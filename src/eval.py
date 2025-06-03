@@ -290,7 +290,7 @@ def build_compile_cache_with_capturing(
 
 
 
-
+# TODO: need to wrap the actual running of the kernel in a container
 def eval_kernel_against_ref(
     original_model_src: str,
     custom_model_src: str,

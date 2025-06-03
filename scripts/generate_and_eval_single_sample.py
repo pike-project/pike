@@ -143,19 +143,19 @@ def main(config: EvalConfig):
         with open(os.path.join(config.logdir, f"generated_kernel_level_{config.level}_problem_{config.problem_id}.py"), "w") as f:
             f.write(custom_cuda)
 
-    # 3. Evaluate Kernel
-    # NOTE: no need to wrap around process here as only a single sample
-    # see batch eval for examples of process isolation
-    kernel_exec_result = eval_kernel_against_ref(
-        ref_arch_src, custom_cuda, verbose=config.verbose, measure_performance=True, num_correct_trials=5, num_perf_trials=100
-    )
+    # # 3. Evaluate Kernel
+    # # NOTE: no need to wrap around process here as only a single sample
+    # # see batch eval for examples of process isolation
+    # kernel_exec_result = eval_kernel_against_ref(
+    #     ref_arch_src, custom_cuda, verbose=config.verbose, measure_performance=True, num_correct_trials=5, num_perf_trials=100
+    # )
     
-    print(f"Evaluation result for level {config.level} problem {config.problem_id}:\n{kernel_exec_result}")
+    # print(f"Evaluation result for level {config.level} problem {config.problem_id}:\n{kernel_exec_result}")
 
-    if config.log:
-        with open(os.path.join(config.logdir, f"eval_result_level_{config.level}_problem_{config.problem_id}.txt"), "a") as f:
-            f.write(f"Problem Name: {problem_name}\n")
-            f.write(str(kernel_exec_result))
+    # if config.log:
+    #     with open(os.path.join(config.logdir, f"eval_result_level_{config.level}_problem_{config.problem_id}.txt"), "a") as f:
+    #         f.write(f"Problem Name: {problem_name}\n")
+    #         f.write(str(kernel_exec_result))
 
 
 if __name__ == "__main__":

@@ -42,6 +42,7 @@ SGLANG_KEY = os.environ.get("SGLANG_API_KEY")  # for Local Deployment
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
 SAMBANOVA_API_KEY = os.environ.get("SAMBANOVA_API_KEY")
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY")
+CBORG_API_KEY = os.environ.get("CBORG_API_KEY")
 
 
 ########################################################
@@ -156,6 +157,12 @@ def query_server(
             
         case "openai":
             client = OpenAI(api_key=OPENAI_KEY)
+            model = model_name
+        case "cborg":
+            client = OpenAI(
+                api_key=CBORG_API_KEY,
+                base_url="https://api.cborg.lbl.gov"
+            )
             model = model_name
         case _:
             raise NotImplementedError
@@ -277,6 +284,20 @@ def query_server(
                 top_p=top_p,
             )
         outputs = [choice.message.content for choice in response.choices]
+    elif server_type == "cborg":
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                # {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            # stream=False,
+            # temperature=temperature,
+            # n=num_completions,
+            # max_tokens=max_tokens,
+            # top_p=top_p,
+        )
+        outputs = [choice.message.content for choice in response.choices]
     elif server_type == "together":
         response = client.chat.completions.create(
             model=model,
@@ -383,6 +404,12 @@ SERVER_PRESETS = {
         "max_tokens": 4096,
     },
     "openai": {
+        "model_name": "gpt-4o-2024-08-06",
+        # "model_name": "o1-preview-2024-09-12", # be careful with this one
+        "temperature": 0.0,
+        "max_tokens": 4096,
+    },
+    "cborg": {
         "model_name": "gpt-4o-2024-08-06",
         # "model_name": "o1-preview-2024-09-12", # be careful with this one
         "temperature": 0.0,

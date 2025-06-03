@@ -50,8 +50,11 @@ class GenerationConfig(Config):
         self.temperature = 0.0
         
         # Logging
+
+        # absolute path to data dir
+        self.data_dir = REQUIRED
         # Top Directory to Store Runs
-        self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
+        # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
     
         self.verbose = False
         self.store_type = "local" # TODO: add Database Integration
@@ -162,8 +165,10 @@ def main(config: GenerationConfig):
 
     print(f"Generating on 1 sample each for level {config.level} problems: {problem_id_range}")
 
+    runs_dir = os.path.join(config.data_dir, "runs")
+
     # set up run directory
-    run_dir = os.path.join(config.runs_dir, config.run_name)
+    run_dir = os.path.join(runs_dir, config.run_name)
     os.makedirs(run_dir, exist_ok=True)
     pydra.save_yaml(config.to_dict(), os.path.join(run_dir, "generation_config.yaml"))
 

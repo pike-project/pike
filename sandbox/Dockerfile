@@ -4,11 +4,11 @@ WORKDIR /workspace
 
 COPY . /workspace
 
-RUN pip install --upgrade pip && pip install -r requirements.txt && pip install -e .
+# RUN pip install --upgrade pip && pip install -r requirements.txt && pip install -e .
 
 # CMD ["python", "app.py"]
 
-# CMD ["sleep", "infinity"]
+CMD ["sleep", "infinity"]
 # CMD ["cat", "README.md"]
-CMD ["ls"]
+# CMD ["ls"]
 # CMD ["pwd"]

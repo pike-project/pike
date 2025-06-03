@@ -1,3 +1,29 @@
+## Notes
+
+Single run as a test:
+
+```bash
+python3 scripts/generate_and_eval_single_sample.py dataset_src=local level=2 problem_id=40 server_type=cborg model_name=lbl/llama log_generated_kernel=True log_prompt=True log=True
+```
+
+This can be run outside of the Docker container:
+
+```bash
+python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data run_name=test1 dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
+```
+
+This should be run within the Docker container:
+
+```bash
+python3 scripts/eval_from_generations.py data_dir=/data run_name=test1 dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_gpu_devices=4 timeout=300
+```
+
+Attach to running docker container:
+
+```bash
+podman-hpc exec -it <id> bash
+```
+
 # KernelBench: Can LLMs Write Efficient GPU Kernels? [ICML '25]
 [arXiv](https://arxiv.org/html/2502.10517v1) | [blog post](https://scalingintelligence.stanford.edu/blogs/kernelbench/) | [HuggingFace Dataset](https://huggingface.co/datasets/ScalingIntelligence/KernelBench) | 
 

@@ -60,8 +60,11 @@ class EvalConfig(Config):
         self.gpu_arch = ["Ada"]
 
         # Logging
+
+        # absolute path to data dir
+        self.data_dir = REQUIRED
         # Top Directory to Store Runs
-        self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
+        # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
 
         self.verbose = False
 
@@ -405,7 +408,10 @@ def main(config: EvalConfig):
 
     print(f"Evaluating 1 sample each for level {config.level} problems: {problem_id_range}")
 
-    run_dir = os.path.join(config.runs_dir, config.run_name)
+    runs_dir = os.path.join(config.data_dir, "runs")
+
+    # set up run directory
+    run_dir = os.path.join(runs_dir, config.run_name)
     eval_file_path = os.path.join(run_dir, f"eval_results.json")
 
 

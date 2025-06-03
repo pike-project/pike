@@ -1,0 +1,12 @@
+**__pycache__/
+scratch/
+**/scratch/
+*.egg-info/
+**build/
+**dist/
+# **results/
+results/*
+runs/*
+cache/*
+!results/timing/
+.env

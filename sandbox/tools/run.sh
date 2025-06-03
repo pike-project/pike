@@ -3,8 +3,8 @@ podman-hpc run --gpu --cap-drop=ALL --network=none \
     --read-only \
     --volume $PSCRATCH/llm/KernelBench-data:/data \
     --security-opt no-new-privileges --rm \
-    python-docker-app
-    # -it ubuntu bash
+    -it python-docker-app bash
+    # python-docker-app
 
 # -d -> if we want to run it as a daemon
 

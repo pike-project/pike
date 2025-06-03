@@ -4,6 +4,14 @@ import pydra
 from pydra import REQUIRED, Config
 from src.dataset import construct_kernelbench_dataset
 
+REPO_TOP_PATH = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+    )
+)
+KERNEL_BENCH_PATH = os.path.join(REPO_TOP_PATH, "KernelBench")
+
 """
 Benchmark Eval Analysis
 
@@ -54,7 +62,7 @@ def analyze_greedy_eval(run_name, hardware, baseline, level):
     Analyze the greedy eval results for a run of a particular level
     """
 
-    dataset = construct_kernelbench_dataset(level)
+    dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, level)
 
     # load json
     eval_file_path = f'runs/{run_name}/eval_results.json'

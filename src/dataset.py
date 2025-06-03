@@ -7,14 +7,6 @@ import random
 import re
 import hashlib
 
-REPO_TOP_PATH = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-    )
-)
-KERNEL_BENCH_PATH = os.path.join(REPO_TOP_PATH, "KernelBench")
-
 
 def assign_problem_hash(problem_path: str) -> list[int]:
     """
@@ -57,15 +49,15 @@ def construct_problem_dataset_from_problem_dir(problem_dir: str) -> list[str]:
     return DATASET
 
 
-def construct_kernelbench_dataset(level: int) -> list[str]:
+def construct_kernelbench_dataset(kernel_bench_path, level: int) -> list[str]:
     return construct_problem_dataset_from_problem_dir(
-        os.path.join(KERNEL_BENCH_PATH, f"level{level}")
+        os.path.join(kernel_bench_path, f"level{level}")
     )
 
 
-KERNELBENCH_LEVEL_1_DATASET = construct_kernelbench_dataset(level=1)
-KERNELBENCH_LEVEL_2_DATASET = construct_kernelbench_dataset(level=2)
-KERNELBENCH_LEVEL_3_DATASET = construct_kernelbench_dataset(level=3)
+# KERNELBENCH_LEVEL_1_DATASET = construct_kernelbench_dataset(level=1)
+# KERNELBENCH_LEVEL_2_DATASET = construct_kernelbench_dataset(level=2)
+# KERNELBENCH_LEVEL_3_DATASET = construct_kernelbench_dataset(level=3)
 
 ################################################################################
 # Eval on Subsets of KernelBench
@@ -73,13 +65,13 @@ KERNELBENCH_LEVEL_3_DATASET = construct_kernelbench_dataset(level=3)
 
 
 def get_kernelbench_subset(
-    level: int, num_subset_problems: int = 10, random_seed: int = 42
+    kernel_bench_path, level: int, num_subset_problems: int = 10, random_seed: int = 42
 ) -> tuple[list[str], list[int]]:
     """
     Get a random subset of problems from the KernelBench dataset
     """
 
-    full_dataset = construct_kernelbench_dataset(level)
+    full_dataset = construct_kernelbench_dataset(kernel_bench_path, level)
 
     random.seed(random_seed)
     num_subset_problems = min(num_subset_problems, len(full_dataset))

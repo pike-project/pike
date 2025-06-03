@@ -13,6 +13,14 @@ from src.eval import eval_kernel_against_ref
 from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread
 
+REPO_TOP_PATH = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+    )
+)
+KERNEL_BENCH_PATH = os.path.join(REPO_TOP_PATH, "KernelBench")
+
 """
 Batch Generate Samples for Particular Level
 
@@ -152,7 +160,7 @@ def main(config: GenerationConfig):
         dataset = load_dataset(config.dataset_name)
         curr_level_dataset = dataset[f"level_{config.level}"]
     elif config.dataset_src == "local":
-        curr_level_dataset = construct_kernelbench_dataset(config.level)
+        curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
 
 
     num_problems_in_level = len(curr_level_dataset)

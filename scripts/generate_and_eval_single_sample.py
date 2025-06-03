@@ -11,6 +11,14 @@ from src.eval import eval_kernel_against_ref
 from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template
 from src.utils import extract_first_code, query_server, set_gpu_arch, read_file, create_inference_server_from_presets
 
+REPO_TOP_PATH = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+    )
+)
+KERNEL_BENCH_PATH = os.path.join(REPO_TOP_PATH, "KernelBench")
+
 """
 Generate and evaluate a single sample
 Easiest way to get started, to test a single problem for experimentation or debugging
@@ -79,7 +87,7 @@ def main(config: EvalConfig):
         dataset = load_dataset(config.dataset_name)
         curr_level_dataset = dataset[f"level_{config.level}"]
     elif config.dataset_src == "local":
-        curr_level_dataset = construct_kernelbench_dataset(config.level)
+        curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
 
     if config.gpu_arch:
         set_gpu_arch(config.gpu_arch)  # otherwise build for all architectures

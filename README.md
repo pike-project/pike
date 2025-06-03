@@ -15,7 +15,7 @@ python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data run_
 This should be run within the Docker container:
 
 ```bash
-python3 scripts/eval_from_generations.py data_dir=/data run_name=test1 dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_gpu_devices=4 timeout=300
+python3 scripts/eval_from_generations.py data_dir=/data run_name=test1 dataset_src=local level=1 num_gpu_devices=4 timeout=300
 ```
 
 Attach to running docker container:

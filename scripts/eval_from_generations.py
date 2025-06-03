@@ -18,6 +18,14 @@ from src.dataset import construct_kernelbench_dataset
 from src.eval import build_compile_cache, eval_kernel_against_ref, KernelExecResult, check_metadata_serializable_all_types
 from src.utils import set_gpu_arch, read_file
 
+REPO_TOP_PATH = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+    )
+)
+KERNEL_BENCH_PATH = os.path.join(REPO_TOP_PATH, "KernelBench")
+
 """
 Batch Evaluation from Existing Generations
 
@@ -396,7 +404,7 @@ def main(config: EvalConfig):
         dataset = load_dataset(config.dataset_name)
         curr_level_dataset = dataset[f"level_{config.level}"]
     elif config.dataset_src == "local":
-        curr_level_dataset = construct_kernelbench_dataset(config.level)
+        curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
     
     num_problems_in_level = len(curr_level_dataset)
 

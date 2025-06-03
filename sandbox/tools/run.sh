@@ -1,4 +1,5 @@
-podman-hpc run --gpu --cap-drop=ALL --network=none --userns user \
+podman-hpc run --gpu --cap-drop=ALL --network=none \
+    --userns keep-id \
     --read-only \
     --volume $PSCRATCH/llm/KernelBench-data:/data \
     --security-opt no-new-privileges --rm \
@@ -17,4 +18,7 @@ podman-hpc run --gpu --cap-drop=ALL --network=none --userns user \
 # --volume /path/to/input:/input:ro \ # Mount input data read-only
 # --volume /path/to/output:/output \  # Mount output directory (be VERY cautious with write access)
 
+
+# ideally should pass the following options with default Docker (not podman-hpc)
+# --userns=default --user 1000:1000
 # --security-opt seccomp=default

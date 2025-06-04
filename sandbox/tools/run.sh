@@ -1,6 +1,7 @@
 podman-hpc run --gpu --cap-drop=ALL --network=none \
     --userns keep-id \
     --read-only \
+    --tmpfs /cache \
     --volume $PSCRATCH/llm/KernelBench-data:/data \
     --security-opt no-new-privileges --rm \
     -it python-docker-app bash

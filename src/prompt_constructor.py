@@ -503,7 +503,7 @@ def prompt_fix_correctness(ref_arch_src, custom_cuda, metadata):
     return prompt
 
 def main():
-    gpu_name = "L40S"
+    gpu_name = "A100"
 
 
     ref_arch_src = read_file(os.path.join(KERNEL_BENCH_PATH, f"level1/19_ReLU.py"))

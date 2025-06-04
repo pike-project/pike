@@ -53,7 +53,7 @@ import modal
 app = modal.App("generate_baseline_modal")
 gpu_arch_mapping = {"L40S": ["Ada"], "H100": ["Hopper"], "A100": ["Ampere"], "A100-80GB": ["Ampere"], "L4": ["Ada"], "T4": ["Turing"], "A10G": ["Ampere"]}
 batch_size = 10
-gpu = "L40S"
+gpu = "A100"
 timeout = 1800
 cuda_version = "12.4.0"  # should be no greater than host CUDA version
 flavor = "devel"  #  includes full CUDA toolkit

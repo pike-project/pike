@@ -3,7 +3,10 @@
 Single run as a test:
 
 ```bash
-python3 scripts/generate_and_eval_single_sample.py dataset_src=local level=2 problem_id=40 server_type=cborg model_name=lbl/llama log_generated_kernel=True log_prompt=True log=True
+python3 scripts/generate_and_eval_single_sample.py dataset_src=local level=1 problem_id=1 server_type=cborg model_name=lbl/llama log_generated_kernel=True log_prompt=True log=True
+
+# to just run and check the result
+python3 scripts/run_and_check.py ref_origin=kernelbench level=1 problem_id=1 kernel_src_path=./results/eval_logs/generated_kernel_level_1_problem_1.py
 ```
 
 This can be run outside of the Docker container:
@@ -28,6 +31,15 @@ Attach to running docker container:
 
 ```bash
 podman-hpc exec -it <id> bash
+```
+
+
+For some reason the pytorch inline CUDA compiler uses `c++` executable, not `g++`. Make sure to do the following
+
+```bash
+mkdir $HOME/bin
+cd $HOME/bin
+ln -sf "$(which g++)" ./c++
 ```
 
 # KernelBench: Can LLMs Write Efficient GPU Kernels? [ICML '25]

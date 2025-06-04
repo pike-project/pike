@@ -8,7 +8,7 @@ from datasets import load_dataset
 
 from src import eval as kernel_eval
 from src import utils as kernel_utils
-from scripts.generate_baseline_time import measure_program_time
+from generate_baseline_time import measure_program_time
 
 from src.utils import read_file
 
@@ -67,7 +67,7 @@ class ScriptConfig(Config):
         self.clear_cache = False # TODO
 
         # Replace with your NVIDIA GPU architecture, e.g. ["Hopper"]
-        self.gpu_arch = ["Ada"] 
+        self.gpu_arch = ["Ampere"] 
 
     def __repr__(self):
         return f"ScriptConfig({self.to_dict()})"

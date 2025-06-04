@@ -44,8 +44,8 @@ class EvalConfig(Config):
         self.eval_mode = "modal"
         # Construct this from mapping from architecture name to torch cuda arch list in the future
         # you can either specify SM version or just use the name
-        self.gpu = "L40S"
-        self.gpu_arch = ['Ada']
+        self.gpu = "A100"
+        self.gpu_arch = ["Ampere"]
 
 
         # Inference config

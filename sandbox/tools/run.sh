@@ -1,11 +1,32 @@
 podman-hpc run --gpu --cap-drop=ALL --network=none \
-    --userns keep-id \
-    --read-only \
     --tmpfs /cache \
-    --volume $PSCRATCH/llm/KernelBench-data:/data \
+    --volume $PSCRATCH/llm/KernelBench:/app \
+    --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \
+    --volume $PSCRATCH/llm/KernelBench-data/workers/0/output:/output \
     --security-opt no-new-privileges --rm \
-    -it python-docker-app bash
+    -it kernel-bench-deps bash
+
+
+# podman-hpc run --gpu --cap-drop=ALL --network=none \
+#     --userns keep-id \
+#     --read-only \
+#     --tmpfs /cache \
+#     --volume $PSCRATCH/llm/KernelBench:/app:ro \
+#     --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \
+#     --volume $PSCRATCH/llm/KernelBench-data/workers/0/output:/output \
+#     --security-opt no-new-privileges --rm \
+#     -it kernel-bench-deps bash
+
+
+# podman-hpc run --gpu --cap-drop=ALL --network=none \
+#     --userns keep-id \
+#     --read-only \
+#     --tmpfs /cache \
+#     --volume $PSCRATCH/llm/KernelBench-data:/data \
+#     --security-opt no-new-privileges --rm \
+#     -it python-docker-app bash
     # python-docker-app
+
 
 # -d -> if we want to run it as a daemon
 

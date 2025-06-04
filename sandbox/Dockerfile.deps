@@ -1,0 +1,23 @@
+FROM nvidia/cuda:12.9.0-cudnn-devel-ubuntu24.04
+
+WORKDIR /deps
+
+COPY requirements.txt /deps/
+
+# Update and install Python and pip
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv
+
+# Create a virtual environment
+ENV VENV_PATH=/opt/venv
+RUN python3 -m venv $VENV_PATH
+
+# Activate the virtual environment and upgrade pip + install dependencies
+ENV PATH="$VENV_PATH/bin:$PATH"
+
+RUN pip install --upgrade pip setuptools wheel
+RUN pip install -r requirements.txt
+
+WORKDIR /app

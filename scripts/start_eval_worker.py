@@ -1,3 +1,5 @@
+import time
+
 # The eval worker waits for new kernel tasks to arrive, then compiles and runs them
 
 # it should make use of recv() and send(), possibly in some library since the sampler
@@ -24,4 +26,9 @@
 # we only technically need to evaluate the reference pytorch implementation once for each task, but the evaluation may
 # not be the bottleneck of this anyway (the LLM sampling might be the bottleneck)
 
+def main():
+    while True:
+        print("Eval worker running...")
+        time.sleep(10)
 
+main()

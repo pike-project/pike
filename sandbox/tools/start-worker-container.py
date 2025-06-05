@@ -6,18 +6,23 @@ curr_path = Path(os.path.realpath(os.path.dirname(__file__)))
 
 def clean_whitespace(s):
     # split() splits string on any whitespace including \n and \t
+    
     return ' '.join(s.split())
 
 def main():
     # could be replaced with docker, the only flag that will need to be adjusted is --gpu (podman-hpc specific)
     container_cmd = "podman-hpc"
 
-    run_cmd = "bash"
+    kernel_bench_dir = Path.resolve(curr_path / "../..")
+
+    # run_cmd = "bash"
+
+    # this command will be run in the container
+    eval_worker_path = "./scripts/start_eval_worker.py"
+    run_cmd = f"python3 {eval_worker_path}"
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)
-
-    kernel_bench_dir = Path.resolve(curr_path / "../..")
 
     # TODO: need to let this data_dir get passed in
     pscratch_dir = Path(os.getenv("PSCRATCH"))

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 podman-hpc run --gpu --cap-drop=ALL --network=none \
     --tmpfs /cache \
     --volume $PSCRATCH/llm/KernelBench:/app \

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # first run: alloc_gpu
 
 # -n 1 -> this indicates how many instances of the container should run
@@ -7,7 +9,7 @@
 
 # srun -n 4 -G 1 bash -c 'echo $SLURM_PROCID'
 
-srun -n 1 -G 4 bash -c podman-hpc run --gpu --cap-drop=ALL --network=none \
+srun -n 1 -G 4 podman-hpc run --gpu --cap-drop=ALL --network=none \
     --tmpfs /cache \
     --volume $PSCRATCH/llm/KernelBench:/app \
     --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \

@@ -11,15 +11,19 @@ def clean_whitespace(s):
 def main():
     # could be replaced with docker, the only flag that will need to be adjusted is --gpu (podman-hpc specific)
     container_cmd = "podman-hpc"
+    image_name = "kernel-bench-deps"
+
+    non_root_user = True
+    read_only_fs = True
 
     kernel_bench_dir = Path.resolve(curr_path / "../..")
-
-    # run_cmd = ["bash"]
 
     # this command will be run in the container
     eval_worker_path = "./scripts/start_eval_worker.py"
     # run_cmd = ["bash", "-c", f"pip install . && python3 {eval_worker_path}"]
     run_cmd = ["python3", eval_worker_path]
+
+    # run_cmd = ["bash"]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)
@@ -32,20 +36,31 @@ def main():
     input_dir = worker_dir / "input"
     output_dir = worker_dir / "output"
 
-    cmd_str = f"""
-            {container_cmd} run --gpu --cap-drop=ALL --network=none
+    flags_str = f"""
+            --gpu --cap-drop=ALL --network=none
             --tmpfs /cache
-            --volume {kernel_bench_dir}:/app
             --volume {input_dir}:/input:ro
             --volume {output_dir}:/output
             --security-opt no-new-privileges --rm
-            -it kernel-bench-deps
+            -it
         """
 
-    cleaned_cmd_str = clean_whitespace(cmd_str)
+    cleaned_flags_str = clean_whitespace(flags_str)
+    flags = cleaned_flags_str.split()
 
-    cmd = cleaned_cmd_str.split()
-    
+    if non_root_user:
+        flags += ["--userns", "keep-id"]
+
+    if read_only_fs:
+        # makes /app mount read-only as well
+        flags += ["--read-only", "--volume", f"{kernel_bench_dir}:/app:ro"]
+    else:
+        # does not make /app mount read-only
+        flags += ["--volume", f"{kernel_bench_dir}:/app"]
+
+    cmd = [container_cmd, "run"]
+    cmd += flags
+    cmd += [image_name]
     cmd += run_cmd
 
     print(f"Running: {cmd}")

@@ -61,6 +61,11 @@ if __name__ == "__main__":
     )
 ```
 
+If you need to clear all cache info (to make sure there is no docker weirdness when mounting this directory to the container):
+
+```bash
+rm -rf build dist **/*.egg-info **/__pycache__
+```
 
 
 # KernelBench: Can LLMs Write Efficient GPU Kernels? [ICML '25]

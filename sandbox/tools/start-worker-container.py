@@ -14,11 +14,12 @@ def main():
 
     kernel_bench_dir = Path.resolve(curr_path / "../..")
 
-    run_cmd = ["bash"]
+    # run_cmd = ["bash"]
 
     # this command will be run in the container
-    # eval_worker_path = "./scripts/start_eval_worker.py"
+    eval_worker_path = "./scripts/start_eval_worker.py"
     # run_cmd = ["bash", "-c", f"pip install . && python3 {eval_worker_path}"]
+    run_cmd = ["python3", eval_worker_path]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)

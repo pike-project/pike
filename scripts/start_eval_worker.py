@@ -1,4 +1,7 @@
 import time
+import asyncio
+from pathlib import Path
+from src.util.disk_channel import DiskChannel
 
 # The eval worker waits for new kernel tasks to arrive, then compiles and runs them
 
@@ -25,10 +28,19 @@ import time
 
 # we only technically need to evaluate the reference pytorch implementation once for each task, but the evaluation may
 # not be the bottleneck of this anyway (the LLM sampling might be the bottleneck)
+# -- it also seems that this is done separately with the current setup, as you can run scripts/generate_baseline_time.py
+# to collect the baseline times for the current architecture
 
-def main():
+async def main():
+    tx_dir = Path("/output")
+    rx_dir = Path("/input")
+
+    disk_channel = DiskChannel(tx_dir, rx_dir)
+
+    print("Eval worker running...")
+
     while True:
-        print("Eval worker running...")
-        time.sleep(10)
+        msg = await disk_channel.recv()
+        print(f"Got message: {msg}")
 
-main()
+asyncio.run(main())

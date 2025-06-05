@@ -6,7 +6,6 @@ curr_path = Path(os.path.realpath(os.path.dirname(__file__)))
 
 def clean_whitespace(s):
     # split() splits string on any whitespace including \n and \t
-    
     return ' '.join(s.split())
 
 def main():
@@ -15,11 +14,11 @@ def main():
 
     kernel_bench_dir = Path.resolve(curr_path / "../..")
 
-    # run_cmd = "bash"
+    run_cmd = ["bash"]
 
     # this command will be run in the container
-    eval_worker_path = "./scripts/start_eval_worker.py"
-    run_cmd = f"python3 {eval_worker_path}"
+    # eval_worker_path = "./scripts/start_eval_worker.py"
+    # run_cmd = ["bash", "-c", f"pip install . && python3 {eval_worker_path}"]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)
@@ -39,14 +38,16 @@ def main():
             --volume {input_dir}:/input:ro
             --volume {output_dir}:/output
             --security-opt no-new-privileges --rm
-            -it kernel-bench-deps {run_cmd}
+            -it kernel-bench-deps
         """
 
     cleaned_cmd_str = clean_whitespace(cmd_str)
 
-    print(f"Running: {cleaned_cmd_str}")
-
     cmd = cleaned_cmd_str.split()
+    
+    cmd += run_cmd
+
+    print(f"Running: {cmd}")
 
     # TODO: may want to rebuild 'kernel-bench-deps' container beforehand
 

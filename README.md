@@ -47,6 +47,22 @@ ln -sf "$(which g++)" $HOME/bin/c++
 export PATH=$HOME/bin:$PATH
 ```
 
+TODO: we probably want a `setup.py` like this:
+
+```python
+from setuptools import setup, find_packages
+
+if __name__ == "__main__":
+    setup(
+        name="kernel-bench",
+        version="0.0.1",
+        packages=find_packages(where="src"),
+        package_dir={"": "src"},
+    )
+```
+
+
+
 # KernelBench: Can LLMs Write Efficient GPU Kernels? [ICML '25]
 [arXiv](https://arxiv.org/html/2502.10517v1) | [blog post](https://scalingintelligence.stanford.edu/blogs/kernelbench/) | [HuggingFace Dataset](https://huggingface.co/datasets/ScalingIntelligence/KernelBench) | 
 

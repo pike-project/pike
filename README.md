@@ -7,6 +7,12 @@ mkdir -p worker_io/input && mkdir -p worker_io/output && mkdir -p worker_io/scra
 python scripts/start_eval_worker.py --input_dir worker_io/input --output_dir worker_io/output --scratch_dir worker_io/scratch
 ```
 
+How to generate samples:
+
+```bash
+python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
+```
+
 How to use the new eval script for a single task
 
 ```bash

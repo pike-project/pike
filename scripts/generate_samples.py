@@ -4,6 +4,8 @@ import os, sys
 import torch
 import json
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 
 from datasets import load_dataset
@@ -13,13 +15,10 @@ from src.eval import eval_kernel_against_ref
 from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread
 
-REPO_TOP_PATH = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-    )
-)
-KERNEL_BENCH_PATH = os.path.join(REPO_TOP_PATH, "KernelBench")
+curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+
+REPO_TOP_PATH = Path.resolve(curr_dir / "..")
+KERNEL_BENCH_PATH = REPO_TOP_PATH / "KernelBench"
 
 """
 Batch Generate Samples for Particular Level
@@ -47,7 +46,9 @@ class GenerationConfig(Config):
         # (None, None) -> full range
         self.subset = (27, 27) # range of problems to generate samples for
 
-        self.run_name = REQUIRED # name of the run
+        timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        # self.run_name = REQUIRED # name of the run
+        self.run_name = timestamp_str
 
         # num of thread pool to call inference server in parallel
         self.num_workers = 1
@@ -73,8 +74,6 @@ class GenerationConfig(Config):
         # Migrate Monkeys code base to KernelBench
         self.num_samples = 10 # for sampling multiple samples per problem
 
-        self.log_prompt = False
-
     def greedy(self):
         # For greedy decoding, epsecially baseline eval
         self.greedy_sample = True
@@ -88,7 +87,7 @@ class WorkArgs:
     problem_id: int # logically indexed
     sample_id: int
 
-def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, run_dir: str) -> bool:
+def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str) -> bool:
     # 1. Fetch Problem
     if config.dataset_src == "huggingface":
         curr_problem_row = dataset.filter(lambda x: x["problem_id"] == work.problem_id, desc=None)
@@ -107,18 +106,24 @@ def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, in
     problem_number = int(problem_name.split("_")[0])
     assert problem_number == work.problem_id, f"Problem number in filename ({problem_number}) does not match config problem_id ({config.problem_id})"
     
-    
+    sample_dir = layer_dir / f"level_{config.level}_problem_{work.problem_id}_sample_{work.sample_id}"
+    os.makedirs(sample_dir, exist_ok=True)
 
     # Construct Prompt   
     custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(ref_arch_src)
-    if config.log_prompt:
-        prompt_path = os.path.join(run_dir, f"level_{config.level}_problem_{work.problem_id}_sample_{work.sample_id}_prompt.txt")
-        with open(prompt_path, "w") as f:
-            f.write(custom_cuda_prompt)
+
+    prompt_path = sample_dir / "prompt.txt"
+    with open(prompt_path, "w") as f:
+        f.write(custom_cuda_prompt)
 
     # Query server with constructed prompt
-    custom_cuda = inference_server(custom_cuda_prompt)
-    custom_cuda = extract_first_code(custom_cuda, ["python", "cpp"])
+    raw_llm_output = inference_server(custom_cuda_prompt)
+
+    raw_llm_output_path = sample_dir / "raw_llm_output.txt"
+    with open(raw_llm_output_path, "w") as f:
+        f.write(raw_llm_output)
+
+    custom_cuda = extract_first_code(raw_llm_output, ["python", "cpp"])
     # check LLM is able to generate custom CUDA code
     assert custom_cuda is not None, "Custom CUDA code generation failed"
 
@@ -126,16 +131,16 @@ def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, in
         print(f"Generated sample {work.sample_id} for problem {problem_number}: {problem_name}")
 
     # Store to local file
-    kernel_path = os.path.join(run_dir, f"level_{config.level}_problem_{work.problem_id}_sample_{work.sample_id}_kernel.py")
+    kernel_path = sample_dir / "kernel.py"
     with open(kernel_path, "w") as f:
         f.write(custom_cuda)
     
     return True
     
 
-def generate_sample_launcher(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, run_dir: str):
+def generate_sample_launcher(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str):
     try:
-        return generate_sample_single(work, config, dataset, inference_server, run_dir)
+        return generate_sample_single(work, config, dataset, inference_server, layer_dir)
     except Exception as e:
         print(f"Error generating sample {work.problem_id} {work.sample_id}: {e}")
         return None
@@ -175,13 +180,17 @@ def main(config: GenerationConfig):
 
     print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
 
-    runs_dir = os.path.join(config.data_dir, "runs")
+    data_dir = Path(config.data_dir)
+
+    runs_dir = data_dir / "runs"
 
     # set up run directory
-    run_dir = os.path.join(runs_dir, config.run_name)
+    run_dir = runs_dir / config.run_name
     os.makedirs(run_dir, exist_ok=True)
-    pydra.save_yaml(config.to_dict(), os.path.join(run_dir, "generation_config.yaml"))
+    pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
 
+    layer_dir = run_dir / "layer_0"
+    os.makedirs(layer_dir, exist_ok=True)
 
     assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
 
@@ -215,7 +224,7 @@ def main(config: GenerationConfig):
                       config=config, 
                       dataset=curr_level_dataset, 
                       inference_server=inference_server,
-                      run_dir=run_dir
+                      layer_dir=layer_dir
                       )
     
     print(generation_results)

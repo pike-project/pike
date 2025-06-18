@@ -49,6 +49,11 @@ class DiskChannel:
         self.tx_dir.mkdir(parents=True, exist_ok=True)
         self.rx_dir.mkdir(parents=True, exist_ok=True)
 
+        # remove any existing files in the channel
+        # for file in self.rx_dir.iterdir():
+        #     if file.is_file():
+        #         file.unlink()
+
         # Internal queue for discovered messages to ensure they are processed one by one.
         # We store the path to the .done file.
         self._pending_files = deque()

@@ -245,12 +245,12 @@ class Eval:
         for name in self.models.keys():
             self.collect_model_results(name)
 
-    def save_results(self):
-        results_dir = Path.resolve(curr_path / "../results/tmp")
+    def save_results(self, results_path: Path):
+        # results_dir = Path.resolve(curr_path / "../results/tmp")
 
-        os.makedirs(results_dir, exist_ok=True)
+        # os.makedirs(results_dir, exist_ok=True)
 
-        results_path = results_dir / f"task_{self.task_id}.json"
+        # results_path = results_dir / f"task_{self.task_id}.json"
 
         with open(results_path, "w") as f:
             json.dump(self.results, f)
@@ -365,6 +365,7 @@ def main():
     parser.add_argument("--level", type=int)
     parser.add_argument("--task", type=int)
     parser.add_argument("--code_path", type=str)
+    parser.add_argument("--output_path", type=str, required=False)
     parser.add_argument("--op_atol", type=float, default=1e-3)
     parser.add_argument("--op_rtol", type=float, default=1e-1)
     args = parser.parse_args()
@@ -375,13 +376,18 @@ def main():
     # llm_path = Path.resolve(curr_path / f"../results/o3-test1/generated_kernel_level_1_problem_1.py")
     llm_path = args.code_path
 
+    output_path = None
+    if args.output_path is not None:
+        output_path = Path(args.output_path)
+
     ev = Eval(level, task, args.op_atol, args.op_rtol)
     ev.create_baseline_model()
     ev.create_model("llm", llm_path)
     ev.check_correctness()
     # ev.collect_model_results("baseline", with_compile=True)
     ev.collect_model_results("llm", with_compile=False)
-    # ev.save_results()
+    if output_path is not None:
+        ev.save_results(output_path)
 
     # level = 3
 

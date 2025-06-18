@@ -50,6 +50,9 @@ class EvalWorker:
         self.code_dir = self.scratch_dir / "code"
         os.makedirs(self.code_dir, exist_ok=True)
 
+        self.eval_output_dir = self.scratch_dir / "eval_output"
+        os.makedirs(self.eval_output_dir, exist_ok=True)
+
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
         self.eval_script_path = curr_dir / "eval.py"
@@ -66,17 +69,19 @@ class EvalWorker:
             code_str = msg["code"]
 
             # 1. write the LLM-generated code to scratch dir with a unique name
-            code_file_id = str(uuid.uuid4())
-            code_path = self.code_dir / f"task_{level}_{task}_{code_file_id}.py"
+            file_id = str(uuid.uuid4())
+            code_path = self.code_dir / f"task_{level}_{task}_{file_id}.py"
             async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
                 await f.write(code_str)
             
             print(f"Wrote: {code_path}")
 
+            eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{file_id}.json"
+
             # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
             #    (do not wait for this to finish, keep listening for tasks to start)
 
-            cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path)]
+            cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,

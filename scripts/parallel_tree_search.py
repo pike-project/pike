@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+import asyncio
 
 
 from datasets import load_dataset
@@ -135,7 +136,7 @@ def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, in
     with open(kernel_path, "w") as f:
         f.write(custom_cuda)
     
-    return True
+    return custom_cuda
     
 
 def generate_sample_launcher(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str):
@@ -152,7 +153,97 @@ def check_kernel_exists(run_dir: str, level: int, problem_id: int, sample_id: in
     """
     kernel_path = os.path.join(run_dir, f"level_{level}_problem_{problem_id}_sample_{sample_id}_kernel.py")
     return os.path.exists(kernel_path)
-    
+
+class ParallelTreeSearch:
+    def __init__(self, config):
+        self.config = config
+
+        # Dataset Configurations
+        if config.dataset_src == "huggingface":
+            dataset = load_dataset(config.dataset_name)
+            curr_level_dataset = dataset[f"level_{config.level}"]
+        elif config.dataset_src == "local":
+            curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
+
+        self.curr_level_dataset = curr_level_dataset
+
+        num_problems_in_level = len(curr_level_dataset)
+
+        if config.subset == (None, None):
+            problem_id_range = range(1, num_problems_in_level)
+        else:
+            assert config.subset[0] >= 1 and config.subset[1] <= num_problems_in_level, f"Subset range {config.subset} out of range for Level {config.level}"
+            problem_id_range = range(config.subset[0], config.subset[1])
+
+        print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
+
+        data_dir = Path(config.data_dir)
+
+        runs_dir = data_dir / "runs"
+
+        # set up run directory
+        run_dir = runs_dir / config.run_name
+        os.makedirs(run_dir, exist_ok=True)
+        pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
+
+        layer_dir = run_dir / "layer_0"
+        os.makedirs(layer_dir, exist_ok=True)
+
+        self.layer_dir = layer_dir
+
+        assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
+
+        self.problem_id_range = problem_id_range
+
+    def generate_samples(self):
+        problems_to_run = []
+        for problem_id in range(self.problem_id_range.start, self.problem_id_range.stop + 1): # end index is inclusive
+            # assume sample id is 0 for now
+            for sample_id in range(self.config.num_samples):
+                problems_to_run.append(
+                    WorkArgs(
+                        problem_id=int(problem_id),
+                        sample_id=sample_id
+                    )
+                )
+
+        self.problems_to_run = problems_to_run
+
+        # Create inference function with config parameters
+        # We provide some presets in utils but you can also pass in your own, see query_server for more details
+        inference_server = create_inference_server_from_presets(server_type=self.config.server_type,
+                                                            model_name=self.config.model_name,
+                                                            temperature=self.config.temperature,
+                                                            max_tokens=self.config.max_tokens,
+                                                            verbose=self.config.verbose)
+
+        # Launch workers
+        generation_results = maybe_multithread(generate_sample_launcher, 
+                        self.problems_to_run, 
+                        self.config.num_workers, 
+                        time_interval=self.config.api_query_interval, 
+                        # extra args
+                        config=self.config, 
+                        dataset=self.curr_level_dataset, 
+                        inference_server=inference_server,
+                        layer_dir=self.layer_dir
+                        )
+
+        num_generated_samples = len(generation_results)
+        total_problems = len(problems_to_run)
+        num_failed_problems = total_problems - num_generated_samples
+        print(f"Generated {num_generated_samples} samples for total {total_problems} problems, Please retry for the {num_failed_problems} failed problems.")
+
+        return generation_results
+
+    async def eval_samples(self, samples):
+        print(f"Evaluating samples")
+
+    def run(self):
+        samples = self.generate_samples()
+
+        asyncio.run(self.eval_samples(samples))
+
 
 @pydra.main(base=GenerationConfig)
 def main(config: GenerationConfig):
@@ -162,77 +253,8 @@ def main(config: GenerationConfig):
     """
     print(f"Starting Batch Generation with config: {config}")
 
-    # Dataset Configurations
-    if config.dataset_src == "huggingface":
-        dataset = load_dataset(config.dataset_name)
-        curr_level_dataset = dataset[f"level_{config.level}"]
-    elif config.dataset_src == "local":
-        curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
-
-
-    num_problems_in_level = len(curr_level_dataset)
-
-    if config.subset == (None, None):
-        problem_id_range = range(1, num_problems_in_level)
-    else:
-        assert config.subset[0] >= 1 and config.subset[1] <= num_problems_in_level, f"Subset range {config.subset} out of range for Level {config.level}"
-        problem_id_range = range(config.subset[0], config.subset[1])
-
-    print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
-
-    data_dir = Path(config.data_dir)
-
-    runs_dir = data_dir / "runs"
-
-    # set up run directory
-    run_dir = runs_dir / config.run_name
-    os.makedirs(run_dir, exist_ok=True)
-    pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
-
-    layer_dir = run_dir / "layer_0"
-    os.makedirs(layer_dir, exist_ok=True)
-
-    assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
-
-    problems_to_run = []
-    for problem_id in range(problem_id_range.start, problem_id_range.stop + 1): # end index is inclusive
-        # assume sample id is 0 for now
-        for sample_id in range(config.num_samples):
-            if not check_kernel_exists(run_dir, config.level, problem_id, sample_id=sample_id):
-                problems_to_run.append(
-                    WorkArgs(
-                        problem_id=int(problem_id),
-                        sample_id=sample_id
-                    )
-            )
-    
-
-    # Create inference function with config parameters
-    # We provide some presets in utils but you can also pass in your own, see query_server for more details
-    inference_server = create_inference_server_from_presets(server_type=config.server_type,
-                                                        model_name=config.model_name,
-                                                        temperature=config.temperature,
-                                                        max_tokens=config.max_tokens,
-                                                        verbose=config.verbose)
-
-    # Launch workers
-    generation_results = maybe_multithread(generate_sample_launcher, 
-                      problems_to_run, 
-                      config.num_workers, 
-                      time_interval=config.api_query_interval, 
-                      # extra args
-                      config=config, 
-                      dataset=curr_level_dataset, 
-                      inference_server=inference_server,
-                      layer_dir=layer_dir
-                      )
-    
-    print(generation_results)
-
-    num_generated_samples = len(generation_results)
-    total_problems = len(problems_to_run)
-    num_failed_problems = total_problems - num_generated_samples
-    print(f"Generated {num_generated_samples} samples for total {total_problems} problems, Please retry for the {num_failed_problems} failed problems.")
+    tree_search = ParallelTreeSearch(config)
+    tree_search.run()
 
 
 if __name__ == "__main__":

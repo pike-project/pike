@@ -46,7 +46,7 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # this function ensures that the results coming back from the LLM evaluation are sanitized safely
 def assert_type_and_unpack(untrusted_dict: dict, src_key: str, expected_type: type):
     val = untrusted_dict[src_key]
-    assert isinstance(val, expected_type)
+    assert isinstance(val, expected_type), f"assert_type_and_unpack assertion failed on key: {src_key}"
     return val
 
 class EvalWorker:

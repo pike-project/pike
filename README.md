@@ -18,6 +18,7 @@ Set up local environment for profiling:
 ```bash
 conda install -c nvidia nsight-compute
 pip install matplotlib pandas
+pip install aiofiles
 pip install -r requirements.txt
 pip install -e .
 

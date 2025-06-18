@@ -1,5 +1,18 @@
 ## Notes
 
+Set up local environment for profiling:
+
+```bash
+conda install -c nvidia nsight-compute
+pip install matplotlib pandas
+pip install -r requirements.txt
+pip install -e .
+
+# to profile
+dcgmi profile --pause
+ncu --set full --export output2.ncu-rep python example.py
+```
+
 **Important:** to run on a particular architecture, you need to make sure that places which reference this architecture are set correctly (e.g. A100/Ampere)
 
 Single run as a test:

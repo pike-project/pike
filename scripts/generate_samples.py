@@ -43,7 +43,9 @@ class GenerationConfig(Config):
         self.level = REQUIRED
         
         # subset of problems to generate, otherwise generate on all problems in the level
-        self.subset = (None, None) # (problem_id, problem_name), these are the logical index
+        # both sides are inclusive
+        # (None, None) -> full range
+        self.subset = (27, 27) # range of problems to generate samples for
 
         self.run_name = REQUIRED # name of the run
 
@@ -69,7 +71,7 @@ class GenerationConfig(Config):
 
         # Future support
         # Migrate Monkeys code base to KernelBench
-        # self.num_samples = 0 # for sampling multiple samples per problem
+        self.num_samples = 10 # for sampling multiple samples per problem
 
         self.log_prompt = False
 
@@ -171,7 +173,7 @@ def main(config: GenerationConfig):
         assert config.subset[0] >= 1 and config.subset[1] <= num_problems_in_level, f"Subset range {config.subset} out of range for Level {config.level}"
         problem_id_range = range(config.subset[0], config.subset[1])
 
-    print(f"Generating on 1 sample each for level {config.level} problems: {problem_id_range}")
+    print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
 
     runs_dir = os.path.join(config.data_dir, "runs")
 
@@ -186,13 +188,14 @@ def main(config: GenerationConfig):
     problems_to_run = []
     for problem_id in range(problem_id_range.start, problem_id_range.stop + 1): # end index is inclusive
         # assume sample id is 0 for now
-        if not check_kernel_exists(run_dir, config.level, problem_id, sample_id=0):
-            problems_to_run.append(
-                WorkArgs(
-                    problem_id=int(problem_id),
-                    sample_id=0 # fix to 0 for now
-                )
-        )
+        for sample_id in range(config.num_samples):
+            if not check_kernel_exists(run_dir, config.level, problem_id, sample_id=sample_id):
+                problems_to_run.append(
+                    WorkArgs(
+                        problem_id=int(problem_id),
+                        sample_id=sample_id
+                    )
+            )
     
 
     # Create inference function with config parameters
@@ -215,6 +218,8 @@ def main(config: GenerationConfig):
                       run_dir=run_dir
                       )
     
+    print(generation_results)
+
     num_generated_samples = len(generation_results)
     total_problems = len(problems_to_run)
     num_failed_problems = total_problems - num_generated_samples

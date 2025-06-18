@@ -88,18 +88,23 @@ class EvalWorker:
             async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
                 await f.write(code_str)
             
-            print(f"Wrote: {code_path}")
+            # print(f"Wrote: {code_path}")
+            print(f"Received task: {eval_id}")
 
             eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{file_id}.json"
 
             # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
             #    (do not wait for this to finish, keep listening for tasks to start)
 
+            env = os.environ.copy()
+            env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
+
             cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=env
             )
 
             stdout_raw, stderr_raw = await process.communicate()
@@ -107,10 +112,10 @@ class EvalWorker:
             stdout = stdout_raw.decode()
             stderr = None
 
-            print(f"[stdout]\n{stdout}")
+            # print(f"[stdout]\n{stdout}")
             if stderr_raw:
                 stderr = stderr_raw.decode()
-                print(f"[stderr]\n{stderr}")
+                # print(f"[stderr]\n{stderr}")
 
             # 3. read results back
 
@@ -147,6 +152,8 @@ class EvalWorker:
             }
 
             await self.disk_channel.send(output_data)
+
+            print(f"Completed task: {eval_id}")
 
 async def main():
     parser = argparse.ArgumentParser()

@@ -6,6 +6,7 @@ import sys
 import os
 import argparse
 import uuid
+import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -40,6 +41,13 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # not be the bottleneck of this anyway (the LLM sampling might be the bottleneck)
 # -- it also seems that this is done separately with the current setup, as you can run scripts/generate_baseline_time.py
 # to collect the baseline times for the current architecture
+
+
+# this function ensures that the results coming back from the LLM evaluation are sanitized safely
+def assert_type_and_unpack(untrusted_dict: dict, src_key: str, expected_type: type):
+    val = untrusted_dict[src_key]
+    assert isinstance(val, expected_type)
+    return val
 
 class EvalWorker:
     def __init__(self, tx_dir: Path, rx_dir: Path, scratch_dir: Path):
@@ -93,13 +101,50 @@ class EvalWorker:
                 stderr=asyncio.subprocess.PIPE
             )
 
-            stdout, stderr = await process.communicate()
+            stdout_raw, stderr_raw = await process.communicate()
 
-            print(f"[stdout]\n{stdout.decode()}")
-            if stderr:
-                print(f"[stderr]\n{stderr.decode()}")
+            stdout = stdout_raw.decode()
+            stderr = None
 
-            # 3. read results back, then send them out to the disk_channel 
+            print(f"[stdout]\n{stdout}")
+            if stderr_raw:
+                stderr = stderr_raw.decode()
+                print(f"[stderr]\n{stderr}")
+
+            # 3. read results back
+
+            eval_results = {}
+
+            # TODO: the file may not exist if the eval.py script failed, so maybe we should check if the file exists
+            # first to handle things more gracefully
+            try:
+                async with aiofiles.open(eval_output_path, encoding='utf-8') as f:
+                    content = await f.read()
+                data = json.loads(content)
+
+                model_key = "llm"
+                if model_key in data:
+                    model_res = data[model_key]
+
+                    eval_results["loaded"] = assert_type_and_unpack(model_res, "loaded", bool)
+                    eval_results["correct"] = assert_type_and_unpack(model_res, "correct", bool)
+                    eval_results["max_diff"] = assert_type_and_unpack(model_res, "max_diff", float)
+
+                    if "runtimes" in model_res:
+                        runtimes_dict = model_res["runtimes"]
+                        eval_results["runtime"] = assert_type_and_unpack(runtimes_dict, "eager", float)
+            except Exception as e:
+                print(e)
+
+            # 4. send results out to the disk_channel
+
+            output_data = {
+                "stdout": stdout,
+                "stderr": stderr,
+                "eval_results": eval_results
+            }
+
+            await self.disk_channel.send(output_data)
 
 async def main():
     parser = argparse.ArgumentParser()

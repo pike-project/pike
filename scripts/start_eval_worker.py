@@ -37,21 +37,40 @@ from src.util.disk_channel import DiskChannel
 # -- it also seems that this is done separately with the current setup, as you can run scripts/generate_baseline_time.py
 # to collect the baseline times for the current architecture
 
+class EvalWorker:
+    def __init__(self, tx_dir, rx_dir, scratch_dir):
+        self.tx_dir = tx_dir
+        self.rx_dir = rx_dir
+        self.scratch_dir = scratch_dir
+
+        self.disk_channel = DiskChannel(tx_dir, rx_dir)
+
+    
+    async def run(self):
+        print("Eval worker running...")
+
+        while True:
+            msg = await self.disk_channel.recv()
+            print(f"Got message: {msg}")
+
+            # TODO:
+            # 1. write the LLM-generated code to scratch dir with a unique name
+            # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
+            #    (do not wait for this to finish, keep listening for tasks to start)
+            # 3. read results back, then send them out to the disk_channel 
+
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, default="/input")
     parser.add_argument("--output_dir", type=str, default="/output")
+    parser.add_argument("--scratch_dir", type=str, default="/scratch")
     args = parser.parse_args()
 
     tx_dir = Path(args.output_dir)
     rx_dir = Path(args.input_dir)
+    scratch_dir = Path(args.scratch_dir)
 
-    disk_channel = DiskChannel(tx_dir, rx_dir)
-
-    print("Eval worker running...")
-
-    while True:
-        msg = await disk_channel.recv()
-        print(f"Got message: {msg}")
+    eval_worker = EvalWorker(tx_dir, rx_dir, scratch_dir)
+    await eval_worker.run()
 
 asyncio.run(main())

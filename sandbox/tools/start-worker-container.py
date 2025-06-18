@@ -39,6 +39,7 @@ def main():
     flags_str = f"""
             --gpu --cap-drop=ALL --network=none
             --tmpfs /cache
+            --tmpfs /scratch
             --volume {input_dir}:/input:ro
             --volume {output_dir}:/output
             --security-opt no-new-privileges --rm

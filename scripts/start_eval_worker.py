@@ -1,9 +1,11 @@
 import time
 import asyncio
+import aiofiles
 from pathlib import Path
 import sys
 import os
 import argparse
+import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -38,10 +40,13 @@ from src.util.disk_channel import DiskChannel
 # to collect the baseline times for the current architecture
 
 class EvalWorker:
-    def __init__(self, tx_dir, rx_dir, scratch_dir):
+    def __init__(self, tx_dir: Path, rx_dir: Path, scratch_dir: Path):
         self.tx_dir = tx_dir
         self.rx_dir = rx_dir
         self.scratch_dir = scratch_dir
+
+        self.code_dir = self.scratch_dir / "code"
+        os.makedirs(self.code_dir, exist_ok=True)
 
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
@@ -51,10 +56,20 @@ class EvalWorker:
 
         while True:
             msg = await self.disk_channel.recv()
-            print(f"Got message: {msg}")
+            # print(f"Got message: {msg}")
 
-            # TODO:
+            level = msg["level"]
+            task = msg["task"]
+            code_str = msg["code"]
+
             # 1. write the LLM-generated code to scratch dir with a unique name
+            file_id = str(uuid.uuid4())
+            file_path = self.code_dir / f"task_{level}_{task}_{file_id}.py"
+            async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+                await f.write(code_str)
+            
+            print(f"Wrote: {file_path}")
+
             # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
             #    (do not wait for this to finish, keep listening for tasks to start)
             # 3. read results back, then send them out to the disk_channel 

@@ -1,5 +1,17 @@
 ## Notes
 
+How to start the eval worker:
+
+```bash
+python scripts/start_eval_worker.py
+```
+
+How to use the new eval script for a single task
+
+```bash
+python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated_kernel_level_1_problem_1.py
+```
+
 Set up local environment for profiling:
 
 ```bash

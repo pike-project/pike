@@ -130,7 +130,7 @@ class Eval:
         self.results = {}
         self.runtime_results = []
 
-    def init_models(self):
+    def create_baseline_model(self):
         # best_dir = Path.resolve(curr_path / "../data/best")
 
         # target_dir = best_dir / f"level_{self.level}" / self.task_str
@@ -157,9 +157,6 @@ class Eval:
         # self.create_model("sakana-functional", functional_path)
         # self.create_model("sakana-cuda", functional_path, cuda_path=kernel_path)
         # self.create_model("metr", metr_path)
-
-        llm_path = Path.resolve(curr_path / f"../results/o3-test1/generated_kernel_level_1_problem_1.py")
-        self.create_model("llm", llm_path)
 
     def get_model_output(self, name):
         model_data = self.models[name]
@@ -365,17 +362,24 @@ class Eval:
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--level", type=int)
+    parser.add_argument("--task", type=int)
+    parser.add_argument("--code_path", type=str)
     parser.add_argument("--op_atol", type=float, default=1e-3)
     parser.add_argument("--op_rtol", type=float, default=1e-1)
     args = parser.parse_args()
 
-    level = 1
-    task = 1
+    level = args.level
+    task = args.task
+
+    # llm_path = Path.resolve(curr_path / f"../results/o3-test1/generated_kernel_level_1_problem_1.py")
+    llm_path = args.code_path
 
     ev = Eval(level, task, args.op_atol, args.op_rtol)
-    ev.init_models()
+    ev.create_baseline_model()
+    ev.create_model("llm", llm_path)
     ev.check_correctness()
-    ev.collect_model_results("baseline", with_compile=True)
+    # ev.collect_model_results("baseline", with_compile=True)
     ev.collect_model_results("llm", with_compile=False)
     # ev.save_results()
 

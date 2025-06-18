@@ -11,6 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.util.disk_channel import DiskChannel
 
+curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+
 # The eval worker waits for new kernel tasks to arrive, then compiles and runs them
 
 # it should make use of recv() and send(), possibly in some library since the sampler
@@ -50,6 +52,7 @@ class EvalWorker:
 
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
+        self.eval_script_path = curr_dir / "eval.py"
     
     async def run(self):
         print("Eval worker running...")
@@ -63,15 +66,29 @@ class EvalWorker:
             code_str = msg["code"]
 
             # 1. write the LLM-generated code to scratch dir with a unique name
-            file_id = str(uuid.uuid4())
-            file_path = self.code_dir / f"task_{level}_{task}_{file_id}.py"
-            async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+            code_file_id = str(uuid.uuid4())
+            code_path = self.code_dir / f"task_{level}_{task}_{code_file_id}.py"
+            async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
                 await f.write(code_str)
             
-            print(f"Wrote: {file_path}")
+            print(f"Wrote: {code_path}")
 
             # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
             #    (do not wait for this to finish, keep listening for tasks to start)
+
+            cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path)]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout, stderr = await process.communicate()
+
+            print(f"[stdout]\n{stdout.decode()}")
+            if stderr:
+                print(f"[stderr]\n{stderr.decode()}")
+
             # 3. read results back, then send them out to the disk_channel 
 
 async def main():

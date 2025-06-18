@@ -1,6 +1,7 @@
 import sys
 import os
 import asyncio
+import uuid
 from pathlib import Path
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,12 +15,15 @@ async def main():
     with open("results/o3-test1/generated_kernel_level_1_problem_1.py") as f:
         code = f.read()
 
-        disk_channel = DiskChannel(tx_dir, rx_dir)
-        await disk_channel.send({
-            "level": 1,
-            "task": 1,
-            "code": code
-        })
+    disk_channel = DiskChannel(tx_dir, rx_dir)
+    await disk_channel.send({
+        "id": str(uuid.uuid4()),
+        "level": 1,
+        "task": 1,
+        "code": code
+    })
+
+    print(await disk_channel.recv())
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -80,6 +80,7 @@ class EvalWorker:
             level = msg["level"]
             task = msg["task"]
             code_str = msg["code"]
+            eval_id = msg["id"]
 
             # 1. write the LLM-generated code to scratch dir with a unique name
             file_id = str(uuid.uuid4())
@@ -139,6 +140,7 @@ class EvalWorker:
             # 4. send results out to the disk_channel
 
             output_data = {
+                "id": eval_id,
                 "stdout": stdout,
                 "stderr": stderr,
                 "eval_results": eval_results

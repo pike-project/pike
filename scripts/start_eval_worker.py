@@ -53,6 +53,11 @@ class EvalWorker:
         self.eval_output_dir = self.scratch_dir / "eval_output"
         os.makedirs(self.eval_output_dir, exist_ok=True)
 
+        # remove any existing files in the eval output dir
+        for file in self.eval_output_dir.iterdir():
+            if file.is_file():
+                file.unlink()
+
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
         self.eval_script_path = curr_dir / "eval.py"

@@ -58,7 +58,7 @@ class GenerationConfig(Config):
         self.server_type = "deepseek"
         self.model_name = "deepseek-coder"
         self.max_tokens = 4096
-        self.temperature = 0.0
+        self.temperature = 0.8
         
         # Logging
 

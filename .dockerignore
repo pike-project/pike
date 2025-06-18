@@ -10,3 +10,4 @@ cache/*
 .env
 
 # results/*
+worker_io/

@@ -3,6 +3,7 @@ import asyncio
 from pathlib import Path
 import sys
 import os
+import argparse
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -37,8 +38,13 @@ from src.util.disk_channel import DiskChannel
 # to collect the baseline times for the current architecture
 
 async def main():
-    tx_dir = Path("/output")
-    rx_dir = Path("/input")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_dir", type=str, default="/input")
+    parser.add_argument("--output_dir", type=str, default="/output")
+    args = parser.parse_args()
+
+    tx_dir = Path(args.output_dir)
+    rx_dir = Path(args.input_dir)
 
     disk_channel = DiskChannel(tx_dir, rx_dir)
 

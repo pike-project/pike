@@ -3,7 +3,8 @@
 How to start the eval worker:
 
 ```bash
-python scripts/start_eval_worker.py
+mkdir -p worker_io/input && mkdir -p worker_io/output
+python scripts/start_eval_worker.py --input_dir worker_io/input --output_dir worker_io/output
 ```
 
 How to use the new eval script for a single task

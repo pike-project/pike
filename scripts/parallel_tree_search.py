@@ -7,14 +7,19 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import asyncio
+import uuid
 
 
 from datasets import load_dataset
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
 from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread
+
+from src.util.disk_channel import DiskChannel
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -67,13 +72,17 @@ class GenerationConfig(Config):
         self.data_dir = REQUIRED
         # Top Directory to Store Runs
         # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
+
+        # these are for the eval worker
+        self.worker_input_dir = REQUIRED
+        self.worker_output_dir = REQUIRED
     
         self.verbose = False
         self.store_type = "local" # TODO: add Database Integration
 
         # Future support
         # Migrate Monkeys code base to KernelBench
-        self.num_samples = 10 # for sampling multiple samples per problem
+        self.num_samples = 2 # for sampling multiple samples per problem
 
     def greedy(self):
         # For greedy decoding, epsecially baseline eval
@@ -87,6 +96,9 @@ class GenerationConfig(Config):
 class WorkArgs:
     problem_id: int # logically indexed
     sample_id: int
+
+def get_sample_dir(layer_dir: Path, level, problem_id, sample_id):
+    return layer_dir / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
 
 def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str) -> bool:
     # 1. Fetch Problem
@@ -106,8 +118,8 @@ def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, in
     # Extract problem number from problem name (e.g. "1" from "1_Square_matrix_multiplication_.py")
     problem_number = int(problem_name.split("_")[0])
     assert problem_number == work.problem_id, f"Problem number in filename ({problem_number}) does not match config problem_id ({config.problem_id})"
-    
-    sample_dir = layer_dir / f"level_{config.level}_problem_{work.problem_id}_sample_{work.sample_id}"
+
+    sample_dir = get_sample_dir(layer_dir, config.level, work.problem_id, work.sample_id)
     os.makedirs(sample_dir, exist_ok=True)
 
     # Construct Prompt   
@@ -136,7 +148,11 @@ def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, in
     with open(kernel_path, "w") as f:
         f.write(custom_cuda)
     
-    return custom_cuda
+    return {
+        "problem_id": work.problem_id,
+        "sample_id": work.sample_id,
+        "code": custom_cuda
+    }
     
 
 def generate_sample_launcher(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str):
@@ -195,6 +211,11 @@ class ParallelTreeSearch:
 
         self.problem_id_range = problem_id_range
 
+        tx_dir = Path(config.worker_input_dir)
+        rx_dir = Path(config.worker_output_dir)
+
+        self.disk_channel = DiskChannel(tx_dir, rx_dir)
+
     def generate_samples(self):
         problems_to_run = []
         for problem_id in range(self.problem_id_range.start, self.problem_id_range.stop + 1): # end index is inclusive
@@ -237,7 +258,41 @@ class ParallelTreeSearch:
         return generation_results
 
     async def eval_samples(self, samples):
-        print(f"Evaluating samples")
+        eval_id_to_sample = {}
+
+        for sample in samples:
+            eval_id = str(uuid.uuid4())
+            # sample_id = sample["sample_id"]
+            problem_id = sample["problem_id"]
+            code = sample["code"]
+
+            eval_id_to_sample[eval_id] = sample
+
+            await self.disk_channel.send({
+                "id": eval_id,
+                "level": self.config.level,
+                "task": problem_id,
+                "code": code
+            })
+
+        num_samples = len(samples)
+        for _ in range(num_samples):
+            # recv, then get the sample based on the eval_id
+            res = await self.disk_channel.recv()
+            eval_id = res["id"]
+            eval_results = res["results"]
+            sample = eval_id_to_sample[eval_id]
+            sample_id = sample["sample_id"]
+            problem_id = sample["problem_id"]
+
+            print(f"Received eval result for sample: {sample_id}")
+
+            sample_dir = get_sample_dir(self.layer_dir, self.config.level, sample["problem_id"], sample["sample_id"])
+            os.makedirs(sample_dir, exist_ok=True)
+
+            eval_results_path = sample_dir / "eval_results.json"
+            with open(eval_results_path, "w") as f:
+                json.dump(eval_results, f)
 
     def run(self):
         samples = self.generate_samples()

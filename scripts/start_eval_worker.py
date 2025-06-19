@@ -146,9 +146,11 @@ class EvalWorker:
 
             output_data = {
                 "id": eval_id,
-                "stdout": stdout,
-                "stderr": stderr,
-                "eval_results": eval_results
+                "results": {
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "eval_results": eval_results
+                }
             }
 
             await self.disk_channel.send(output_data)

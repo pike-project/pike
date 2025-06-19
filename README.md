@@ -16,7 +16,7 @@ python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data data
 How to run parallel tree search:
 
 ```bash
-python3 scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local level=3 server_type=cborg model_name=lbl/llama num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output 
+python3 scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=cborg model_name=lbl/llama num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task=1 num_samples=3
 ```
 
 How to use the new eval script for a single task

@@ -294,68 +294,61 @@ class Eval:
         plt.savefig(figs_dir / f"task_{self.task_id}.pdf")
 
     def create_model(self, name, file_path, input_changes=None, cuda_path=None, baseline=False):
-        try:
-            task = load_module_from_path(file_path)
+        task = load_module_from_path(file_path)
 
-            if baseline:
-                torch.manual_seed(self.input_seed)
+        if baseline:
+            torch.manual_seed(self.input_seed)
 
-                input_changes = self.input_changes
-                if input_changes is not None:
-                    for key, val in input_changes.items():
-                        setattr(task, key, val)
-                
-                # METR wackiness
-                inputs = []
-                if hasattr(task, "get_inputs"):
-                    inputs = task.get_inputs()
-
-                init_inputs = None
-                # METR wackiness
-                if hasattr(task, "get_init_inputs"):
-                    init_inputs = task.get_init_inputs()
-
-                self.inputs = inputs
-                self.init_inputs = init_inputs   
-
-            torch.manual_seed(self.weights_seed)
-
-            if hasattr(task, "ModelNew"):
-                model = task.ModelNew(*self.init_inputs)
-            else:
-                model = task.Model(*self.init_inputs)
-
-            model.eval()
-
-            has_module_fn = hasattr(task, "module_fn")
-            module_fn = None
-            if has_module_fn:
-                module_fn = task.module_fn
+            input_changes = self.input_changes
+            if input_changes is not None:
+                for key, val in input_changes.items():
+                    setattr(task, key, val)
             
-            if cuda_path is not None:
-                module_fn = load(
-                    name="forward",
-                    sources=[cuda_path],
-                    extra_cuda_cflags=["-O3", "--use_fast_math"],
-                    with_cuda=True,
-                    verbose=True,
-                ).forward
+            # METR wackiness
+            inputs = []
+            if hasattr(task, "get_inputs"):
+                inputs = task.get_inputs()
 
-            self.models[name] = {
-                "model": model,
-                "module_fn": module_fn,
-                "idx": self.curr_model_idx
-            }
+            init_inputs = None
+            # METR wackiness
+            if hasattr(task, "get_init_inputs"):
+                init_inputs = task.get_init_inputs()
 
-            self.results[name] = {
-                "loaded": True,
-            }
-        except Exception as e:
-            print(f"Loading model {name} failed for task {self.task_id}")
+            self.inputs = inputs
+            self.init_inputs = init_inputs   
 
-            self.results[name] = {
-                "loaded": False,
-            }
+        torch.manual_seed(self.weights_seed)
+
+        if hasattr(task, "ModelNew"):
+            model = task.ModelNew(*self.init_inputs)
+        else:
+            model = task.Model(*self.init_inputs)
+
+        model.eval()
+
+        has_module_fn = hasattr(task, "module_fn")
+        module_fn = None
+        if has_module_fn:
+            module_fn = task.module_fn
+        
+        if cuda_path is not None:
+            module_fn = load(
+                name="forward",
+                sources=[cuda_path],
+                extra_cuda_cflags=["-O3", "--use_fast_math"],
+                with_cuda=True,
+                verbose=True,
+            ).forward
+
+        self.models[name] = {
+            "model": model,
+            "module_fn": module_fn,
+            "idx": self.curr_model_idx
+        }
+
+        self.results[name] = {
+            "loaded": True,
+        }
 
         self.curr_model_idx += 1
 

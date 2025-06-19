@@ -46,11 +46,13 @@ class GenerationConfig(Config):
 
         # Problem Specification
         self.level = REQUIRED
+
+        self.task = REQUIRED
         
         # subset of problems to generate, otherwise generate on all problems in the level
         # both sides are inclusive
         # (None, None) -> full range
-        self.subset = (27, 27) # range of problems to generate samples for
+        # self.subset = (self.task, self.task) # range of problems to generate samples for
 
         timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         # self.run_name = REQUIRED # name of the run
@@ -82,7 +84,7 @@ class GenerationConfig(Config):
 
         # Future support
         # Migrate Monkeys code base to KernelBench
-        self.num_samples = 2 # for sampling multiple samples per problem
+        self.num_samples = REQUIRED # for sampling multiple samples per problem
 
     def greedy(self):
         # For greedy decoding, epsecially baseline eval
@@ -185,11 +187,12 @@ class ParallelTreeSearch:
 
         num_problems_in_level = len(curr_level_dataset)
 
-        if config.subset == (None, None):
-            problem_id_range = range(1, num_problems_in_level)
-        else:
-            assert config.subset[0] >= 1 and config.subset[1] <= num_problems_in_level, f"Subset range {config.subset} out of range for Level {config.level}"
-            problem_id_range = range(config.subset[0], config.subset[1])
+        problem_id_range = range(config.task, config.task + 1)
+        # if config.subset == (None, None):
+        #     problem_id_range = range(1, num_problems_in_level)
+        # else:
+        #     # assert config.subset[0] >= 1 and config.subset[1] <= num_problems_in_level, f"Subset range {config.subset} out of range for Level {config.level}"
+        #     problem_id_range = range(config.subset[0], config.subset[1])
 
         print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
 
@@ -218,7 +221,7 @@ class ParallelTreeSearch:
 
     def generate_samples(self):
         problems_to_run = []
-        for problem_id in range(self.problem_id_range.start, self.problem_id_range.stop + 1): # end index is inclusive
+        for problem_id in self.problem_id_range: # end index is inclusive
             # assume sample id is 0 for now
             for sample_id in range(self.config.num_samples):
                 problems_to_run.append(
@@ -275,12 +278,14 @@ class ParallelTreeSearch:
                 "code": code
             })
 
+        all_results = []
+
         num_samples = len(samples)
         for _ in range(num_samples):
             # recv, then get the sample based on the eval_id
             res = await self.disk_channel.recv()
             eval_id = res["id"]
-            eval_results = res["results"]
+            results = res["results"]
             sample = eval_id_to_sample[eval_id]
             sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
@@ -290,14 +295,50 @@ class ParallelTreeSearch:
             sample_dir = get_sample_dir(self.layer_dir, self.config.level, sample["problem_id"], sample["sample_id"])
             os.makedirs(sample_dir, exist_ok=True)
 
-            eval_results_path = sample_dir / "eval_results.json"
-            with open(eval_results_path, "w") as f:
-                json.dump(eval_results, f)
+            results_path = sample_dir / "eval_results.json"
+            with open(results_path, "w") as f:
+                json.dump(results, f)
+
+            results_data = {
+                "sample_id": sample_id,
+                "problem_id": problem_id,
+                "results": results,
+            }
+
+            all_results.append(results_data)
+        
+        all_results.sort(key=lambda x: x["sample_id"])
+
+        return all_results
+
+    def eval_and_process(self, samples):
+        all_results = asyncio.run(self.eval_samples(samples))
+
+        for results_data in all_results:
+            sample_id = results_data["sample_id"]
+            results = results_data["results"]
+
+            if "eval_results" in results:
+                eval_results = results["eval_results"]
+
+                if "runtime" in eval_results:
+                    runtime = eval_results["runtime"]
+                    print(f"Sample {sample_id} runtime: {runtime}")
+                elif "correct" in eval_results:
+                    correct = eval_results["correct"]
+                    max_diff = eval_results["max_diff"]
+                    print(f"Sample {sample_id} correct: {correct}, max_diff: {max_diff}")
+            
+            stderr = results["stderr"]
+            if stderr is not None:
+                print(f"\n------- Sample {sample_id} has stderr --------")
+                print(stderr)
+                print("------------------------------------------\n")
 
     def run(self):
         samples = self.generate_samples()
 
-        asyncio.run(self.eval_samples(samples))
+        self.eval_and_process(samples)
 
 
 @pydra.main(base=GenerationConfig)

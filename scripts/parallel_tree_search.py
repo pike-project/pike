@@ -311,21 +311,45 @@ class ParallelTreeSearch:
             sample_id = results_data["sample_id"]
             results = results_data["results"]
 
+            # TODO: should we be using sample_id to index here?
+            code = samples[sample_id]["code"]
+
+            stdout = results["stdout"]
+            stderr = results["stderr"]
+
             if "eval_results" in results:
                 eval_results = results["eval_results"]
 
                 if "runtime" in eval_results:
                     runtime = eval_results["runtime"]
                     print(f"Sample {sample_id} runtime: {runtime}")
+
+                    max_diff = eval_results["max_diff"]
+
+                    working_kernel_samples.append({
+                        "code": code,
+                        "runtime": runtime,
+                        "max_diff": max_diff
+                    })
                 elif "correct" in eval_results:
                     correct = eval_results["correct"]
                     max_diff = eval_results["max_diff"]
                     print(f"Sample {sample_id} correct: {correct}, max_diff: {max_diff}")
-            
-            stdout = results["stdout"]
-            stderr = results["stderr"]
 
-            # it may be useful to pass stdout back to the LLM even if the run was successful,
+                    if not correct:
+                        # TODO: more info would be useful here
+                        correctness_fails_samples.append({
+                            "code": code,
+                            "max_diff": max_diff
+                        })
+            else:
+                error_samples.append({
+                    "code": code,
+                    "stdout": stdout,
+                    "stderr": stderr
+                })
+
+            # TODO: it may be useful to pass stdout back to the LLM even if the run was successful,
             # in case the LLM wants to test something by printing, etc.
 
             print(f"\n----------- Sample {sample_id} stdout ------------")

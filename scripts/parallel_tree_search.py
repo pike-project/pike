@@ -141,12 +141,11 @@ class ParallelTreeSearch:
         # set up run directory
         run_dir = runs_dir / config.run_name
         os.makedirs(run_dir, exist_ok=True)
+        self.run_dir = run_dir
+
         pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
 
-        step_dir = run_dir / "step_0"
-        os.makedirs(step_dir, exist_ok=True)
-
-        self.step_dir = step_dir
+        self.curr_step = 0
 
         assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
 
@@ -195,6 +194,59 @@ class ParallelTreeSearch:
             inference_server=self.inference_server
         )
 
+        return res
+
+    def get_step_dir(self):
+        step_dir = self.run_dir / f"step_{self.curr_step}"
+        return step_dir
+
+    def get_sample_dir(self, sample_id):
+        level = self.config.level
+        problem_id = self.config.task
+
+        sample_dir = self.get_step_dir() / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
+        os.makedirs(sample_dir, exist_ok=True)
+
+        return sample_dir
+
+    def write_sample_data(self, sample_id, filename, data):
+        file_path = self.get_sample_dir(sample_id) / filename
+        with open(file_path, "w") as f:
+            f.write(data)
+
+    def query_and_save(self, queries):
+        for sample_id, query in enumerate(queries):
+            self.write_sample_data(sample_id, "prompt.txt", query)
+
+        query_results = self.query_llm_parallel(queries)
+
+        # important: this assumes results arrive back in the order they were sent
+        for sample_id, query_result in enumerate(query_results):
+            self.write_sample_data(sample_id, "query_result.txt", query_result)
+        
+        return query_results
+    
+    def run_step(self, queries, extract_code=True):
+        problem_id = self.config.task
+        query_results = self.query_and_save(queries)
+
+        res = []
+        if extract_code:
+            for sample_id, query_result in enumerate(query_results):
+                custom_kernel = extract_first_code(query_result, ["python", "cpp"])
+                # check LLM is able to generate custom CUDA code
+                if custom_kernel is not None:
+                    self.write_sample_data(sample_id, "kernel.py", custom_kernel)
+                
+                    res.append({
+                        "sample_id": sample_id,
+                        "problem_id": problem_id,
+                        "code": custom_kernel,
+                    })
+        else:
+            res = query_results
+
+        self.curr_step += 1
         return res
 
     async def eval_samples(self, samples):
@@ -293,59 +345,21 @@ class ParallelTreeSearch:
 
         return res
 
-    def gen_samples_naive(self):
-        step_dir = self.step_dir
-        config = self.config
-        level = self.config.level
-        problem_id = self.config.task
-
+    def gen_initial_samples(self):
         problem_code = self.get_problem_code()
 
         queries = []
 
         for sample_id in range(self.config.num_samples):
-            sample_dir = get_sample_dir(step_dir, level, problem_id, sample_id)
-            os.makedirs(sample_dir, exist_ok=True)
-
-            # Construct Prompt
             custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(problem_code)
-
-            prompt_path = sample_dir / "prompt.txt"
-            with open(prompt_path, "w") as f:
-                f.write(custom_cuda_prompt)
-            
             queries.append(custom_cuda_prompt)
 
-        query_results = self.query_llm_parallel(queries)
-
-        res = []
-
-        # important: this assumes results arrive back in the order they were sent
-        for sample_id, query_result in enumerate(query_results):
-            sample_dir = get_sample_dir(step_dir, level, problem_id, sample_id)
-
-            raw_llm_output_path = sample_dir / "raw_llm_output.txt"
-            with open(raw_llm_output_path, "w") as f:
-                f.write(query_result)
-
-            custom_cuda = extract_first_code(query_result, ["python", "cpp"])
-            # check LLM is able to generate custom CUDA code
-            if custom_cuda is not None:
-                # Store to local file
-                kernel_path = sample_dir / "kernel.py"
-                with open(kernel_path, "w") as f:
-                    f.write(custom_cuda)
-            
-                res.append({
-                    "sample_id": sample_id,
-                    "problem_id": problem_id,
-                    "code": custom_cuda,
-                })
+        res = self.run_step(queries, extract_code=True)
 
         return res
 
     def run(self):
-        samples = self.gen_samples_naive()
+        samples = self.gen_initial_samples()
         self.eval_and_process(samples)
 
 

@@ -416,6 +416,8 @@ class ParallelTreeSearch:
             prompt_path = sample_dir / "prompt.txt"
             with open(prompt_path, "w") as f:
                 f.write(custom_cuda_prompt)
+            
+            queries.append(custom_cuda_prompt)
 
         query_results = self.query_llm_parallel(queries)
 
@@ -437,15 +439,21 @@ class ParallelTreeSearch:
                 with open(kernel_path, "w") as f:
                     f.write(custom_cuda)
             
-                res.append(custom_cuda)
+                res.append({
+                    "sample_id": sample_id,
+                    "problem_id": problem_id,
+                    "code": custom_cuda,
+                })
 
         return res
 
     def run(self):
-        samples = self.generate_samples()
-        self.eval_and_process(samples)
+        # samples = self.generate_samples()
+        # self.eval_and_process(samples)
         # res = self.run_init_queries(3)
         # print(res)
+        samples = self.collect_samples_naive()
+        self.eval_and_process(samples)
 
 
 @pydra.main(base=GenerationConfig)

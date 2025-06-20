@@ -396,7 +396,7 @@ class ParallelTreeSearch:
 
         return res
 
-    def collect_samples_naive(self):
+    def gen_samples_naive(self):
         layer_dir = self.layer_dir
         config = self.config
         level = self.config.level
@@ -452,7 +452,7 @@ class ParallelTreeSearch:
         # self.eval_and_process(samples)
         # res = self.run_init_queries(3)
         # print(res)
-        samples = self.collect_samples_naive()
+        samples = self.gen_samples_naive()
         self.eval_and_process(samples)
 
 

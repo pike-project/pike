@@ -332,7 +332,8 @@ class ParallelTreeSearch:
             stdout = results["stdout"]
             stderr = results["stderr"]
 
-            # it may be useful to pass stdout
+            # it may be useful to pass stdout back to the LLM even if the run was successful,
+            # in case the LLM wants to test something by printing, etc.
 
             print(f"\n----------- Sample {sample_id} stdout ------------")
             print(stdout)

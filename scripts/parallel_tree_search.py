@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
-from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template
+from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template, prompt_summarize_error, prompt_fix_compile
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 from src.util.disk_channel import DiskChannel
@@ -246,7 +246,6 @@ class ParallelTreeSearch:
         else:
             res = query_results
 
-        self.curr_step += 1
         return res
 
     async def eval_samples(self, samples):
@@ -281,12 +280,7 @@ class ParallelTreeSearch:
 
             print(f"Received eval result for sample: {sample_id}")
 
-            sample_dir = get_sample_dir(self.step_dir, self.config.level, sample["problem_id"], sample["sample_id"])
-            os.makedirs(sample_dir, exist_ok=True)
-
-            results_path = sample_dir / "eval_results.json"
-            with open(results_path, "w") as f:
-                json.dump(results, f)
+            self.write_sample_data(sample_id, "eval_results.json", json.dumps(results))
 
             results_data = {
                 "sample_id": sample_id,
@@ -317,6 +311,8 @@ class ParallelTreeSearch:
             stdout = results["stdout"]
             stderr = results["stderr"]
 
+            model_loaded = True
+
             if "eval_results" in results:
                 eval_results = results["eval_results"]
 
@@ -342,7 +338,12 @@ class ParallelTreeSearch:
                             "code": code,
                             "max_diff": max_diff
                         })
+                else:
+                    model_loaded = False
             else:
+                model_loaded = False
+
+            if not model_loaded:
                 error_samples.append({
                     "code": code,
                     "stdout": stdout,
@@ -358,6 +359,8 @@ class ParallelTreeSearch:
             print(stderr)
             print("------------------------------------------------\n")
 
+        self.curr_step += 1
+
         return (working_kernel_samples, correctness_fails_samples, error_samples)
 
     # TODO: this should save working solutions to our "solutions database"
@@ -367,12 +370,24 @@ class ParallelTreeSearch:
 
     # returns the prompts to make in the next error/correctness-fixing step, if any are needed
     # (if no error/correctness-fixing is needed, simply proceed to the next code gen step)
-    def get_correction_queries(self, eval_data):
+    def get_correction_queries_and_bad_solutions(self, eval_data):
         (_, correctness_fails_samples, error_samples) = eval_data
 
         queries = []
+        bad_solutions = []
 
-        return queries
+        # TODO
+        for sample in correctness_fails_samples:
+            pass
+
+        for sample in error_samples:
+            code = sample["code"]
+            stdout = sample["stdout"]
+            stderr = sample["stderr"]
+            queries.append(prompt_summarize_error(code, stdout, stderr))
+            bad_solutions.append(code)
+
+        return queries, bad_solutions
 
     # this is an example of the first round of querying the LLM, before there is any prior output
     def run_init_queries(self, num_queries):
@@ -406,12 +421,22 @@ class ParallelTreeSearch:
         return res
 
     def gen_fix_messages(self, eval_data):
-        correction_queries = self.get_correction_queries(eval_data)
+        correction_queries, bad_solutions = self.get_correction_queries_and_bad_solutions(eval_data)
         res = self.run_step(correction_queries, extract_code=False)
 
-        # TODO: craft a message which will prompt the LLM to fix the broken solution in the next step
+        # craft a message which will prompt the LLM to fix the broken solution in the next step
+        problem_code = self.get_problem_code()
+        queries = []
+        for error_summary, solution_to_fix in zip(res, bad_solutions):
+            if error_summary is None:
+                continue
 
-        return None
+            prompt = prompt_fix_compile(problem_code, solution_to_fix, error_summary)
+            queries.append(prompt)
+
+        self.curr_step += 1
+
+        return queries
 
     def run(self):
         initial_queries = self.get_initial_queries()

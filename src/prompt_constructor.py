@@ -459,10 +459,28 @@ Here are some best practices for writing CUDA kernels on GPU: \n\n"""
     return Nonoe
 
 
+def prompt_summarize_error(custom_cuda, stdout, stderr):
+    prompt = f"""
+The following code failed to compile:
+```
+{custom_cuda}
+```
+Here's the stdout:
+```
+{stdout}
+```
+Here's the stderr:
+```
+{stderr}
+```
+    
+Please give a concise description of the error, indicating exactly what the issue is to someone who has not seen the stdout/stderr output.
+You do not need to explain how to fix the issue, you must only relay the information that is relevant to solving the issue
+    """
+    return prompt
 
 
-
-def prompt_fix_compile(ref_arch_src, custom_cuda, metadata):
+def prompt_fix_compile(ref_arch_src, custom_cuda, summary):
     prompt = PROBLEM_STATEMENT
     prompt += f"""
     With the following architecture:
@@ -473,9 +491,9 @@ def prompt_fix_compile(ref_arch_src, custom_cuda, metadata):
     ```
     {custom_cuda}
     ```
-    Here's the metadata of the compilation error:
+    Here's the summary of the compilation error:
     ```
-    {metadata}
+    {summary}
     ```
     
     Please fix the compilation error in the new model code. Please output the corrected code in codeblocks.

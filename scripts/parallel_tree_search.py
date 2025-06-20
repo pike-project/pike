@@ -329,11 +329,16 @@ class ParallelTreeSearch:
                     max_diff = eval_results["max_diff"]
                     print(f"Sample {sample_id} correct: {correct}, max_diff: {max_diff}")
             
+            stdout = results["stdout"]
             stderr = results["stderr"]
-            if stderr is not None:
-                print(f"\n------- Sample {sample_id} has stderr --------")
-                print(stderr)
-                print("------------------------------------------\n")
+
+            # it may be useful to pass stdout
+
+            print(f"\n----------- Sample {sample_id} stdout ------------")
+            print(stdout)
+            print(f"----------- Sample {sample_id} stderr ------------")
+            print(stderr)
+            print("------------------------------------------------\n")
 
     def run(self):
         samples = self.generate_samples()

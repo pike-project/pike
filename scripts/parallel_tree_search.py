@@ -99,8 +99,8 @@ class WorkArgs:
     problem_id: int # logically indexed
     sample_id: int
 
-def get_sample_dir(layer_dir: Path, level, problem_id, sample_id):
-    return layer_dir / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
+def get_sample_dir(step_dir: Path, level, problem_id, sample_id):
+    return step_dir / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
 
 def query_llm(query: str, inference_server: callable):
     try:
@@ -143,10 +143,10 @@ class ParallelTreeSearch:
         os.makedirs(run_dir, exist_ok=True)
         pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
 
-        layer_dir = run_dir / "layer_0"
-        os.makedirs(layer_dir, exist_ok=True)
+        step_dir = run_dir / "step_0"
+        os.makedirs(step_dir, exist_ok=True)
 
-        self.layer_dir = layer_dir
+        self.step_dir = step_dir
 
         assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
 
@@ -229,7 +229,7 @@ class ParallelTreeSearch:
 
             print(f"Received eval result for sample: {sample_id}")
 
-            sample_dir = get_sample_dir(self.layer_dir, self.config.level, sample["problem_id"], sample["sample_id"])
+            sample_dir = get_sample_dir(self.step_dir, self.config.level, sample["problem_id"], sample["sample_id"])
             os.makedirs(sample_dir, exist_ok=True)
 
             results_path = sample_dir / "eval_results.json"
@@ -294,7 +294,7 @@ class ParallelTreeSearch:
         return res
 
     def gen_samples_naive(self):
-        layer_dir = self.layer_dir
+        step_dir = self.step_dir
         config = self.config
         level = self.config.level
         problem_id = self.config.task
@@ -304,7 +304,7 @@ class ParallelTreeSearch:
         queries = []
 
         for sample_id in range(self.config.num_samples):
-            sample_dir = get_sample_dir(layer_dir, level, problem_id, sample_id)
+            sample_dir = get_sample_dir(step_dir, level, problem_id, sample_id)
             os.makedirs(sample_dir, exist_ok=True)
 
             # Construct Prompt
@@ -322,7 +322,7 @@ class ParallelTreeSearch:
 
         # important: this assumes results arrive back in the order they were sent
         for sample_id, query_result in enumerate(query_results):
-            sample_dir = get_sample_dir(layer_dir, level, problem_id, sample_id)
+            sample_dir = get_sample_dir(step_dir, level, problem_id, sample_id)
 
             raw_llm_output_path = sample_dir / "raw_llm_output.txt"
             with open(raw_llm_output_path, "w") as f:

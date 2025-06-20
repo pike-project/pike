@@ -132,7 +132,7 @@ def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, in
     sample_dir = get_sample_dir(layer_dir, config.level, work.problem_id, work.sample_id)
     os.makedirs(sample_dir, exist_ok=True)
 
-    # Construct Prompt   
+    # Construct Prompt
     custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(ref_arch_src)
 
     prompt_path = sample_dir / "prompt.txt"
@@ -393,6 +393,51 @@ class ParallelTreeSearch:
             queries.append(custom_cuda_prompt)
 
         res = self.query_llm_parallel(queries)
+
+        return res
+
+    def collect_samples_naive(self):
+        layer_dir = self.layer_dir
+        config = self.config
+        level = self.config.level
+        problem_id = self.config.task
+
+        problem_code = self.get_problem_code()
+
+        queries = []
+
+        for sample_id in range(self.config.num_samples):
+            sample_dir = get_sample_dir(layer_dir, level, problem_id, sample_id)
+            os.makedirs(sample_dir, exist_ok=True)
+
+            # Construct Prompt
+            custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(problem_code)
+
+            prompt_path = sample_dir / "prompt.txt"
+            with open(prompt_path, "w") as f:
+                f.write(custom_cuda_prompt)
+
+        query_results = self.query_llm_parallel(queries)
+
+        res = []
+
+        # important: this assumes results arrive back in the order they were sent
+        for sample_id, query_result in enumerate(query_results):
+            sample_dir = get_sample_dir(layer_dir, level, problem_id, sample_id)
+
+            raw_llm_output_path = sample_dir / "raw_llm_output.txt"
+            with open(raw_llm_output_path, "w") as f:
+                f.write(query_result)
+
+            custom_cuda = extract_first_code(query_result, ["python", "cpp"])
+            # check LLM is able to generate custom CUDA code
+            if custom_cuda is not None:
+                # Store to local file
+                kernel_path = sample_dir / "kernel.py"
+                with open(kernel_path, "w") as f:
+                    f.write(custom_cuda)
+            
+                res.append(custom_cuda)
 
         return res
 

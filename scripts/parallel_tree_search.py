@@ -102,8 +102,16 @@ class WorkArgs:
 def get_sample_dir(layer_dir: Path, level, problem_id, sample_id):
     return layer_dir / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
 
+def query_llm(query: str, inference_server: callable):
+    try:
+        raw_llm_output = inference_server(query)
+        return raw_llm_output
+    except Exception as e:
+        print(f"Error generating sample: {e}")
+        return None
+
 def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str) -> bool:
-    # 1. Fetch Problem
+    # Fetch problem source code
     if config.dataset_src == "huggingface":
         curr_problem_row = dataset.filter(lambda x: x["problem_id"] == work.problem_id, desc=None)
 
@@ -185,7 +193,7 @@ class ParallelTreeSearch:
 
         self.curr_level_dataset = curr_level_dataset
 
-        num_problems_in_level = len(curr_level_dataset)
+        # num_problems_in_level = len(curr_level_dataset)
 
         problem_id_range = range(config.task, config.task + 1)
         # if config.subset == (None, None):
@@ -219,6 +227,46 @@ class ParallelTreeSearch:
 
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
+        # Create inference function with config parameters
+        # We provide some presets in utils but you can also pass in your own, see query_server for more details
+        self.inference_server = create_inference_server_from_presets(server_type=self.config.server_type,
+                                                                model_name=self.config.model_name,
+                                                                temperature=self.config.temperature,
+                                                                max_tokens=self.config.max_tokens,
+                                                                verbose=self.config.verbose)
+
+    def get_problem_code(self):
+        dataset = self.curr_level_dataset
+        problem_id = self.config.task
+
+        # Fetch problem source code
+        if self.config.dataset_src == "huggingface":
+            curr_problem_row = dataset.filter(lambda x: x["problem_id"] == problem_id, desc=None)
+
+            ref_arch_src = curr_problem_row["code"][0]
+            problem_name = curr_problem_row["name"][0]
+
+        elif self.config.dataset_src == "local":
+            problem_idx_in_dataset = problem_id - 1 # due to dataset list being 0-indexed locally
+            ref_arch_path = dataset[problem_idx_in_dataset]
+
+            problem_name = os.path.basename(ref_arch_path)
+            ref_arch_src = read_file(ref_arch_path)
+
+        return ref_arch_src
+
+    def query_llm_parallel(self, queries):
+        res = maybe_multithread(
+            query_llm, 
+            queries,
+            self.config.num_workers, 
+            time_interval=self.config.api_query_interval, 
+            # extra args
+            inference_server=self.inference_server
+        )
+
+        return res
+
     def generate_samples(self):
         problems_to_run = []
         for problem_id in self.problem_id_range: # end index is inclusive
@@ -233,14 +281,6 @@ class ParallelTreeSearch:
 
         self.problems_to_run = problems_to_run
 
-        # Create inference function with config parameters
-        # We provide some presets in utils but you can also pass in your own, see query_server for more details
-        inference_server = create_inference_server_from_presets(server_type=self.config.server_type,
-                                                            model_name=self.config.model_name,
-                                                            temperature=self.config.temperature,
-                                                            max_tokens=self.config.max_tokens,
-                                                            verbose=self.config.verbose)
-
         # Launch workers
         generation_results = maybe_multithread(generate_sample_launcher, 
                         self.problems_to_run, 
@@ -249,7 +289,7 @@ class ParallelTreeSearch:
                         # extra args
                         config=self.config, 
                         dataset=self.curr_level_dataset, 
-                        inference_server=inference_server,
+                        inference_server=self.inference_server,
                         layer_dir=self.layer_dir
                         )
 
@@ -341,10 +381,26 @@ class ParallelTreeSearch:
             print(stderr)
             print("------------------------------------------------\n")
 
+    # this is the first round of querying the LLM, before there is any prior output
+    def run_init_queries(self, num_queries):
+        problem_code = self.get_problem_code()
+
+        custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(problem_code)
+
+        queries = []
+
+        for _ in range(num_queries):
+            queries.append(custom_cuda_prompt)
+
+        res = self.query_llm_parallel(queries)
+
+        return res
+
     def run(self):
         samples = self.generate_samples()
-
         self.eval_and_process(samples)
+        # res = self.run_init_queries(3)
+        # print(res)
 
 
 @pydra.main(base=GenerationConfig)

@@ -110,76 +110,6 @@ def query_llm(query: str, inference_server: callable):
         print(f"Error generating sample: {e}")
         return None
 
-def generate_sample_single(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str) -> bool:
-    # Fetch problem source code
-    if config.dataset_src == "huggingface":
-        curr_problem_row = dataset.filter(lambda x: x["problem_id"] == work.problem_id, desc=None)
-
-        ref_arch_src = curr_problem_row["code"][0]
-        problem_name = curr_problem_row["name"][0]
-
-    elif config.dataset_src == "local":
-        problem_idx_in_dataset = work.problem_id - 1 # due to dataset list being 0-indexed locally
-        ref_arch_path = dataset[problem_idx_in_dataset]
-
-        problem_name = os.path.basename(ref_arch_path)
-        ref_arch_src = read_file(ref_arch_path)
-
-    # Extract problem number from problem name (e.g. "1" from "1_Square_matrix_multiplication_.py")
-    problem_number = int(problem_name.split("_")[0])
-    assert problem_number == work.problem_id, f"Problem number in filename ({problem_number}) does not match config problem_id ({config.problem_id})"
-
-    sample_dir = get_sample_dir(layer_dir, config.level, work.problem_id, work.sample_id)
-    os.makedirs(sample_dir, exist_ok=True)
-
-    # Construct Prompt
-    custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(ref_arch_src)
-
-    prompt_path = sample_dir / "prompt.txt"
-    with open(prompt_path, "w") as f:
-        f.write(custom_cuda_prompt)
-
-    # Query server with constructed prompt
-    raw_llm_output = inference_server(custom_cuda_prompt)
-
-    raw_llm_output_path = sample_dir / "raw_llm_output.txt"
-    with open(raw_llm_output_path, "w") as f:
-        f.write(raw_llm_output)
-
-    custom_cuda = extract_first_code(raw_llm_output, ["python", "cpp"])
-    # check LLM is able to generate custom CUDA code
-    assert custom_cuda is not None, "Custom CUDA code generation failed"
-
-    if config.verbose:
-        print(f"Generated sample {work.sample_id} for problem {problem_number}: {problem_name}")
-
-    # Store to local file
-    kernel_path = sample_dir / "kernel.py"
-    with open(kernel_path, "w") as f:
-        f.write(custom_cuda)
-    
-    return {
-        "problem_id": work.problem_id,
-        "sample_id": work.sample_id,
-        "code": custom_cuda
-    }
-    
-
-def generate_sample_launcher(work: WorkArgs, config: GenerationConfig, dataset, inference_server: callable, layer_dir: str):
-    try:
-        return generate_sample_single(work, config, dataset, inference_server, layer_dir)
-    except Exception as e:
-        print(f"Error generating sample {work.problem_id} {work.sample_id}: {e}")
-        return None
-
-
-def check_kernel_exists(run_dir: str, level: int, problem_id: int, sample_id: int) -> bool:
-    """
-    Check if a kernel for a given problem and sample ID already exists in the run directory
-    """
-    kernel_path = os.path.join(run_dir, f"level_{level}_problem_{problem_id}_sample_{sample_id}_kernel.py")
-    return os.path.exists(kernel_path)
-
 class ParallelTreeSearch:
     def __init__(self, config):
         self.config = config
@@ -267,39 +197,6 @@ class ParallelTreeSearch:
 
         return res
 
-    def generate_samples(self):
-        problems_to_run = []
-        for problem_id in self.problem_id_range: # end index is inclusive
-            # assume sample id is 0 for now
-            for sample_id in range(self.config.num_samples):
-                problems_to_run.append(
-                    WorkArgs(
-                        problem_id=int(problem_id),
-                        sample_id=sample_id
-                    )
-                )
-
-        self.problems_to_run = problems_to_run
-
-        # Launch workers
-        generation_results = maybe_multithread(generate_sample_launcher, 
-                        self.problems_to_run, 
-                        self.config.num_workers, 
-                        time_interval=self.config.api_query_interval, 
-                        # extra args
-                        config=self.config, 
-                        dataset=self.curr_level_dataset, 
-                        inference_server=self.inference_server,
-                        layer_dir=self.layer_dir
-                        )
-
-        num_generated_samples = len(generation_results)
-        total_problems = len(problems_to_run)
-        num_failed_problems = total_problems - num_generated_samples
-        print(f"Generated {num_generated_samples} samples for total {total_problems} problems, Please retry for the {num_failed_problems} failed problems.")
-
-        return generation_results
-
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
 
@@ -381,7 +278,7 @@ class ParallelTreeSearch:
             print(stderr)
             print("------------------------------------------------\n")
 
-    # this is the first round of querying the LLM, before there is any prior output
+    # this is an example of the first round of querying the LLM, before there is any prior output
     def run_init_queries(self, num_queries):
         problem_code = self.get_problem_code()
 
@@ -448,10 +345,6 @@ class ParallelTreeSearch:
         return res
 
     def run(self):
-        # samples = self.generate_samples()
-        # self.eval_and_process(samples)
-        # res = self.run_init_queries(3)
-        # print(res)
         samples = self.gen_samples_naive()
         self.eval_and_process(samples)
 

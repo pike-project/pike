@@ -300,8 +300,12 @@ class ParallelTreeSearch:
 
         return all_results
 
-    def eval_and_process(self, samples):
+    def run_eval(self, samples):
         all_results = asyncio.run(self.eval_samples(samples))
+
+        working_kernel_samples = []
+        correctness_fails_samples = []
+        error_samples = []
 
         for results_data in all_results:
             sample_id = results_data["sample_id"]
@@ -330,6 +334,22 @@ class ParallelTreeSearch:
             print(stderr)
             print("------------------------------------------------\n")
 
+        return (working_kernel_samples, correctness_fails_samples, error_samples)
+
+    # TODO: this should save working solutions to our "solutions database"
+    def save_working_solutions(self, eval_data):
+        (working_kernel_samples, _, _) = eval_data
+        pass
+
+    # returns the prompts to make in the next error/correctness-fixing step, if any are needed
+    # (if no error/correctness-fixing is needed, simply proceed to the next code gen step)
+    def get_correction_queries(self, eval_data):
+        (_, correctness_fails_samples, error_samples) = eval_data
+
+        queries = []
+
+        return queries
+
     # this is an example of the first round of querying the LLM, before there is any prior output
     def run_init_queries(self, num_queries):
         problem_code = self.get_problem_code()
@@ -345,7 +365,8 @@ class ParallelTreeSearch:
 
         return res
 
-    def gen_initial_samples(self):
+    # TODO: the initial queries are currently all the same, we should vary them to diversify the initial set of solutions
+    def get_initial_queries(self):
         problem_code = self.get_problem_code()
 
         queries = []
@@ -353,15 +374,31 @@ class ParallelTreeSearch:
         for sample_id in range(self.config.num_samples):
             custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(problem_code)
             queries.append(custom_cuda_prompt)
+        
+        return queries
 
+    def gen_samples(self, queries=None):
         res = self.run_step(queries, extract_code=True)
-
         return res
 
-    def run(self):
-        samples = self.gen_initial_samples()
-        self.eval_and_process(samples)
+    def gen_fix_messages(self, eval_data):
+        correction_queries = self.get_correction_queries(eval_data)
+        res = self.run_step(correction_queries, extract_code=False)
 
+        # TODO: craft a message which will prompt the LLM to fix the broken solution in the next step
+
+        return None
+
+    def run(self):
+        initial_queries = self.get_initial_queries()
+        samples = self.gen_samples(initial_queries)
+        eval_data = self.run_eval(samples)
+        self.save_working_solutions(eval_data)
+
+        fix_queries = self.gen_fix_messages(eval_data)
+        new_samples = self.gen_samples(fix_queries)
+        new_eval_data = self.run_eval(new_samples)
+        self.save_working_solutions(new_eval_data)
 
 @pydra.main(base=GenerationConfig)
 def main(config: GenerationConfig):

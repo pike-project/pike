@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
 from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template
-from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread
+from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 from src.util.disk_channel import DiskChannel
 
@@ -256,7 +256,7 @@ class ParallelTreeSearch:
         return ref_arch_src
 
     def query_llm_parallel(self, queries):
-        res = maybe_multithread(
+        res = maybe_multithread_ordered(
             query_llm, 
             queries,
             self.config.num_workers, 

@@ -574,6 +574,59 @@ def extract_code_blocks(text, code_language_types: list[str]) -> str:
 # Scale up experiments in parallel
 ################################################################################
 
+import concurrent.futures
+import time
+from tqdm import tqdm
+
+def maybe_multithread_ordered(func, instances, num_workers, time_interval=0.0, *shared_args, **shared_kwargs):
+    """
+    Multithreaded execution of func, with optional time interval between submissions.
+    Results are guaranteed to be in the same order as the input `instances`.
+    Ideal for querying LLM APIs, does not provide process isolation.
+    """
+    output_data = []
+    if num_workers not in [1, None]:
+        with tqdm(total=len(instances), smoothing=0, desc="Processing") as pbar:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+
+                # Submit tasks one at a time with a delay between them.
+                # The 'futures' list will maintain the submission order.
+                futures = []
+                for instance in instances:
+                    futures.append(
+                        executor.submit(
+                            func,
+                            instance,
+                            *shared_args,
+                            **shared_kwargs
+                        )
+                    )
+                    if time_interval > 0:
+                        time.sleep(time_interval)
+
+                # Retrieve results in the order they were submitted.
+                # .result() will block until the specific future is complete.
+                for future in futures:
+                    try:
+                        result = future.result()
+                        output_data.append(result)
+                    except Exception as e:
+                        print(f"A task generated an exception: {e}")
+                        output_data.append(None)
+                    finally:
+                        pbar.update(1)
+    else:
+        # Sequential execution already preserves order.
+        for instance in tqdm(instances, desc="Processing sequentially"):
+            try:
+                output = func(instance, *shared_args, **shared_kwargs)
+                output_data.append(output)
+            except Exception as e:
+                print(f"A task generated an exception: {e}")
+                output_data.append(None)
+
+    return output_data
+
 def maybe_multithread(func, instances, num_workers, time_interval=0.0, *shared_args, **shared_kwargs):
     """
     Multithreaded execution of func, with optional time interval between queries

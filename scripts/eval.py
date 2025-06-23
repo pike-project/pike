@@ -90,12 +90,12 @@ def time_model(model, module_fn, inputs, device, compile, name):
 
 
 class Eval:
-    def __init__(self, level, task, op_atol, op_rtol):
+    def __init__(self, level, task, op_atol, op_rtol, gpu_locks_dir=None):
         self.level = level
         self.task = task
-
         self.op_atol = op_atol
         self.op_rtol = op_rtol
+        self.gpu_locks_dir = gpu_locks_dir
 
         self.task_id = f"{self.level}_{self.task}"
 
@@ -359,6 +359,7 @@ def main():
     parser.add_argument("--task", type=int)
     parser.add_argument("--code_path", type=str)
     parser.add_argument("--output_path", type=str, required=False)
+    parser.add_argument("--gpu_locks_dir", type=str, required=False)
     parser.add_argument("--op_atol", type=float, default=1e-3)
     parser.add_argument("--op_rtol", type=float, default=1e-1)
     args = parser.parse_args()
@@ -372,8 +373,12 @@ def main():
     output_path = None
     if args.output_path is not None:
         output_path = Path(args.output_path)
+    
+    gpu_locks_dir = None
+    if args.gpu_locks_dir is not None:
+        gpu_locks_dir = Path(args.gpu_locks_dir)
 
-    ev = Eval(level, task, args.op_atol, args.op_rtol)
+    ev = Eval(level, task, args.op_atol, args.op_rtol, gpu_locks_dir=gpu_locks_dir)
     ev.create_baseline_model()
     ev.create_model("llm", llm_path)
     ev.check_correctness()

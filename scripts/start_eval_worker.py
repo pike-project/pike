@@ -61,6 +61,9 @@ class EvalWorker:
         self.eval_output_dir = self.scratch_dir / "eval_output"
         os.makedirs(self.eval_output_dir, exist_ok=True)
 
+        self.gpu_locks_dir = self.scratch_dir / "gpu_locks"
+        os.makedirs(self.gpu_locks_dir, exist_ok=True)
+
         # remove any existing files in the eval output dir
         for file in self.eval_output_dir.iterdir():
             if file.is_file():
@@ -70,92 +73,96 @@ class EvalWorker:
 
         self.eval_script_path = curr_dir / "eval.py"
     
+    async def handle_msg(self, msg):
+        level = msg["level"]
+        task = msg["task"]
+        code_str = msg["code"]
+        eval_id = msg["id"]
+
+        # 1. write the LLM-generated code to scratch dir with a unique name
+        file_id = str(uuid.uuid4())
+        code_path = self.code_dir / f"task_{level}_{task}_{file_id}.py"
+        async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
+            await f.write(code_str)
+        
+        # print(f"Wrote: {code_path}")
+        print(f"Received task: {eval_id}")
+
+        eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{file_id}.json"
+
+        # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
+        #    (do not wait for this to finish, keep listening for tasks to start)
+
+        env = os.environ.copy()
+        env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
+
+        cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env
+        )
+
+        stdout_raw, stderr_raw = await process.communicate()
+
+        stdout = stdout_raw.decode()
+        stderr = None
+
+        # print(f"[stdout]\n{stdout}")
+        if stderr_raw:
+            stderr = stderr_raw.decode()
+            # print(f"[stderr]\n{stderr}")
+
+        # 3. read results back
+
+        eval_results = {}
+
+        # TODO: the file may not exist if the eval.py script failed, so maybe we should check if the file exists
+        # first to handle things more gracefully
+        try:
+            async with aiofiles.open(eval_output_path, encoding='utf-8') as f:
+                content = await f.read()
+            data = json.loads(content)
+
+            model_key = "llm"
+            if model_key in data:
+                model_res = data[model_key]
+
+                eval_results["loaded"] = assert_type_and_unpack(model_res, "loaded", bool)
+                eval_results["correct"] = assert_type_and_unpack(model_res, "correct", bool)
+                eval_results["max_diff"] = assert_type_and_unpack(model_res, "max_diff", float)
+
+                if "runtimes" in model_res:
+                    runtimes_dict = model_res["runtimes"]
+                    eval_results["runtime"] = assert_type_and_unpack(runtimes_dict, "eager", float)
+        except Exception as e:
+            print(e)
+
+        # 4. send results out to the disk_channel
+
+        output_data = {
+            "id": eval_id,
+            "results": {
+                "stdout": stdout,
+                "stderr": stderr,
+                "eval_results": eval_results
+            }
+        }
+
+        await self.disk_channel.send(output_data)
+
+        print(f"Completed task: {eval_id}")
+
     async def run(self):
         print("Eval worker running...")
 
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-
-            level = msg["level"]
-            task = msg["task"]
-            code_str = msg["code"]
-            eval_id = msg["id"]
-
-            # 1. write the LLM-generated code to scratch dir with a unique name
-            file_id = str(uuid.uuid4())
-            code_path = self.code_dir / f"task_{level}_{task}_{file_id}.py"
-            async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
-                await f.write(code_str)
+            # asyncio.create_task(self.handle_msg(msg))
+            await self.handle_msg(msg)
             
-            # print(f"Wrote: {code_path}")
-            print(f"Received task: {eval_id}")
-
-            eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{file_id}.json"
-
-            # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
-            #    (do not wait for this to finish, keep listening for tasks to start)
-
-            env = os.environ.copy()
-            env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
-
-            cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env
-            )
-
-            stdout_raw, stderr_raw = await process.communicate()
-
-            stdout = stdout_raw.decode()
-            stderr = None
-
-            # print(f"[stdout]\n{stdout}")
-            if stderr_raw:
-                stderr = stderr_raw.decode()
-                # print(f"[stderr]\n{stderr}")
-
-            # 3. read results back
-
-            eval_results = {}
-
-            # TODO: the file may not exist if the eval.py script failed, so maybe we should check if the file exists
-            # first to handle things more gracefully
-            try:
-                async with aiofiles.open(eval_output_path, encoding='utf-8') as f:
-                    content = await f.read()
-                data = json.loads(content)
-
-                model_key = "llm"
-                if model_key in data:
-                    model_res = data[model_key]
-
-                    eval_results["loaded"] = assert_type_and_unpack(model_res, "loaded", bool)
-                    eval_results["correct"] = assert_type_and_unpack(model_res, "correct", bool)
-                    eval_results["max_diff"] = assert_type_and_unpack(model_res, "max_diff", float)
-
-                    if "runtimes" in model_res:
-                        runtimes_dict = model_res["runtimes"]
-                        eval_results["runtime"] = assert_type_and_unpack(runtimes_dict, "eager", float)
-            except Exception as e:
-                print(e)
-
-            # 4. send results out to the disk_channel
-
-            output_data = {
-                "id": eval_id,
-                "results": {
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "eval_results": eval_results
-                }
-            }
-
-            await self.disk_channel.send(output_data)
-
-            print(f"Completed task: {eval_id}")
 
 async def main():
     parser = argparse.ArgumentParser()

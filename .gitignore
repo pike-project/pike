@@ -9,5 +9,6 @@ results/*
 runs/*
 cache/*
 !results/timing/
+!results/cost_modeling/
 .env
 worker_io/

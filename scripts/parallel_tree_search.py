@@ -480,7 +480,7 @@ class ParallelTreeSearch:
             eval_data = self.run_eval(new_samples)
             self.save_working_solutions(eval_data)
             queries = self.get_direct_fix_queries(eval_data)
-            if len(queries == 0):
+            if len(queries) == 0:
                 print(f"======== All solutions passing correctness, exiting at iteration {i} ========")
 
 

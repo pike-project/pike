@@ -22,7 +22,7 @@ TIME_WITH_TRITON = True
 # Both of these values are in ms
 # note that if the benchmark ends up running longer than this for one repetition,
 # at least one repetition will always complete
-TRITON_BENCH_TIME_GOAL = 10000 # 10 seconds
+TRITON_BENCH_TIME_GOAL = 2000 # 2 seconds
 TRITON_BENCH_WARMUP = 1000 # 1 second
 
 # this is the number of reps that pytorch Timer timeit does

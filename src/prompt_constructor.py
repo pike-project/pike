@@ -35,37 +35,40 @@ def get_arch_definition(arch_src):
 ############################################
 # CUDA Prompt
 ############################################
-PROBLEM_STATEMENT = """You write custom CUDA kernels to replace the pytorch operators in the given architecture to get speedups. \n
-    You have complete freedom to choose the set of operators you want to replace. You may make the decision to replace some operators with custom CUDA kernels and leave others unchanged. You may replace multiple operators with custom implementations, consider operator fusion opportunities (combining multiple operators into a single kernel, for example, combining matmul+relu), or algorithmic changes (such as online softmax). You are only limited by your imagination.\n
+PROBLEM_STATEMENT = """You write custom CUDA kernels to replace the pytorch operators in the given architecture to get speedups.\n
+You have complete freedom to choose the set of operators you want to replace. You may make the decision to replace some operators with custom CUDA kernels and leave others unchanged. You may replace multiple operators with custom implementations, consider operator fusion opportunities (combining multiple operators into a single kernel, for example, combining matmul+relu), or algorithmic changes (such as online softmax).\n
 """
 PROBLEM_INSTRUCTION = """
-Optimize the architecture named Model with custom CUDA operators! Name your optimized output architecture ModelNew. Output the new code in codeblocks. Please generate real code, NOT pseudocode, make sure the code compiles and is fully functional. Just output the new model code, no other text, and NO testing code! \n
+Optimize the architecture named Model with custom CUDA operators! Name your optimized output architecture ModelNew. Output the new code in codeblocks.
+Please generate real code, NOT pseudocode. Just output the new model code, no other text, and NO testing code!
+Try to make a radical change which will significantly improve performance over the given architecture.
+You should try to make sure the code compiles and is fully functional, but we will attempt to fix errors and correctness issues if it does not.
 """
 
 
 def prompt_generate_custom_cuda(
-    arc_src: str, example_arch_src: str, example_new_arch_src: str
+    arch_src: str, example_arch_src: str, example_new_arch_src: str
 ) -> str:
     prompt = PROBLEM_STATEMENT
 
     if example_arch_src != "" and example_new_arch_src != "":
         prompt += f"""
-        Here's an example to show you the syntax of inline embedding custom CUDA operators in torch: The example given architecture is: \n
-        ``` \n
-        {example_arch_src}
-        ``` \n
-        The example new arch with custom CUDA kernels looks like this: 
-        ```
-        {example_new_arch_src}
-        ``` \n
-        """
+Here's an example to show you the syntax of inline embedding custom CUDA operators in torch. The example given architecture is:\n
+```python
+{example_arch_src}
+```\n
+The new architecture for the previous example with custom CUDA kernels looks like this:
+```python
+{example_new_arch_src}
+```\n
+"""
 
     prompt += f"""
-    You are given the following architecture: \n
-    ```
-    {arc_src}
-    ```
-    """
+You are given the following architecture:\n
+```python
+{arch_src}
+```
+"""
     prompt += PROBLEM_INSTRUCTION
     return prompt
 
@@ -462,7 +465,7 @@ Here are some best practices for writing CUDA kernels on GPU: \n\n"""
 def prompt_summarize_error(custom_cuda, stdout, stderr):
     prompt = f"""
 The following code failed to compile:
-```
+```python
 {custom_cuda}
 ```
 Here's the stdout:
@@ -476,27 +479,56 @@ Here's the stderr:
     
 Please give a concise description of the error, indicating exactly what the issue is to someone who has not seen the stdout/stderr output.
 You do not need to explain how to fix the issue, you must only relay the information that is relevant to solving the issue
-    """
+"""
     return prompt
 
 
-def prompt_fix_compile(ref_arch_src, custom_cuda, summary):
+def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, stdout, stderr):
     prompt = PROBLEM_STATEMENT
     prompt += f"""
-    With the following architecture:
-    ```
-    {ref_arch_src}
-    ```
-    You generated the following solution and it failed to compile:
-    ```
-    {custom_cuda}
-    ```
-    Here's the summary of the compilation error:
-    ```
-    {summary}
-    ```
+With the following architecture:
+```python
+{ref_arch_src}
+```
+
+You generated the following solution and it failed to compile:
+```python
+{custom_cuda}
+```
+
+Here's the stdout:
+```
+{stdout}
+```
+
+Here's the stderr:
+```
+{stderr}
+```
     
-    Please fix the compilation error in the new model code. Please output the corrected code in codeblocks.
+Please fix the compilation error in the new model code. Please output the corrected code in codeblocks.
+Just output the new model code, no other text, and NO testing code!
+"""
+    return prompt
+
+
+def prompt_fix_compile_summarized(ref_arch_src, custom_cuda, summary):
+    prompt = PROBLEM_STATEMENT
+    prompt += f"""
+With the following architecture:
+```python
+{ref_arch_src}
+```
+You generated the following solution and it failed to compile:
+```python
+{custom_cuda}
+```
+Here's the summary of the compilation error:
+```
+{summary}
+```
+    
+Please fix the compilation error in the new model code. Please output the corrected code in codeblocks.
     """
     return prompt
 

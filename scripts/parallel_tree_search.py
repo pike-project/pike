@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
-from src.prompt_constructor import prompt_generate_custom_cuda_from_prompt_template, prompt_summarize_error, prompt_fix_compile
+import src.prompt_constructor as prompt
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 from src.util.disk_channel import DiskChannel
@@ -216,13 +216,13 @@ class ParallelTreeSearch:
 
     def query_and_save(self, queries):
         for sample_id, query in enumerate(queries):
-            self.write_sample_data(sample_id, "prompt.txt", query)
+            self.write_sample_data(sample_id, "prompt.md", query)
 
         query_results = self.query_llm_parallel(queries)
 
         # important: this assumes results arrive back in the order they were sent
         for sample_id, query_result in enumerate(query_results):
-            self.write_sample_data(sample_id, "query_result.txt", query_result)
+            self.write_sample_data(sample_id, "query_result.md", query_result)
         
         return query_results
     
@@ -384,16 +384,37 @@ class ParallelTreeSearch:
             code = sample["code"]
             stdout = sample["stdout"]
             stderr = sample["stderr"]
-            queries.append(prompt_summarize_error(code, stdout, stderr))
+            queries.append(prompt.prompt_summarize_error(code, stdout, stderr))
             bad_solutions.append(code)
 
         return queries, bad_solutions
+
+    # in this case, we are creating queries that will prompt the LLM to fix the
+    # error directly from stdout and stderr, no error summarizing involved
+    def get_direct_fix_queries(self, eval_data):
+        (_, correctness_fails_samples, error_samples) = eval_data
+
+        queries = []
+
+        # TODO
+        for sample in correctness_fails_samples:
+            pass
+
+        problem_code = self.get_problem_code()
+
+        for sample in error_samples:
+            code = sample["code"]
+            stdout = sample["stdout"]
+            stderr = sample["stderr"]
+            queries.append(prompt.prompt_fix_compile_stdout_stderr(problem_code, code, stdout, stderr))
+
+        return queries
 
     # this is an example of the first round of querying the LLM, before there is any prior output
     def run_init_queries(self, num_queries):
         problem_code = self.get_problem_code()
 
-        custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(problem_code)
+        custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
 
         queries = []
 
@@ -411,7 +432,7 @@ class ParallelTreeSearch:
         queries = []
 
         for sample_id in range(self.config.num_samples):
-            custom_cuda_prompt = prompt_generate_custom_cuda_from_prompt_template(problem_code)
+            custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
             queries.append(custom_cuda_prompt)
         
         return queries
@@ -420,7 +441,9 @@ class ParallelTreeSearch:
         res = self.run_step(queries, extract_code=True)
         return res
 
-    def gen_fix_messages(self, eval_data):
+    # in this case, we are having a "summary agent" summarize the errors, not
+    # attempt to fix the errors
+    def gen_summarized_fix_messages(self, eval_data):
         correction_queries, bad_solutions = self.get_correction_queries_and_bad_solutions(eval_data)
         res = self.run_step(correction_queries, extract_code=False)
 
@@ -431,7 +454,7 @@ class ParallelTreeSearch:
             if error_summary is None:
                 continue
 
-            prompt = prompt_fix_compile(problem_code, solution_to_fix, error_summary)
+            prompt = prompt.prompt_fix_compile_summarized(problem_code, solution_to_fix, error_summary)
             queries.append(prompt)
 
         self.curr_step += 1
@@ -439,15 +462,27 @@ class ParallelTreeSearch:
         return queries
 
     def run(self):
-        initial_queries = self.get_initial_queries()
-        samples = self.gen_samples(initial_queries)
-        eval_data = self.run_eval(samples)
-        self.save_working_solutions(eval_data)
+        # initial_queries = self.get_initial_queries()
+        # samples = self.gen_samples(initial_queries)
+        # eval_data = self.run_eval(samples)
+        # self.save_working_solutions(eval_data)
 
-        fix_queries = self.gen_fix_messages(eval_data)
-        new_samples = self.gen_samples(fix_queries)
-        new_eval_data = self.run_eval(new_samples)
-        self.save_working_solutions(new_eval_data)
+        # error_summary_queries = self.gen_error_summary_messages(eval_data)
+        # new_samples = self.gen_samples(error_summary_queries)
+        # new_eval_data = self.run_eval(new_samples)
+        # self.save_working_solutions(new_eval_data)
+
+        queries = self.get_initial_queries()
+
+        for i in range(5):
+            print(f"======== Running fix iteration {i} ========")
+            new_samples = self.gen_samples(queries)
+            eval_data = self.run_eval(new_samples)
+            self.save_working_solutions(eval_data)
+            queries = self.get_direct_fix_queries(eval_data)
+            if len(queries == 0):
+                print(f"======== All solutions passing correctness, exiting at iteration {i} ========")
+
 
 @pydra.main(base=GenerationConfig)
 def main(config: GenerationConfig):

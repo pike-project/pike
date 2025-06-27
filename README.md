@@ -106,6 +106,16 @@ If you need to clear all cache info (to make sure there is no docker weirdness w
 rm -rf build dist **/*.egg-info **/__pycache__
 ```
 
+## Prompting Notes
+
+We should pass this back to the correctness fixing LLM, so that it knows it is allowed to print:
+
+```
+You are allowed to print information in the code at intermediate steps, as the stdout can be used to resolve correctness issues if they exist.
+```
+
+However, if correctness is achieved, a final pass should be made to remove this debugging stuff.
+
 
 # KernelBench: Can LLMs Write Efficient GPU Kernels? [ICML '25]
 [arXiv](https://arxiv.org/html/2502.10517v1) | [blog post](https://scalingintelligence.stanford.edu/blogs/kernelbench/) | [HuggingFace Dataset](https://huggingface.co/datasets/ScalingIntelligence/KernelBench) | 

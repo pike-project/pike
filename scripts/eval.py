@@ -5,8 +5,6 @@ from torch.utils.cpp_extension import load
 from torch.utils._pytree import tree_map
 import importlib.util
 from torch.utils.benchmark import Timer
-import matplotlib.pyplot as plt
-import pandas as pd
 from pathlib import Path
 import inspect
 from triton.testing import do_bench
@@ -255,44 +253,6 @@ class Eval:
         with open(results_path, "w") as f:
             json.dump(self.results, f)
 
-    def plot(self):
-        df = pd.DataFrame(self.runtime_results)
-
-        f, ax = plt.subplots(1, figsize=(4, 3))
-
-        labels = df["label"]
-        values = df["runtime"]
-
-        col = [
-            "#2aadb6",
-            "#ff6583",
-            "#aa6fc5",
-            "#ffa600",
-        ]
-
-        colors = []
-
-        for _, row in df.iterrows():
-            model_idx = row['model_idx']
-            colors.append(col[model_idx])
-
-        plt.title(f"Task: {self.task_id}")
-        plt.ylabel('Runtime (ms)')
-
-        plt.bar(labels, values, color=colors, linewidth=1, edgecolor='black')
-
-        plt.xticks(rotation=30, ha='right')
-        plt.grid(axis='y')
-        plt.gca().set_axisbelow(True)
-
-        plt.subplots_adjust(left=0.2, bottom=0.3)
-
-        figs_dir = Path.resolve(curr_path / "../figs/eval_new_3")
-
-        os.makedirs(figs_dir, exist_ok=True)
-
-        plt.savefig(figs_dir / f"task_{self.task_id}.pdf")
-
     def create_model(self, name, file_path, input_changes=None, cuda_path=None, baseline=False):
         task = load_module_from_path(file_path)
 
@@ -413,7 +373,6 @@ def main():
     #         # ev.save_results()
     #     except Exception as e:
     #         print(e)
-    # # ev.plot()
 
 if __name__ == "__main__":
     main()

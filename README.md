@@ -1,4 +1,35 @@
-## Notes
+## Requirements
+
+Set up local environment for profiling:
+
+```bash
+conda install -c nvidia nsight-compute
+pip install -r requirements.txt
+pip install -e .
+
+# to profile
+# (disable any profiling tools such as DCGMI currently using the GPU)
+dcgmi profile --pause
+ncu --set full --export output2.ncu-rep python example.py
+```
+
+Note: For some reason the pytorch inline CUDA compiler uses `c++` executable, not `g++`. Make sure to do the following to allow pytorch to compile the inline CUDA code:
+
+```bash
+mkdir -p $HOME/bin
+ln -sf "$(which g++)" $HOME/bin/c++
+
+# add to .bashrc
+export PATH=$HOME/bin:$PATH
+```
+
+For data analysis:
+
+```bash
+pip install matplotlib pandas
+```
+
+## Eval Worker and Agents
 
 How to start the eval worker:
 
@@ -7,10 +38,11 @@ mkdir -p worker_io/input && mkdir -p worker_io/output && mkdir -p worker_io/scra
 python scripts/start_eval_worker.py --input_dir worker_io/input --output_dir worker_io/output --scratch_dir worker_io/scratch
 ```
 
-How to generate samples:
+To set up the Docker container and start the eval worker in that container:
 
 ```bash
-python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
+./sandbox/tools/build-deps.sh
+python sandbox/tools/start-worker-container.py
 ```
 
 How to run parallel tree search:
@@ -25,21 +57,21 @@ How to use the new eval script for a single task
 python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated_kernel_level_1_problem_1.py
 ```
 
-Set up local environment for profiling:
+**Important:** to run on a particular architecture, you need to make sure that places which reference this architecture are set correctly (e.g. A100/Ampere)
+
+
+
+
+
+
+
+## Old Tool Notes
+
+How to generate samples:
 
 ```bash
-conda install -c nvidia nsight-compute
-pip install matplotlib pandas
-pip install aiofiles
-pip install -r requirements.txt
-pip install -e .
-
-# to profile
-dcgmi profile --pause
-ncu --set full --export output2.ncu-rep python example.py
+python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
 ```
-
-**Important:** to run on a particular architecture, you need to make sure that places which reference this architecture are set correctly (e.g. A100/Ampere)
 
 Single run as a test:
 
@@ -73,17 +105,6 @@ Attach to running docker container:
 
 ```bash
 podman-hpc exec -it <id> bash
-```
-
-
-For some reason the pytorch inline CUDA compiler uses `c++` executable, not `g++`. Make sure to do the following to allow pytorch to compile the inline CUDA code:
-
-```bash
-mkdir -p $HOME/bin
-ln -sf "$(which g++)" $HOME/bin/c++
-
-# add to .bashrc
-export PATH=$HOME/bin:$PATH
 ```
 
 TODO: we probably want a `setup.py` like this:

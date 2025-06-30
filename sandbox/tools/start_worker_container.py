@@ -16,9 +16,10 @@ def main():
     non_root_user = True
     read_only_fs = True
 
-    kernel_bench_dir = Path.resolve(curr_path / "../..")
+    root_dir = Path.resolve(curr_path / "../..")
 
     # this command will be run in the container
+    # IMPORTANT: DO NOT MAKE IT AN ABSOLUTE PATH, KEEP IT RELATIVE
     eval_worker_path = "./scripts/start_eval_worker.py"
     # run_cmd = ["bash", "-c", f"pip install . && python3 {eval_worker_path}"]
     run_cmd = ["python3", eval_worker_path]
@@ -32,7 +33,9 @@ def main():
     pscratch_dir = Path(os.getenv("PSCRATCH"))
     data_dir = pscratch_dir / "llm/KernelBench-data"
 
-    worker_dir = data_dir / "workers" / worker_id
+    # worker_dir = data_dir / "workers" / worker_id
+    worker_dir = root_dir / "worker_io"
+
     input_dir = worker_dir / "input"
     output_dir = worker_dir / "output"
 
@@ -43,9 +46,10 @@ def main():
             --gpu --cap-drop=ALL --network=none
             --tmpfs /cache
             --tmpfs /scratch
-            --volume {input_dir}:/input:ro
+            --volume {input_dir}:/input
             --volume {output_dir}:/output
             --security-opt no-new-privileges --rm
+            -e TORCH_EXTENSIONS_DIR=/cache
             -it
         """
 
@@ -57,10 +61,10 @@ def main():
 
     if read_only_fs:
         # makes /app mount read-only as well
-        flags += ["--read-only", "--volume", f"{kernel_bench_dir}:/app:ro"]
+        flags += ["--read-only", "--volume", f"{root_dir}:/app:ro"]
     else:
         # does not make /app mount read-only
-        flags += ["--volume", f"{kernel_bench_dir}:/app"]
+        flags += ["--volume", f"{root_dir}:/app"]
 
     cmd = [container_cmd, "run"]
     cmd += flags

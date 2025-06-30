@@ -36,6 +36,9 @@ def main():
     input_dir = worker_dir / "input"
     output_dir = worker_dir / "output"
 
+    os.makedirs(input_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+
     flags_str = f"""
             --gpu --cap-drop=ALL --network=none
             --tmpfs /cache

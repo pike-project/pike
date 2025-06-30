@@ -12,6 +12,7 @@ import torch._logging
 import logging
 import warnings
 import json
+import time
 
 # it seems pytorch Timer timeit is much more noisy for small input sizes
 # so we should always be using Triton
@@ -169,6 +170,8 @@ class Eval:
             return model.to(self.device)(*easy_to_device(self.inputs, self.device), module_fn)
 
     def check_correctness(self):
+        start_time = time.time()
+
         # Test for correctness
         with torch.no_grad():
             baseline_output = self.get_model_output("baseline")
@@ -193,6 +196,9 @@ class Eval:
                 self.results[name]["correct"] = correct
                 self.results[name]["max_diff"] = max_diff
 
+        end_time = time.time()
+        print(f"Time to check correctness: {end_time - start_time:.2f}s")
+
     def profile(self):
         with torch.no_grad():
             for name in self.models.keys():
@@ -201,6 +207,8 @@ class Eval:
                     print(comp_output)
 
     def time_model(self, name, compile):
+        start_time = time.time()
+
         model_data = self.models[name]
         model = model_data["model"]
         module_fn = model_data["module_fn"]
@@ -220,6 +228,9 @@ class Eval:
             "runtime": runtime,
             "model_idx": model_idx,
         })
+
+        end_time = time.time()
+        print(f"Time to eval model {name}, compile={compile}: {end_time - start_time:.2f}s")
 
         return runtime
 
@@ -254,6 +265,8 @@ class Eval:
             json.dump(self.results, f)
 
     def create_model(self, name, file_path, input_changes=None, cuda_path=None, baseline=False):
+        start_time = time.time()
+
         task = load_module_from_path(file_path)
 
         if baseline:
@@ -311,6 +324,9 @@ class Eval:
         }
 
         self.curr_model_idx += 1
+
+        end_time = time.time()
+        print(f"Load time for model {name}: {end_time - start_time:.2f}s")
 
 
 def main():

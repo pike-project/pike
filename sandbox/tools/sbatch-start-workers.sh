@@ -7,4 +7,4 @@
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/../.."
 
-srun -n 1 -G 4 python3 $ROOT/sandbox/tools/start-worker-container.py
+srun -n 1 -G 4 python3 $ROOT/sandbox/tools/start_worker_container.py

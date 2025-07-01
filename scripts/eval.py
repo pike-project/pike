@@ -13,6 +13,9 @@ import logging
 import warnings
 import json
 import time
+import uuid
+import filelock
+from filelock import FileLock
 
 # it seems pytorch Timer timeit is much more noisy for small input sizes
 # so we should always be using Triton
@@ -55,7 +58,6 @@ def time_model(model, module_fn, inputs, device, compile, name):
     if module_fn is not None:
         model_invocation = "model(*inputs, module_fn)"
 
-    # TODO: this is where we should ensure we have exclusive access over the current GPU via some lock mechanism
     # METR wackiness, as sometimes their best solution is just a function, not a Model class
     moved_model = model
     if hasattr(model, "to"):
@@ -98,16 +100,18 @@ class Eval:
 
         self.task_id = f"{self.level}_{self.task}"
 
-        task_str = f"{self.task}"
-        if len(task_str) == 1:
-            task_str = "00" + task_str
-        elif len(task_str) == 2:
-            task_str = "0" + task_str
+        self.num_gpus = torch.cuda.device_count()
 
-        self.task_str = task_str
+        print(f"GPU count: {self.num_gpus}")
 
-        # Initialize model and inputs
-        self.device = torch.device("cuda:0")
+        self.devices = []
+        self.gpu_locks = []
+
+        for gpu_id in range(self.num_gpus):
+            self.devices.append(torch.device(f"cuda:{gpu_id}"))
+            if self.gpu_locks_dir is not None:
+                gpu_lock_path = self.gpu_locks_dir / f"gpu_{gpu_id}.lock"
+                self.gpu_locks.append(FileLock(gpu_lock_path))
         
         # this is very dicey, better way would be to pass in
         # the weights for the Linear layers
@@ -130,10 +134,6 @@ class Eval:
         self.runtime_results = []
 
     def create_baseline_model(self):
-        # best_dir = Path.resolve(curr_path / "../data/best")
-
-        # target_dir = best_dir / f"level_{self.level}" / self.task_str
-
         baseline_dir = Path.resolve(curr_path / f"../KernelBench/level{self.level}")
 
         baseline_path = None
@@ -163,11 +163,15 @@ class Eval:
         model = model_data["model"]
         module_fn = model_data["module_fn"]
         
-        # TODO: lock the GPU to ensure exclusive access, so we are not disrupting some other performance run
-        if module_fn is None:
-            return model.to(self.device)(*easy_to_device(self.inputs, self.device))
-        else:
-            return model.to(self.device)(*easy_to_device(self.inputs, self.device), module_fn)
+        # lock the GPU to ensure exclusive access, so we are not disrupting some other performance run
+        device, gpu_lock = self.acquire_available_gpu_lock()
+        try:
+            if module_fn is None:
+                return model.to(device)(*easy_to_device(self.inputs, device))
+            else:
+                return model.to(device)(*easy_to_device(self.inputs, device), module_fn)
+        finally:
+            self.release_gpu_lock(gpu_lock)
 
     def check_correctness(self):
         start_time = time.time()
@@ -214,7 +218,12 @@ class Eval:
         module_fn = model_data["module_fn"]
         model_idx = model_data["idx"]
 
-        runtime = time_model(model, module_fn, self.inputs, self.device, compile, name)
+        # TODO: this is where we should ensure we have exclusive access over the current GPU via lock mechanism
+        device, gpu_lock = self.acquire_available_gpu_lock()
+        try:
+            runtime = time_model(model, module_fn, self.inputs, device, compile, name)
+        finally:
+            self.release_gpu_lock(gpu_lock)
 
         label = name + "-"
         if compile:
@@ -328,6 +337,29 @@ class Eval:
         end_time = time.time()
         print(f"Load time for model {name}: {end_time - start_time:.2f}s")
 
+    def acquire_available_gpu_lock(self, check_interval: float = 1.0) -> tuple[int, FileLock]:
+        """
+        Waits until one of the GPU locks is available, acquires it, and returns (gpu_id, lock).
+        """
+        if self.gpu_locks_dir is None:
+            lock_path = f"/tmp/{uuid.uuid4()}"
+            lock = FileLock(lock_path)
+            lock.acquire(timeout=0)
+
+            return self.devices[0], lock
+
+        while True:
+            for i, lock in enumerate(self.gpu_locks):
+                try:
+                    lock.acquire(timeout=0)  # Non-blocking try-lock
+                    return self.devices[i], lock
+                except filelock.Timeout:
+                    continue
+            # No GPU lock acquired; wait and retry
+            time.sleep(check_interval)
+
+    def release_gpu_lock(self, gpu_lock):
+        gpu_lock.release()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -353,6 +385,7 @@ def main():
     gpu_locks_dir = None
     if args.gpu_locks_dir is not None:
         gpu_locks_dir = Path(args.gpu_locks_dir)
+        os.makedirs(gpu_locks_dir, exist_ok=True)
 
     ev = Eval(level, task, args.op_atol, args.op_rtol, gpu_locks_dir=gpu_locks_dir)
     ev.create_baseline_model()

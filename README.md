@@ -60,7 +60,7 @@ python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data d
 How to use the new eval script for a single task
 
 ```bash
-python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated_kernel_level_1_problem_1.py
+python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated_kernel_level_1_problem_1.py --gpu_locks_dir worker_io/gpu_locks
 ```
 
 **Important:** to run on a particular architecture, you need to make sure that places which reference this architecture are set correctly (e.g. A100/Ampere)

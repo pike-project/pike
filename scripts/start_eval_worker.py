@@ -164,8 +164,8 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            # asyncio.create_task(self.handle_msg(msg))
-            await self.handle_msg(msg)
+            asyncio.create_task(self.handle_msg(msg))
+            # await self.handle_msg(msg)
             
 
 async def main():

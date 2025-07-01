@@ -508,7 +508,7 @@ Just output the new model code, no other text, and NO testing code!
 
 # max_stdio_chars are needed to ensure we do not spend excessively on the input to the LLM
 # if the stdout/stderr exceeds this max, we only keep the ending portion of it
-def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, results, max_stdio_chars=5000):
+def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, results, max_stdio_chars=10000):
     stdout = results["stdout"]
     stderr = results["stderr"]
 

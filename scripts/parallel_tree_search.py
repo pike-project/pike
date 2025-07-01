@@ -65,7 +65,10 @@ class GenerationConfig(Config):
         # Inference config
         self.server_type = "deepseek"
         self.model_name = "deepseek-coder"
-        self.max_tokens = 4096
+        # Max spend of $0.20 for a solution output with current Gemini pricing:
+        # $10.00 per 1M tokens
+        # 20000 * 10 / (10^6) = 0.20
+        self.max_tokens = 20000
         self.temperature = 0.8
         
         # Logging
@@ -235,7 +238,9 @@ class ParallelTreeSearch:
             for sample_id, query_result in enumerate(query_results):
                 custom_kernel = extract_first_code(query_result, ["python", "cpp"])
                 # check LLM is able to generate custom CUDA code
-                if custom_kernel is not None:
+                if custom_kernel is None:
+                    print(f"Failed to parse custom kernel for sample: {sample_id}")
+                else:
                     self.write_sample_data(sample_id, "kernel.py", custom_kernel)
                 
                     res.append({
@@ -483,7 +488,7 @@ class ParallelTreeSearch:
             self.save_working_solutions(eval_data)
             queries = self.get_direct_fix_queries(eval_data)
             if len(queries) == 0:
-                print(f"======== All solutions passing correctness, exiting at iteration {i} ========")
+                print(f"======== All solutions passing/failed, exiting at iteration {i} ========")
                 break
 
 

@@ -288,14 +288,14 @@ def query_server(
         response = client.chat.completions.create(
             model=model,
             messages=[
-                # {"role": "system", "content": system_prompt},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
-            # stream=False,
-            # temperature=temperature,
-            # n=num_completions,
-            # max_tokens=max_tokens,
-            # top_p=top_p,
+            stream=False,
+            temperature=temperature,
+            n=num_completions,
+            max_tokens=max_tokens,
+            top_p=top_p,
         )
         outputs = [choice.message.content for choice in response.choices]
     elif server_type == "together":

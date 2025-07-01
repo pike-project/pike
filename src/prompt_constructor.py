@@ -506,9 +506,16 @@ Just output the new model code, no other text, and NO testing code!
     return prompt
 
 
-def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, results):
+# max_stdio_chars are needed to ensure we do not spend excessively on the input to the LLM
+# if the stdout/stderr exceeds this max, we only keep the ending portion of it
+def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, results, max_stdio_chars=5000):
     stdout = results["stdout"]
     stderr = results["stderr"]
+
+    # trimmed stdout and stderr
+    stdout_trimmed = stdout[-max_stdio_chars:]
+    stderr_trimmed = stderr[-max_stdio_chars:]
+
     timed_out = results["timed_out"]
 
     prompt = PROBLEM_STATEMENT
@@ -523,14 +530,14 @@ You generated the following solution and it failed to compile or timed out:
 {custom_cuda}
 ```
 
-Here's the stdout:
+End of stdout:
 ```
-{stdout}
+{stdout_trimmed}
 ```
 
-Here's the stderr:
+End of stderr:
 ```
-{stderr}
+{stderr_trimmed}
 ```
 
 Timed out: {timed_out}
@@ -562,7 +569,7 @@ Please fix the compilation error in the new model code. Please output the correc
     return prompt
 
 
-def prompt_fix_correctness(ref_arch_src, custom_cuda, metadata):
+def prompt_fix_correctness_old(ref_arch_src, custom_cuda, metadata):
     prompt = PROBLEM_STATEMENT
     prompt += f"""
     With the following architecture:

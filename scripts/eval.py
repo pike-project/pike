@@ -1,4 +1,5 @@
 import os
+import gc
 import torch
 import argparse
 from torch.utils.cpp_extension import load
@@ -104,6 +105,9 @@ class Eval:
 
         print(f"GPU count: {self.num_gpus}")
 
+        self.locked_device = None
+        self.held_lock = None
+
         self.devices = []
         self.gpu_locks = []
 
@@ -162,16 +166,15 @@ class Eval:
 
         model = model_data["model"]
         module_fn = model_data["module_fn"]
+
+        assert self.held_lock is not None, "Lock should be held"
+        assert self.locked_device is not None, "Locked device should exist"
         
-        # lock the GPU to ensure exclusive access, so we are not disrupting some other performance run
-        device, gpu_lock = self.acquire_available_gpu_lock()
-        try:
-            if module_fn is None:
-                return model.to(device)(*easy_to_device(self.inputs, device))
-            else:
-                return model.to(device)(*easy_to_device(self.inputs, device), module_fn)
-        finally:
-            self.release_gpu_lock(gpu_lock)
+        # make sure we are not disrupting some other performance run by ensuring we have a lock while in this region
+        if module_fn is None:
+            return model.to(self.locked_device)(*easy_to_device(self.inputs, self.locked_device))
+        else:
+            return model.to(self.locked_device)(*easy_to_device(self.inputs, self.locked_device), module_fn)
 
     def check_correctness(self):
         start_time = time.time()
@@ -218,12 +221,11 @@ class Eval:
         module_fn = model_data["module_fn"]
         model_idx = model_data["idx"]
 
-        # TODO: this is where we should ensure we have exclusive access over the current GPU via lock mechanism
-        device, gpu_lock = self.acquire_available_gpu_lock()
-        try:
-            runtime = time_model(model, module_fn, self.inputs, device, compile, name)
-        finally:
-            self.release_gpu_lock(gpu_lock)
+        # this is where we should ensure we have exclusive access over the current GPU via lock mechanism
+        assert self.held_lock is not None, "Lock should be held"
+        assert self.locked_device is not None, "Locked device should exist"
+
+        runtime = time_model(model, module_fn, self.inputs, self.locked_device, compile, name)
 
         label = name + "-"
         if compile:
@@ -358,8 +360,28 @@ class Eval:
             # No GPU lock acquired; wait and retry
             time.sleep(check_interval)
 
-    def release_gpu_lock(self, gpu_lock):
-        gpu_lock.release()
+    def acquire_gpu_lock(self):
+        device, lock = self.acquire_available_gpu_lock()
+        self.locked_device = device
+        self.held_lock = lock
+
+        torch.cuda.set_device(device)
+
+    def release_gpu_lock(self):
+        self.held_lock.release()
+
+    def free_models_and_inputs(self):
+        del self.inputs
+        del self.models
+
+    def cleanup(self):
+        self.free_models_and_inputs()
+        torch.cuda.empty_cache()
+
+        # Collect unused Python objects
+        gc.collect()
+
+        torch.cuda.synchronize()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -388,11 +410,20 @@ def main():
         os.makedirs(gpu_locks_dir, exist_ok=True)
 
     ev = Eval(level, task, args.op_atol, args.op_rtol, gpu_locks_dir=gpu_locks_dir)
+    
     ev.create_baseline_model()
     ev.create_model("llm", llm_path)
-    ev.check_correctness()
-    # ev.collect_model_results("baseline", with_compile=True)
-    ev.collect_model_results("llm", with_compile=False)
+
+    ev.acquire_gpu_lock()
+
+    try:
+        ev.check_correctness()
+        # ev.collect_model_results("baseline", with_compile=True)
+        ev.collect_model_results("llm", with_compile=False)
+        ev.cleanup()
+    finally:
+        ev.release_gpu_lock()
+
     if output_path is not None:
         ev.save_results(output_path)
 

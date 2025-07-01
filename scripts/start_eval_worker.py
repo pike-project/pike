@@ -112,7 +112,13 @@ class EvalWorker:
         stderr = None
         timed_out = False
 
-        cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
+        cmd = [
+            "python", str(self.eval_script_path),
+            "--level", str(level),
+            "--task", str(task),
+            "--code_path", str(code_path),
+            "--output_path", str(eval_output_path),
+            "--gpu_locks_dir", str(self.gpu_locks_dir)]
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,

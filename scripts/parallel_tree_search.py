@@ -310,6 +310,7 @@ class ParallelTreeSearch:
 
             stdout = results["stdout"]
             stderr = results["stderr"]
+            timed_out = results["timed_out"]
 
             model_loaded = True
 
@@ -346,8 +347,7 @@ class ParallelTreeSearch:
             if not model_loaded:
                 error_samples.append({
                     "code": code,
-                    "stdout": stdout,
-                    "stderr": stderr
+                    "results": results
                 })
 
             # TODO: it may be useful to pass stdout back to the LLM even if the run was successful,
@@ -357,6 +357,8 @@ class ParallelTreeSearch:
             print(stdout)
             print(f"----------- Sample {sample_id} stderr ------------")
             print(stderr)
+            print(f"----------- Sample {sample_id} timed_out ------------")
+            print(timed_out)
             print("------------------------------------------------\n")
 
         self.curr_step += 1
@@ -396,17 +398,17 @@ class ParallelTreeSearch:
 
         queries = []
 
-        # TODO
-        for sample in correctness_fails_samples:
-            pass
-
         problem_code = self.get_problem_code()
+
+        for sample in correctness_fails_samples:
+            code = sample["code"]
+            max_diff = sample["max_diff"]
+            queries.append(prompt.prompt_fix_correctness(problem_code, code, max_diff))
 
         for sample in error_samples:
             code = sample["code"]
-            stdout = sample["stdout"]
-            stderr = sample["stderr"]
-            queries.append(prompt.prompt_fix_compile_stdout_stderr(problem_code, code, stdout, stderr))
+            results = sample["results"]
+            queries.append(prompt.prompt_fix_compile_stdout_stderr(problem_code, code, results))
 
         return queries
 

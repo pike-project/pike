@@ -483,7 +483,7 @@ You do not need to explain how to fix the issue, you must only relay the informa
     return prompt
 
 
-def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, stdout, stderr):
+def prompt_fix_correctness(ref_arch_src, custom_cuda, max_diff):
     prompt = PROBLEM_STATEMENT
     prompt += f"""
 With the following architecture:
@@ -491,7 +491,34 @@ With the following architecture:
 {ref_arch_src}
 ```
 
-You generated the following solution and it failed to compile:
+You generated the following solution architecture:
+```python
+{custom_cuda}
+```
+
+It compiled and ran, but failed to pass correctness checks.
+
+Your code exceeded the error tolerance from the ground-truth result, with a max value diff of: {max_diff}
+    
+Please fix the correctness issue in the new model code. Please output the corrected code in codeblocks.
+Just output the new model code, no other text, and NO testing code!
+"""
+    return prompt
+
+
+def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, results):
+    stdout = results["stdout"]
+    stderr = results["stderr"]
+    timed_out = results["timed_out"]
+
+    prompt = PROBLEM_STATEMENT
+    prompt += f"""
+With the following architecture:
+```python
+{ref_arch_src}
+```
+
+You generated the following solution and it failed to compile or timed out:
 ```python
 {custom_cuda}
 ```
@@ -505,6 +532,8 @@ Here's the stderr:
 ```
 {stderr}
 ```
+
+Timed out: {timed_out}
     
 Please fix the compilation error in the new model code. Please output the corrected code in codeblocks.
 Just output the new model code, no other text, and NO testing code!

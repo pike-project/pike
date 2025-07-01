@@ -11,10 +11,13 @@ def clean_whitespace(s):
 def main():
     # could be replaced with docker, the only flag that will need to be adjusted is --gpu (podman-hpc specific)
     container_cmd = "podman-hpc"
-    image_name = "kernel-bench-deps"
+
+    local_image_name = "kernel-bench-deps"
+    remote_image_name = "docker.io/loonride/kernel-bench-deps:v0.2"
 
     non_root_user = True
     read_only_fs = True
+    pull_from_docker_hub = False
 
     root_dir = Path.resolve(curr_path / "../..")
 
@@ -67,7 +70,12 @@ def main():
 
     cmd = [container_cmd, "run"]
     cmd += flags
-    cmd += [image_name]
+
+    if pull_from_docker_hub:
+        cmd += ["--pull=always", remote_image_name]
+    else:
+        cmd += [local_image_name]
+
     cmd += run_cmd
 
     print(f"Running: {cmd}")

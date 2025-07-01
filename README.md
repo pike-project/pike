@@ -45,8 +45,8 @@ To set up the Docker container and start the eval worker in that container:
 
 # to push the built image (if you need to)
 podman-hpc login docker.io
-podman-hpc tag kernel-bench-deps:latest kernel-bench-deps:v0.1
-podman-hpc push kernel-bench-deps:v0.1
+podman-hpc tag kernel-bench-deps:latest docker.io/<username>/kernel-bench-deps:v0.1
+podman-hpc push docker.io/<username>/kernel-bench-deps:v0.1
 
 python sandbox/tools/start_worker_container.py
 ```

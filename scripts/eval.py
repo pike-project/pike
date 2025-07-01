@@ -370,6 +370,13 @@ class Eval:
     def release_gpu_lock(self):
         self.held_lock.release()
 
+    def print_gpu_mem(self):
+        mem_alloc = torch.cuda.memory_allocated() / 1e6
+        mem_res = torch.cuda.memory_reserved() / 1e6
+
+        print(f"CUDA memory allocated at start: {mem_alloc} MB")
+        print(f"CUDA memory reserved at start: {mem_res} MB")
+
     def free_models_and_inputs(self):
         del self.inputs
         del self.models
@@ -415,6 +422,8 @@ def main():
     ev.create_model("llm", llm_path)
 
     ev.acquire_gpu_lock()
+    # sanity check print, make sure the GPU is completely free to work with
+    ev.print_gpu_mem()
 
     try:
         ev.check_correctness()

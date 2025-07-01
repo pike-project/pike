@@ -29,8 +29,6 @@ class EvalSolutions:
 
         tasks = []
 
-        sample_id = 0
-
         for filename in os.listdir(level_dir):
             if not filename.endswith(".py"):
                 continue
@@ -44,11 +42,11 @@ class EvalSolutions:
             
             tasks.append({
                 "code": code,
-                "sample_id": sample_id,
+                "sample_id": task - 1,
                 "problem_id": task
             })
 
-            sample_id += 1
+        tasks.sort(key=lambda x: x["sample_id"])
 
         return tasks
 
@@ -102,7 +100,7 @@ class EvalSolutions:
 
         results_path = self.results_dir / "out.json"
 
-        with open(results_path) as f:
+        with open(results_path, "w") as f:
             json.dump(results, f, indent=4)
 
 

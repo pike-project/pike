@@ -7,12 +7,12 @@
 
 # (so if we wanted to deploy 8 workers, each with 4 GPUs, we do -n 8 -G 4)
 
-# srun -n 4 -G 1 bash -c 'echo $SLURM_PROCID'
+srun -n 4 -G 1 bash -c 'echo $SLURM_PROCID'
 
-srun -n 1 -G 4 podman-hpc run --gpu --cap-drop=ALL --network=none \
-    --tmpfs /cache \
-    --volume $PSCRATCH/llm/KernelBench:/app \
-    --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \
-    --volume $PSCRATCH/llm/KernelBench-data/workers/0/output:/output \
-    --security-opt no-new-privileges --rm \
-    -it kernel-bench-deps bash
+# srun -n 1 -G 4 podman-hpc run --gpu --cap-drop=ALL --network=none \
+#     --tmpfs /cache \
+#     --volume $PSCRATCH/llm/KernelBench:/app \
+#     --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \
+#     --volume $PSCRATCH/llm/KernelBench-data/workers/0/output:/output \
+#     --security-opt no-new-privileges --rm \
+#     -it kernel-bench-deps bash

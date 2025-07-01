@@ -15,7 +15,7 @@ def main():
     local_image_name = "kernel-bench-deps"
     remote_image_name = "docker.io/loonride/kernel-bench-deps:v0.2"
 
-    non_root_user = True
+    non_root_user = False
     read_only_fs = True
     pull_from_docker_hub = False
 
@@ -78,7 +78,7 @@ def main():
 
     cmd += run_cmd
 
-    print(f"Running: {cmd}")
+    print(f"Running: {" ".join(cmd)}")
 
     # TODO: may want to rebuild 'kernel-bench-deps' container beforehand
 

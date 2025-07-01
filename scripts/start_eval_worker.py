@@ -64,6 +64,9 @@ class EvalWorker:
         self.gpu_locks_dir = self.scratch_dir / "gpu_locks"
         os.makedirs(self.gpu_locks_dir, exist_ok=True)
 
+        self.torch_extensions_dir = self.scratch_dir / "torch_extensions"
+        os.makedirs(self.torch_extensions_dir, exist_ok=True)
+
         # remove any existing files in the eval output dir
         for file in self.eval_output_dir.iterdir():
             if file.is_file():
@@ -93,8 +96,12 @@ class EvalWorker:
         # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
         #    (do not wait for this to finish, keep listening for tasks to start)
 
+        eval_torch_ext_dir = self.torch_extensions_dir / str(uuid.uuid4())
+        os.makedirs(eval_torch_ext_dir, exist_ok=True)
+
         env = os.environ.copy()
         env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
+        env["TORCH_EXTENSIONS_DIR"] = str(eval_torch_ext_dir)
 
         task_start_time = time.time()
 

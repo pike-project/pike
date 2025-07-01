@@ -49,7 +49,6 @@ def main():
             --volume {input_dir}:/input
             --volume {output_dir}:/output
             --security-opt no-new-privileges --rm
-            -e TORCH_EXTENSIONS_DIR=/cache
             -it
         """
 

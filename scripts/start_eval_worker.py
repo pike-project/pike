@@ -5,7 +5,6 @@ from pathlib import Path
 import sys
 import os
 import argparse
-import uuid
 import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -64,7 +63,7 @@ class EvalWorker:
         self.gpu_locks_dir = self.scratch_dir / "gpu_locks"
         os.makedirs(self.gpu_locks_dir, exist_ok=True)
 
-        self.torch_extensions_dir = self.scratch_dir / "torch_extensions"
+        self.torch_extensions_dir = self.scratch_dir / "torch_ext"
         os.makedirs(self.torch_extensions_dir, exist_ok=True)
 
         # remove any existing files in the eval output dir
@@ -75,28 +74,29 @@ class EvalWorker:
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
         self.eval_script_path = curr_dir / "eval.py"
+
+        self.task_count = 0
     
-    async def handle_msg(self, msg):
+    async def handle_msg(self, msg, task_number):
         level = msg["level"]
         task = msg["task"]
         code_str = msg["code"]
         eval_id = msg["id"]
 
         # 1. write the LLM-generated code to scratch dir with a unique name
-        file_id = str(uuid.uuid4())
-        code_path = self.code_dir / f"task_{level}_{task}_{file_id}.py"
+        code_path = self.code_dir / f"task_{level}_{task}_{task_number}.py"
         async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
             await f.write(code_str)
         
         # print(f"Wrote: {code_path}")
-        print(f"Received task: {eval_id}")
+        print(f"Received task: {eval_id}, number: {task_number}")
 
-        eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{file_id}.json"
+        eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{task_number}.json"
 
         # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
         #    (do not wait for this to finish, keep listening for tasks to start)
 
-        eval_torch_ext_dir = self.torch_extensions_dir / str(uuid.uuid4())
+        eval_torch_ext_dir = self.torch_extensions_dir / str(task_number)
         os.makedirs(eval_torch_ext_dir, exist_ok=True)
 
         env = os.environ.copy()
@@ -186,8 +186,9 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            asyncio.create_task(self.handle_msg(msg))
+            asyncio.create_task(self.handle_msg(msg, self.task_count))
             # await self.handle_msg(msg)
+            self.task_count += 1
             
 
 async def main():

@@ -22,7 +22,37 @@ class EvalSolutions:
 
         self.level = 3
     
-    def get_ground_truth_solutions(self):
+    def metr_solutions(self):
+        kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
+
+        level_dir = kernel_bench_dir / f"best_agent_solutions/level_{self.level}"
+
+        tasks = []
+
+        for filename in os.listdir(level_dir):
+            if not filename.endswith(".py"):
+                continue
+
+            task = int(filename.split("_")[1].split(".py")[0])
+            
+            file_path = level_dir / filename
+
+            with open(file_path) as f:
+                code = f.read()
+            
+            tasks.append({
+                "code": code,
+                "problem_id": task
+            })
+
+        tasks.sort(key=lambda x: x["problem_id"])
+
+        for idx, task in enumerate(tasks):
+            task["sample_id"] = idx
+
+        return tasks
+
+    def ground_truth_solutions(self):
         kernel_bench_dir = (curr_dir / "../../KernelBench").resolve()
 
         level_dir = kernel_bench_dir / f"level{self.level}"
@@ -95,10 +125,12 @@ class EvalSolutions:
         return all_results
 
     async def run(self):
-        samples = self.get_ground_truth_solutions()
+        # samples = self.ground_truth_solutions()
+        samples = self.metr_solutions()
+
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / "out.json"
+        results_path = self.results_dir / "metr_out.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)

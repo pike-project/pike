@@ -66,6 +66,9 @@ class EvalWorker:
         self.torch_extensions_dir = self.scratch_dir / "torch_ext"
         os.makedirs(self.torch_extensions_dir, exist_ok=True)
 
+        self.triton_cache_dir = self.scratch_dir / "triton_cache"
+        os.makedirs(self.triton_cache_dir, exist_ok=True)
+
         # remove any existing files in the eval output dir
         for file in self.eval_output_dir.iterdir():
             if file.is_file():
@@ -99,9 +102,13 @@ class EvalWorker:
         eval_torch_ext_dir = self.torch_extensions_dir / str(task_number)
         os.makedirs(eval_torch_ext_dir, exist_ok=True)
 
+        eval_triton_cache_dir = self.triton_cache_dir / str(task_number)
+        os.makedirs(eval_triton_cache_dir, exist_ok=True)
+
         env = os.environ.copy()
         env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
         env["TORCH_EXTENSIONS_DIR"] = str(eval_torch_ext_dir)
+        env["TRITON_CACHE_DIR"] = str(eval_triton_cache_dir)
 
         task_start_time = time.time()
 
@@ -187,6 +194,7 @@ class EvalWorker:
         print(f"Completed task: {eval_id}, task time: {task_time:.2f}s")
 
     async def run(self):
+        print(f"CPU count: {os.cpu_count()}")
         print("Eval worker running...")
 
         while True:

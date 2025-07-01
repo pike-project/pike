@@ -12,3 +12,5 @@ cache/*
 !results/cost_modeling/
 .env
 worker_io/
+
+test/lock_test/locks/

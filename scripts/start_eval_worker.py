@@ -97,24 +97,38 @@ class EvalWorker:
         env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
 
         task_start_time = time.time()
-        cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env
-        )
 
-        stdout_raw, stderr_raw = await process.communicate()
-        task_end_time = time.time()
+        # 10 minutes
+        timeout_sec = 10 * 60
 
-        stdout = stdout_raw.decode()
+        stdout = None
         stderr = None
+        timed_out = False
 
-        # print(f"[stdout]\n{stdout}")
-        if stderr_raw:
-            stderr = stderr_raw.decode()
-            # print(f"[stderr]\n{stderr}")
+        cmd = ["python", str(self.eval_script_path), "--level", str(level), "--task", str(task), "--code_path", str(code_path), "--output_path", str(eval_output_path)]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env
+            )
+
+            stdout_raw, stderr_raw = await asyncio.wait_for(proc.communicate(), timeout=timeout_sec)
+            task_end_time = time.time()
+
+            stdout = stdout_raw.decode()
+
+            # print(f"[stdout]\n{stdout}")
+            if stderr_raw:
+                stderr = stderr_raw.decode()
+                # print(f"[stderr]\n{stderr}")
+
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            
+            timed_out = True
 
         # 3. read results back
 
@@ -148,7 +162,8 @@ class EvalWorker:
             "results": {
                 "stdout": stdout,
                 "stderr": stderr,
-                "eval_results": eval_results
+                "eval_results": eval_results,
+                "timed_out": timed_out,
             }
         }
 

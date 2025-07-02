@@ -308,7 +308,7 @@ class ParallelTreeSearch:
             sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
 
-            print(f"Received eval result for sample: {sample_id}")
+            # print(f"Received eval result for sample: {sample_id}")
 
             self.write_sample_data(sample_id, "eval_results.json", json.dumps(results, indent=4))
 
@@ -372,7 +372,7 @@ class ParallelTreeSearch:
                 elif "correct" in eval_results:
                     correct = eval_results["correct"]
                     max_diff = eval_results["max_diff"]
-                    print(f"Sample {sample_id} correct: {correct}, max_diff: {max_diff}")
+                    # print(f"Sample {sample_id} correct: {correct}, max_diff: {max_diff}")
 
                     assert not correct, "If there is no runtime for a given sample, we expect it to be not correct"
 
@@ -411,7 +411,7 @@ class ParallelTreeSearch:
 
             final_results.append(sample_data)
 
-        print(f"\n-------------- Step: {self.curr_step} --------------\n")
+        print(f"\n------------------ Step: {self.curr_step} ------------------\n")
         print(f"CORRECT: {correct_count}, INCORRECT: {incorrect_count}, ERROR: {error_count}")
         print("------------------------------------------------\n")
 
@@ -435,7 +435,7 @@ class ParallelTreeSearch:
                 f.write(sample_data["code"])
             
             with open(data_path, "w") as f:
-                json.dump(sample_data, data_path, indent=4)
+                json.dump(sample_data, f, indent=4)
             
             self.phase_solutions.append(sample_data)
 

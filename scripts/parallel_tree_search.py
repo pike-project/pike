@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 import asyncio
 import uuid
+from enum import Enum
 
 
 from datasets import load_dataset
@@ -35,6 +36,21 @@ Assume 1 sample per problem here
 REPO_TOP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 torch.set_printoptions(precision=4, threshold=10)
+
+class EvalState(Enum):
+    CORRECT = "correct"
+    INCORRECT = "incorrect"
+    ERROR = "error"
+
+@dataclass
+class Query:
+    sample_id: int
+    query: str
+
+@dataclass
+class QueryResult:
+    sample_id: int
+    result: str
 
 class GenerationConfig(Config):
     def __init__(self):
@@ -137,8 +153,6 @@ class ParallelTreeSearch:
 
         print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
 
-        self.active_sample_ids = list(range(config.num_samples))
-
         data_dir = Path(config.data_dir)
 
         runs_dir = data_dir / "runs"
@@ -189,10 +203,10 @@ class ParallelTreeSearch:
 
         return ref_arch_src
 
-    def query_llm_parallel(self, queries):
+    def query_llm_parallel(self, raw_queries: list[str]) -> list[str]:
         res = maybe_multithread_ordered(
             query_llm, 
-            queries,
+            raw_queries,
             self.config.num_workers, 
             time_interval=self.config.api_query_interval, 
             # extra args
@@ -219,28 +233,27 @@ class ParallelTreeSearch:
         with open(file_path, "w") as f:
             f.write(data)
 
-    def query_and_save(self, queries):
-        for sample_id, query in zip(self.active_sample_ids, queries):
-            self.write_sample_data(sample_id, "prompt.md", query)
+    def query_and_save(self, queries: list[Query]):
+        raw_queries = []
+        sample_ids = []
 
-        query_results = self.query_llm_parallel(queries)
+        for q in queries:
+            self.write_sample_data(q.sample_id, "prompt.md", q.query)
+            raw_queries.append(q.query)
+            sample_ids.append(q.sample_id)
+
+        query_results = self.query_llm_parallel(raw_queries)
 
         filtered_query_results = []
-        new_active_sample_ids = []
 
         # important: this assumes results arrive back in the order they were sent
-        for sample_id, query_result in zip(self.active_sample_ids, query_results):
+        for sample_id, query_result in zip(sample_ids, query_results):
             if query_result is None:
                 print(f"No query result for sample: {sample_id}")
                 continue
 
             self.write_sample_data(sample_id, "query_result.md", query_result)
-            filtered_query_results.append(query_result)
-
-            # we do not include any sample ids that failed
-            new_active_sample_ids.append(sample_id)
-        
-        self.active_sample_ids = new_active_sample_ids
+            filtered_query_results.append(QueryResult(sample_id=sample_id, result=query_result))
         
         return filtered_query_results
 
@@ -293,9 +306,11 @@ class ParallelTreeSearch:
     def run_eval(self, samples):
         all_results = asyncio.run(self.eval_samples(samples))
 
-        working_kernel_samples = []
-        correctness_fails_samples = []
-        error_samples = []
+        final_results = []
+
+        correct_count = 0
+        incorrect_count = 0
+        error_count = 0
 
         for results_data in all_results:
             sample_id = results_data["sample_id"]
@@ -312,6 +327,13 @@ class ParallelTreeSearch:
             stderr = results["stderr"]
             timed_out = results["timed_out"]
 
+            # sample states are: "correct", "incorrect", "error"
+            sample_data = {
+                "state": EvalState.ERROR,
+                "code": code,
+                "sample_id": sample_id
+            }
+
             model_loaded = True
 
             if "eval_results" in results:
@@ -323,52 +345,64 @@ class ParallelTreeSearch:
 
                     max_diff = eval_results["max_diff"]
 
-                    working_kernel_samples.append({
-                        "code": code,
-                        "runtime": runtime,
-                        "max_diff": max_diff
-                    })
+                    sample_data["state"] = EvalState.CORRECT
+                    sample_data["runtime"] = runtime
+                    sample_data["max_diff"] = max_diff
                 elif "correct" in eval_results:
                     correct = eval_results["correct"]
                     max_diff = eval_results["max_diff"]
                     print(f"Sample {sample_id} correct: {correct}, max_diff: {max_diff}")
 
+                    assert not correct, "If there is no runtime for a given sample, we expect it to be not correct"
+
                     if not correct:
                         # TODO: more info would be useful here
-                        correctness_fails_samples.append({
-                            "code": code,
-                            "max_diff": max_diff
-                        })
+
+                        sample_data["state"] = EvalState.INCORRECT
+                        sample_data["max_diff"] = max_diff
                 else:
                     model_loaded = False
             else:
                 model_loaded = False
 
             if not model_loaded:
-                error_samples.append({
-                    "code": code,
-                    "results": results
-                })
+                sample_data["state"] = EvalState.ERROR
+                sample_data["results"] = results
 
             # TODO: it may be useful to pass stdout back to the LLM even if the run was successful,
             # in case the LLM wants to test something by printing, etc.
 
-            print(f"\n----------- Sample {sample_id} stdout ------------")
-            print(stdout)
-            print(f"----------- Sample {sample_id} stderr ------------")
-            print(stderr)
-            print(f"----------- Sample {sample_id} timed_out ------------")
-            print(timed_out)
-            print("------------------------------------------------\n")
+            # print(f"\n----------- Sample {sample_id} stdout ------------")
+            # print(stdout)
+            # print(f"----------- Sample {sample_id} stderr ------------")
+            # print(stderr)
+            # print(f"----------- Sample {sample_id} timed_out ------------")
+            # print(timed_out)
+            # print("------------------------------------------------\n")
+
+            final_state = sample_data["state"]
+            if final_state == EvalState.CORRECT:
+                correct_count += 1
+            elif final_state == EvalState.INCORRECT:
+                incorrect_count += 1
+            elif final_state == EvalState.ERROR:
+                error_count += 1
+
+            final_results.append(sample_data)
+
+        print(f"\n-------------- Step: {self.curr_step} --------------\n")
+        print(f"CORRECT: {correct_count}, INCORRECT: {incorrect_count}, ERROR: {error_count}")
+        print("------------------------------------------------\n")
 
         self.curr_step += 1
 
-        return (working_kernel_samples, correctness_fails_samples, error_samples)
+        return final_results
 
     # TODO: this should save working solutions to our "solutions database"
     def save_working_solutions(self, eval_data):
-        (working_kernel_samples, _, _) = eval_data
-        pass
+        for sample_data in eval_data:
+            if sample_data["state"] != EvalState.CORRECT:
+                continue
 
     # returns the prompts to make in the next error/correctness-fixing step, if any are needed
     # (if no error/correctness-fixing is needed, simply proceed to the next code gen step)
@@ -393,22 +427,25 @@ class ParallelTreeSearch:
 
     # in this case, we are creating queries that will prompt the LLM to fix the
     # error directly from stdout and stderr, no error summarizing involved
-    def get_direct_fix_queries(self, eval_data):
-        (_, correctness_fails_samples, error_samples) = eval_data
-
+    def get_direct_fix_queries(self, eval_data) -> list[Query]:
         queries = []
 
         problem_code = self.get_problem_code()
 
-        for sample in correctness_fails_samples:
-            code = sample["code"]
-            max_diff = sample["max_diff"]
-            queries.append(prompt.prompt_fix_correctness(problem_code, code, max_diff))
+        for sample_data in eval_data:
+            sample_id = sample_data["sample_id"]
+            state = sample_data["state"]
 
-        for sample in error_samples:
-            code = sample["code"]
-            results = sample["results"]
-            queries.append(prompt.prompt_fix_compile_stdout_stderr(problem_code, code, results))
+            if state == EvalState.INCORRECT:
+                code = sample_data["code"]
+                max_diff = sample_data["max_diff"]
+                query = prompt.prompt_fix_correctness(problem_code, code, max_diff)
+                queries.append(Query(sample_id=sample_id, query=query))
+            elif state == EvalState.ERROR:
+                code = sample_data["code"]
+                results = sample_data["results"]
+                query = prompt.prompt_fix_compile_stdout_stderr(problem_code, code, results)
+                queries.append(Query(sample_id=sample_id, query=query))
 
         return queries
 
@@ -428,33 +465,35 @@ class ParallelTreeSearch:
         return res
 
     # TODO: the initial queries are currently all the same, we should vary them to diversify the initial set of solutions
-    def get_initial_queries(self):
+    def get_init_queries(self) -> list[Query]:
         problem_code = self.get_problem_code()
 
         queries = []
 
         for sample_id in range(self.config.num_samples):
             custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
-            queries.append(custom_cuda_prompt)
+            queries.append(Query(sample_id=sample_id, query=custom_cuda_prompt))
         
         return queries
 
-    def gen_samples(self, queries):
-        problem_id = self.config.task
+    # sample_ids_and_queries is a zipped list of pairs (sample_id, query)
+    def gen_samples(self, queries: list[Query]):
         query_results = self.query_and_save(queries)
 
+        problem_id = self.config.task
+
         res = []
-        for sample_id, query_result in zip(self.active_sample_ids, query_results):
-            custom_kernel = extract_first_code(query_result, ["python", "cpp"])
+        for qr in query_results:
+            custom_kernel = extract_first_code(qr.result, ["python", "cpp"])
             # check LLM is able to generate custom CUDA code
             if custom_kernel is None:
-                print(f"Failed to parse custom kernel for sample: {sample_id}")
+                print(f"Failed to parse custom kernel for sample: {qr.sample_id}")
                 continue
 
-            self.write_sample_data(sample_id, "kernel.py", custom_kernel)
+            self.write_sample_data(qr.sample_id, "kernel.py", custom_kernel)
         
             res.append({
-                "sample_id": sample_id,
+                "sample_id": qr.sample_id,
                 "problem_id": problem_id,
                 "code": custom_kernel,
             })
@@ -465,7 +504,7 @@ class ParallelTreeSearch:
     # attempt to fix the errors
     def gen_summarized_fix_messages(self, eval_data):
         correction_queries, bad_solutions = self.get_correction_queries_and_bad_solutions(eval_data)
-        res = self.query_and_save(queries)
+        res = self.query_and_save(correction_queries)
 
         # craft a message which will prompt the LLM to fix the broken solution in the next step
         problem_code = self.get_problem_code()
@@ -489,10 +528,10 @@ class ParallelTreeSearch:
         # new_eval_data = self.run_eval(new_samples)
         # self.save_working_solutions(new_eval_data)
 
-        queries = self.get_initial_queries()
+        queries = self.get_init_queries()
 
         for i in range(3):
-            print(f"======================= Running fix iteration {i}, sample count: {len(self.active_sample_ids)} =======================")
+            print(f"======================= Running fix iteration {i} =======================")
             new_samples = self.gen_samples(queries)
             eval_data = self.run_eval(new_samples)
             self.save_working_solutions(eval_data)

@@ -564,14 +564,14 @@ class ParallelTreeSearch:
         # new_eval_data = self.run_eval(new_samples)
         # self.save_working_solutions(new_eval_data)
 
-        for phase in range(self.num_phases):
+        for phase in range(self.config.num_phases):
             if phase == 0:
                 queries = self.get_init_queries()
             else:
                 # TODO: use the saved solutions to build queries for the next phase (branching in the parallel tree search)
                 pass
 
-            for fix_iter in range(self.max_fix_attempts):
+            for fix_iter in range(self.config.max_fix_attempts):
                 print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")
                 new_samples = self.gen_samples(queries)
                 eval_data = self.run_eval(new_samples)

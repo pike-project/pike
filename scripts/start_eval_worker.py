@@ -6,10 +6,12 @@ import sys
 import os
 import argparse
 import json
+import shutil
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.util.disk_channel import DiskChannel
+from src.util.atomics import AtomicIntAsync
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -78,7 +80,9 @@ class EvalWorker:
 
         self.eval_script_path = curr_dir / "eval.py"
 
-        self.task_count = 0
+        self.total_task_count = 0
+
+        self.active_task_count = AtomicIntAsync(0)
     
     async def handle_msg(self, msg, task_number):
         level = msg["level"]
@@ -150,6 +154,10 @@ class EvalWorker:
             
             timed_out = True
 
+        # remove cache dirs, no longer needed
+        shutil.rmtree(eval_torch_ext_dir)
+        shutil.rmtree(eval_triton_cache_dir)
+
         # 3. read results back
 
         eval_results = {}
@@ -193,6 +201,8 @@ class EvalWorker:
 
         print(f"Completed task: {eval_id}, task time: {task_time:.2f}s")
 
+        await self.active_task_count.dec()
+
     async def run(self):
         print(f"CPU count: {os.cpu_count()}")
         print("Eval worker running...")
@@ -200,9 +210,14 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            asyncio.create_task(self.handle_msg(msg, self.task_count))
+            while self.active_task_count.peek() >= 100:
+                await asyncio.sleep(1)
+
+            active_task_count = await self.active_task_count.inc()
+            print(f"Active task count: {active_task_count}")
+            asyncio.create_task(self.handle_msg(msg, self.total_task_count))
             # await self.handle_msg(msg)
-            self.task_count += 1
+            self.total_task_count += 1
             
 
 async def main():

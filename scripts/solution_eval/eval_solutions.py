@@ -20,6 +20,8 @@ class EvalSolutions:
         self.results_dir = (curr_dir / "../../results/eval_solutions").resolve()
         os.makedirs(self.results_dir, exist_ok=True)
 
+        self.dup_count = 10
+
         self.level = 3
     
     def metr_solutions(self):
@@ -40,10 +42,11 @@ class EvalSolutions:
             with open(file_path) as f:
                 code = f.read()
             
-            tasks.append({
-                "code": code,
-                "problem_id": task
-            })
+            for _ in range(self.dup_count):
+                tasks.append({
+                    "code": code,
+                    "problem_id": task
+                })
 
         tasks.sort(key=lambda x: x["problem_id"])
 

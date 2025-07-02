@@ -137,6 +137,8 @@ class ParallelTreeSearch:
 
         print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
 
+        self.active_sample_ids = list(range(config.num_samples))
+
         data_dir = Path(config.data_dir)
 
         runs_dir = data_dir / "runs"
@@ -218,40 +220,29 @@ class ParallelTreeSearch:
             f.write(data)
 
     def query_and_save(self, queries):
-        for sample_id, query in enumerate(queries):
+        for sample_id, query in zip(self.active_sample_ids, queries):
             self.write_sample_data(sample_id, "prompt.md", query)
 
         query_results = self.query_llm_parallel(queries)
 
+        filtered_query_results = []
+        new_active_sample_ids = []
+
         # important: this assumes results arrive back in the order they were sent
-        for sample_id, query_result in enumerate(query_results):
+        for sample_id, query_result in zip(self.active_sample_ids, query_results):
+            if query_result is None:
+                print(f"No query result for sample: {sample_id}")
+                continue
+
             self.write_sample_data(sample_id, "query_result.md", query_result)
+            filtered_query_results.append(query_result)
+
+            # we do not include any sample ids that failed
+            new_active_sample_ids.append(sample_id)
         
-        return query_results
-    
-    def run_step(self, queries, extract_code=True):
-        problem_id = self.config.task
-        query_results = self.query_and_save(queries)
-
-        res = []
-        if extract_code:
-            for sample_id, query_result in enumerate(query_results):
-                custom_kernel = extract_first_code(query_result, ["python", "cpp"])
-                # check LLM is able to generate custom CUDA code
-                if custom_kernel is None:
-                    print(f"Failed to parse custom kernel for sample: {sample_id}")
-                else:
-                    self.write_sample_data(sample_id, "kernel.py", custom_kernel)
-                
-                    res.append({
-                        "sample_id": sample_id,
-                        "problem_id": problem_id,
-                        "code": custom_kernel,
-                    })
-        else:
-            res = query_results
-
-        return res
+        self.active_sample_ids = new_active_sample_ids
+        
+        return filtered_query_results
 
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
@@ -310,8 +301,12 @@ class ParallelTreeSearch:
             sample_id = results_data["sample_id"]
             results = results_data["results"]
 
-            # TODO: should we be using sample_id to index here?
-            code = samples[sample_id]["code"]
+            code = None
+            for sample in samples:
+                if sample["sample_id"] == sample_id:
+                    code = sample["code"]
+            
+            assert code is not None, "sample_id code was not found in original samples"
 
             stdout = results["stdout"]
             stderr = results["stderr"]
@@ -444,23 +439,38 @@ class ParallelTreeSearch:
         
         return queries
 
-    def gen_samples(self, queries=None):
-        res = self.run_step(queries, extract_code=True)
+    def gen_samples(self, queries):
+        problem_id = self.config.task
+        query_results = self.query_and_save(queries)
+
+        res = []
+        for sample_id, query_result in zip(self.active_sample_ids, query_results):
+            custom_kernel = extract_first_code(query_result, ["python", "cpp"])
+            # check LLM is able to generate custom CUDA code
+            if custom_kernel is None:
+                print(f"Failed to parse custom kernel for sample: {sample_id}")
+                continue
+
+            self.write_sample_data(sample_id, "kernel.py", custom_kernel)
+        
+            res.append({
+                "sample_id": sample_id,
+                "problem_id": problem_id,
+                "code": custom_kernel,
+            })
+
         return res
 
     # in this case, we are having a "summary agent" summarize the errors, not
     # attempt to fix the errors
     def gen_summarized_fix_messages(self, eval_data):
         correction_queries, bad_solutions = self.get_correction_queries_and_bad_solutions(eval_data)
-        res = self.run_step(correction_queries, extract_code=False)
+        res = self.query_and_save(queries)
 
         # craft a message which will prompt the LLM to fix the broken solution in the next step
         problem_code = self.get_problem_code()
         queries = []
         for error_summary, solution_to_fix in zip(res, bad_solutions):
-            if error_summary is None:
-                continue
-
             prompt = prompt.prompt_fix_compile_summarized(problem_code, solution_to_fix, error_summary)
             queries.append(prompt)
 
@@ -481,8 +491,8 @@ class ParallelTreeSearch:
 
         queries = self.get_initial_queries()
 
-        for i in range(5):
-            print(f"======================= Running fix iteration {i} =======================")
+        for i in range(3):
+            print(f"======================= Running fix iteration {i}, sample count: {len(self.active_sample_ids)} =======================")
             new_samples = self.gen_samples(queries)
             eval_data = self.run_eval(new_samples)
             self.save_working_solutions(eval_data)

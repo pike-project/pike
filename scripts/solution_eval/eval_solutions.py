@@ -133,7 +133,7 @@ class EvalSolutions:
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / "metr_out_4.json"
+        results_path = self.results_dir / "metr_out_5.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)

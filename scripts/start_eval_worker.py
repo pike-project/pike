@@ -139,7 +139,6 @@ class EvalWorker:
             )
 
             stdout_raw, stderr_raw = await asyncio.wait_for(proc.communicate(), timeout=timeout_sec)
-            task_end_time = time.time()
 
             stdout = stdout_raw.decode()
 
@@ -197,6 +196,7 @@ class EvalWorker:
 
         await self.disk_channel.send(output_data)
 
+        task_end_time = time.time()
         task_time = task_end_time - task_start_time
 
         print(f"Completed task: {eval_id}, task time: {task_time:.2f}s")

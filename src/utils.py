@@ -606,7 +606,11 @@ def maybe_multithread_ordered(func, instances, num_workers, time_interval=0.0, *
 
                 # Retrieve results in the order they were submitted.
                 # .result() will block until the specific future is complete.
-                for future in futures:
+                for idx, future in enumerate(futures):
+                    # Test to simulate failure
+                    # if idx == 1:
+                    #     output_data.append(None)
+
                     try:
                         result = future.result()
                         output_data.append(result)

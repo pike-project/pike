@@ -112,6 +112,9 @@ def query_server(
     - Fireworks (OpenAI compatbility)
     - SGLang (Local Server)
     """
+
+    full_response = None
+
     # Select model and client based on arguments
     match server_type:
         case "sglang":
@@ -298,6 +301,9 @@ def query_server(
             top_p=top_p,
         )
         outputs = [choice.message.content for choice in response.choices]
+
+        full_response = response
+
     elif server_type == "together":
         response = client.chat.completions.create(
             model=model,
@@ -369,9 +375,9 @@ def query_server(
 
     # output processing
     if len(outputs) == 1:
-        return outputs[0]
+        return outputs[0], full_response
     else:
-        return outputs
+        return outputs, full_response
 
 
 # a list of presets for API server configs
@@ -446,12 +452,12 @@ def create_inference_server_from_presets(server_type: str = None,
         
         if time_generation:
             start_time = time.time()
-            response = query_server(
+            res_data = query_server(
                 prompt, server_type=server_type, **server_args
             )
             end_time = time.time()
             print(f"[Timing] Inference took {end_time - start_time:.2f} seconds")
-            return response
+            return res_data
         else:
             return query_server(
                 prompt, server_type=server_type, **server_args

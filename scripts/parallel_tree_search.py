@@ -247,12 +247,15 @@ class ParallelTreeSearch:
         filtered_query_results = []
 
         # important: this assumes results arrive back in the order they were sent
-        for sample_id, query_result in zip(sample_ids, query_results):
-            if query_result is None:
+        for sample_id, res_data in zip(sample_ids, query_results):
+            if res_data is None:
                 print(f"No query result for sample: {sample_id}")
                 continue
 
+            (query_result, full_response) = res_data
+
             self.write_sample_data(sample_id, "query_result.md", query_result)
+            self.write_sample_data(sample_id, "full_llm_response.json", json.dumps(full_response.to_dict(), indent=4))
             filtered_query_results.append(QueryResult(sample_id=sample_id, result=query_result))
         
         return filtered_query_results
@@ -289,7 +292,7 @@ class ParallelTreeSearch:
 
             print(f"Received eval result for sample: {sample_id}")
 
-            self.write_sample_data(sample_id, "eval_results.json", json.dumps(results))
+            self.write_sample_data(sample_id, "eval_results.json", json.dumps(results, indent=4))
 
             results_data = {
                 "sample_id": sample_id,

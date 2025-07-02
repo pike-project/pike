@@ -210,7 +210,7 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            while self.active_task_count.peek() >= 100:
+            while self.active_task_count.peek() >= 50:
                 await asyncio.sleep(1)
 
             active_task_count = await self.active_task_count.inc()

@@ -20,7 +20,7 @@ class EvalSolutions:
         self.results_dir = (curr_dir / "../../results/eval_solutions").resolve()
         os.makedirs(self.results_dir, exist_ok=True)
 
-        self.dup_count = 10
+        self.dup_count = 5
 
         self.level = 3
     
@@ -133,7 +133,7 @@ class EvalSolutions:
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / "metr_out_5.json"
+        results_path = self.results_dir / "metr_out_6.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)

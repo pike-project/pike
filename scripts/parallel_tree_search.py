@@ -105,6 +105,9 @@ class GenerationConfig(Config):
         # Migrate Monkeys code base to KernelBench
         self.num_samples = REQUIRED # for sampling multiple samples per problem
 
+        self.num_phases = 1
+        self.max_fix_attempts = 3
+
     def greedy(self):
         # For greedy decoding, epsecially baseline eval
         self.greedy_sample = True
@@ -117,9 +120,6 @@ class GenerationConfig(Config):
 class WorkArgs:
     problem_id: int # logically indexed
     sample_id: int
-
-def get_sample_dir(step_dir: Path, level, problem_id, sample_id):
-    return step_dir / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
 
 def query_llm(query: str, inference_server: callable):
     try:
@@ -164,6 +164,8 @@ class ParallelTreeSearch:
 
         pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
 
+        self.phase_solutions = []
+        self.curr_phase = 0
         self.curr_step = 0
 
         assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
@@ -215,19 +217,35 @@ class ParallelTreeSearch:
 
         return res
 
+    def get_phase_dir(self):
+        phase_dir = self.run_dir / f"phases/phase_{self.curr_phase}"
+        return phase_dir
+
+    # TODO: pass in problem_id too
+    def get_solutions_dir(self, solution_id):
+        level = self.config.level
+        problem_id = self.config.task
+
+        solutions_dir = self.get_phase_dir() / "solutions" / f"level_{level}" / f"task_{problem_id}" / f"solution_{solution_id}"
+        os.makedirs(solutions_dir, exist_ok=True)
+
+        return solutions_dir
+
     def get_step_dir(self):
-        step_dir = self.run_dir / f"step_{self.curr_step}"
+        step_dir = self.get_phase_dir() / f"steps/step_{self.curr_step}"
         return step_dir
 
+    # TODO: pass in problem_id too
     def get_sample_dir(self, sample_id):
         level = self.config.level
         problem_id = self.config.task
 
-        sample_dir = self.get_step_dir() / f"level_{level}_problem_{problem_id}_sample_{sample_id}"
+        sample_dir = self.get_step_dir() / f"level_{level}" / f"task_{problem_id}" / f"sample_{sample_id}"
         os.makedirs(sample_dir, exist_ok=True)
 
         return sample_dir
 
+    # TODO: pass in problem_id too
     def write_sample_data(self, sample_id, filename, data):
         file_path = self.get_sample_dir(sample_id) / filename
         with open(file_path, "w") as f:
@@ -401,11 +419,26 @@ class ParallelTreeSearch:
 
         return final_results
 
-    # TODO: this should save working solutions to our "solutions database"
-    def save_working_solutions(self, eval_data):
+    # this should save working solutions to our "solutions database"
+    def save_solutions(self, eval_data):
         for sample_data in eval_data:
             if sample_data["state"] != EvalState.CORRECT:
                 continue
+
+            solution_id = len(self.phase_solutions)
+            solutions_dir = self.get_solutions_dir(solution_id)
+
+            code_path = solutions_dir / "kernel.py"
+            data_path = solutions_dir / "data.json"
+
+            with open(code_path, "w") as f:
+                f.write(sample_data["code"])
+            
+            with open(data_path, "w") as f:
+                json.dump(sample_data, data_path, indent=4)
+            
+            self.phase_solutions.append(sample_data)
+
 
     # returns the prompts to make in the next error/correctness-fixing step, if any are needed
     # (if no error/correctness-fixing is needed, simply proceed to the next code gen step)
@@ -531,17 +564,29 @@ class ParallelTreeSearch:
         # new_eval_data = self.run_eval(new_samples)
         # self.save_working_solutions(new_eval_data)
 
-        queries = self.get_init_queries()
+        for phase in range(self.num_phases):
+            if phase == 0:
+                queries = self.get_init_queries()
+            else:
+                # TODO: use the saved solutions to build queries for the next phase (branching in the parallel tree search)
+                pass
 
-        for i in range(3):
-            print(f"======================= Running fix iteration {i} =======================")
-            new_samples = self.gen_samples(queries)
-            eval_data = self.run_eval(new_samples)
-            self.save_working_solutions(eval_data)
-            queries = self.get_direct_fix_queries(eval_data)
-            if len(queries) == 0:
-                print(f"======== All solutions passing/failed, exiting at iteration {i} ========")
-                break
+            for fix_iter in range(self.max_fix_attempts):
+                print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")
+                new_samples = self.gen_samples(queries)
+                eval_data = self.run_eval(new_samples)
+                self.save_solutions(eval_data)
+                queries = self.get_direct_fix_queries(eval_data)
+                if len(queries) == 0:
+                    print(f"======== All solutions passing/failed, exiting at phase: {phase}, fix iter: {fix_iter} ========")
+                    break
+            
+            print(f"\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+            print(f"Phase {phase} complete. Solutions found: {len(self.phase_solutions)}")
+            print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n")
+
+            self.curr_phase += 1
+            self.phase_solutions = []
 
 
 @pydra.main(base=GenerationConfig)

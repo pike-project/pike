@@ -173,13 +173,19 @@ class ParallelTreeSearch:
 
         pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
 
-        self.phase_solutions = []
+        self.all_solutions = {}
+        self.phase_solutions = {}
+
         self.curr_phase = 0
         self.curr_step = 0
 
         assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
 
         self.problem_id_range = problem_id_range
+
+        for problem_id in self.problem_id_range:
+            self.phase_solutions[problem_id] = []
+            self.all_solutions[problem_id] = []
 
         tx_dir = Path(config.worker_input_dir)
         rx_dir = Path(config.worker_output_dir)
@@ -430,8 +436,10 @@ class ParallelTreeSearch:
             if sample_data["state"] != EvalState.CORRECT:
                 continue
 
-            solution_id = len(self.phase_solutions)
-            solutions_dir = self.get_solutions_dir(solution_id, sample_data["problem_id"])
+            problem_id = sample_data["problem_id"]
+
+            solution_id = len(self.phase_solutions[problem_id])
+            solutions_dir = self.get_solutions_dir(solution_id, problem_id)
 
             code_path = solutions_dir / "kernel.py"
             data_path = solutions_dir / "data.json"
@@ -442,7 +450,8 @@ class ParallelTreeSearch:
             with open(data_path, "w") as f:
                 json.dump(sample_data, f, indent=4, cls=EnumEncoder)
             
-            self.phase_solutions.append(sample_data)
+            self.phase_solutions[problem_id].append(sample_data)
+            self.all_solutions[problem_id].append(sample_data)
 
 
     # returns the prompts to make in the next error/correctness-fixing step, if any are needed
@@ -575,12 +584,17 @@ class ParallelTreeSearch:
                     break
             
             print(f"\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-            print(f"Phase {phase} complete. Solutions found: {len(self.phase_solutions)}")
+            print(f"Phase {phase} complete.")
+            for problem_id, l in self.phase_solutions.items():
+                print(f"  Task: {problem_id}, solution count: {len(l)}")
+
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n")
 
             self.curr_phase += 1
             self.curr_step = 0
-            self.phase_solutions = []
+
+            for problem_id in self.phase_solutions.keys():
+                self.phase_solutions[problem_id] = []
 
 
 @pydra.main(base=GenerationConfig)

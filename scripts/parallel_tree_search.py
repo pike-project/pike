@@ -52,6 +52,12 @@ class QueryResult:
     sample_id: int
     result: str
 
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        return super().default(obj)
+
 class GenerationConfig(Config):
     def __init__(self):
         
@@ -217,30 +223,30 @@ class ParallelTreeSearch:
 
         return res
 
+    # TODO: pass in problem_id
+    def get_task_dir(self):
+        level = self.config.level
+        problem_id = self.config.task
+
+        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}"
+
+        return task_dir
+
+    # TODO: pass in problem_id
     def get_phase_dir(self):
-        phase_dir = self.run_dir / f"phases/phase_{self.curr_phase}"
+        phase_dir = self.get_task_dir() / f"phases/phase_{self.curr_phase}"
         return phase_dir
 
     # TODO: pass in problem_id too
     def get_solutions_dir(self, solution_id):
-        level = self.config.level
-        problem_id = self.config.task
-
-        solutions_dir = self.get_phase_dir() / "solutions" / f"level_{level}" / f"task_{problem_id}" / f"solution_{solution_id}"
+        solutions_dir = self.get_phase_dir() / f"solutions/solution_{solution_id}"
         os.makedirs(solutions_dir, exist_ok=True)
 
         return solutions_dir
 
-    def get_step_dir(self):
-        step_dir = self.get_phase_dir() / f"steps/step_{self.curr_step}"
-        return step_dir
-
     # TODO: pass in problem_id too
     def get_sample_dir(self, sample_id):
-        level = self.config.level
-        problem_id = self.config.task
-
-        sample_dir = self.get_step_dir() / f"level_{level}" / f"task_{problem_id}" / f"sample_{sample_id}"
+        sample_dir = self.get_phase_dir() / f"agents/agent_{sample_id}/step_{self.curr_step}"
         os.makedirs(sample_dir, exist_ok=True)
 
         return sample_dir
@@ -411,7 +417,7 @@ class ParallelTreeSearch:
 
             final_results.append(sample_data)
 
-        print(f"\n------------------ Step: {self.curr_step} ------------------\n")
+        print(f"\n--------------- Phase: {self.curr_phase}, Step: {self.curr_step} ---------------\n")
         print(f"CORRECT: {correct_count}, INCORRECT: {incorrect_count}, ERROR: {error_count}")
         print("------------------------------------------------\n")
 
@@ -435,7 +441,7 @@ class ParallelTreeSearch:
                 f.write(sample_data["code"])
             
             with open(data_path, "w") as f:
-                json.dump(sample_data, f, indent=4)
+                json.dump(sample_data, f, indent=4, cls=EnumEncoder)
             
             self.phase_solutions.append(sample_data)
 
@@ -586,6 +592,7 @@ class ParallelTreeSearch:
             print(f"-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n")
 
             self.curr_phase += 1
+            self.curr_step = 0
             self.phase_solutions = []
 
 

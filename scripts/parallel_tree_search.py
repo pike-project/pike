@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
-import src.prompt_constructor as prompt
+import src.prompt_constructor_new as prompt
 import src.query_strategies as query_strategies
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
@@ -565,10 +565,11 @@ class ParallelTreeSearch:
         num_samples = self.config.num_samples
 
         curr_sample_id = 0
-        for problem_id, solutions in self.all_solutions:
+        for problem_id, solutions in self.all_solutions.items():
             sorted(solutions, key=lambda x: x["runtime"])
 
-            raw_queries = query_strategies.simple_branching_strategy(solutions, num_samples, problem_id)
+            problem_code = self.get_problem_code(problem_id)
+            raw_queries = query_strategies.simple_branching_strategy(solutions, num_samples, problem_code)
 
             if len(raw_queries) == 0:
                 print(f"WARNING: No queries generated for task {problem_id}")

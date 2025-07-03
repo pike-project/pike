@@ -1,15 +1,11 @@
 import numpy as np
+import src.prompt_constructor_new as prompt
 
-def get_simple_branching_query(code, runtime, problem_id):
-    return f"""Please improve the following code:
-
-```python
-{code}
-```
-"""
-
-# returns a set of prompts
-def simple_branching_strategy(sorted_solutions, num_samples, problem_id) -> list[str]:
+# the simple branching strategy requires at least 3 correct solutions, and it
+# returns queries which focus on one of the top 3 solutions (in terms of runtime)
+# splitting work evenly between the 3 solutions
+# - returns a list of prompts
+def simple_branching_strategy(sorted_solutions, num_samples, problem_code) -> list[str]:
     # TODO: should we create a next round based on just 1-2 solutions, if there are only that many?
     if len(sorted_solutions) < 3:
         return []
@@ -28,8 +24,8 @@ def simple_branching_strategy(sorted_solutions, num_samples, problem_id) -> list
         runtime = sol["runtime"]
 
         for _ in range(bin_size):
-            q = get_simple_branching_query(code, runtime, problem_id)
-            queries.append(q)
+            query = prompt.prompt_improve_solution(problem_code, code)
+            queries.append(query)
 
     return queries
 
@@ -49,7 +45,7 @@ def test_simple_branching_strategy():
         },
     ]
 
-    qs = simple_branching_strategy(sorted_sols, 10, 1)
+    qs = simple_branching_strategy(sorted_sols, 10, "problem_code")
 
     assert len(qs) == 10, "Length of queries should be 10"
 

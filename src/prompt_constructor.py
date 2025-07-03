@@ -45,6 +45,62 @@ Try to make changes which will significantly improve performance over the given 
 You should try to make sure the code compiles and is fully functional, but we will attempt to fix errors and correctness issues if it does not.
 """
 
+def full_problem_instruction_with_example(
+    arch_src: str, example_arch_src: str, example_new_arch_src: str
+) -> str:
+    prompt = PROBLEM_STATEMENT
+
+    if example_arch_src != "" and example_new_arch_src != "":
+        prompt += f"""
+Here's an example to show you the syntax of inline embedding custom CUDA operators in torch. The example given architecture is:\n
+```python
+{example_arch_src}
+```\n
+The new architecture for the previous example with custom CUDA kernels looks like this:
+```python
+{example_new_arch_src}
+```\n
+"""
+
+    prompt += f"""
+You are given the following architecture:\n
+```python
+{arch_src}
+```
+"""
+    return prompt
+
+
+def full_problem_instruction(ref_arch_src: str) -> str:
+    """
+    Using prompt example (an element-wise addition) for prompt templates
+    The most basic form of example just to show LLM the task and the expected output format
+    """
+    arch = ref_arch_src
+    # These are strictly defined for now
+
+    # path to prompt template, show an example of Model (torch specifications) and ModelNew (torch + custom CUDA kernels)
+    example_arch_path = os.path.join(
+        REPO_TOP_PATH, f"src/prompts/model_ex_add.py"
+    )
+    example_new_arch_path = os.path.join(
+        REPO_TOP_PATH, f"src/prompts/model_new_ex_add.py"
+    )
+
+    if not os.path.exists(example_arch_path):
+        raise FileNotFoundError(
+            f"Example architecture file not found: {example_arch_path}"
+        )
+    if not os.path.exists(example_new_arch_path):
+        raise FileNotFoundError(
+            f"Example new architecture file not found: {example_new_arch_path}"
+        )
+
+    example_arch = read_file(example_arch_path)
+    example_new_arch = read_file(example_new_arch_path)
+
+    return full_problem_instruction_with_example(arch, example_arch, example_new_arch)
+
 
 def prompt_generate_custom_cuda(
     arch_src: str, example_arch_src: str, example_new_arch_src: str

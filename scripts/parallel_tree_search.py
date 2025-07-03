@@ -18,6 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
 import src.prompt_constructor as prompt
+import src.query_strategies as query_strategies
 from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 from src.util.disk_channel import DiskChannel
@@ -114,7 +115,7 @@ class GenerationConfig(Config):
         # Migrate Monkeys code base to KernelBench
         self.num_samples = REQUIRED # for sampling multiple samples per problem
 
-        self.num_phases = 1
+        self.num_phases = 2
         self.max_fix_attempts = 3
 
     def greedy(self):
@@ -555,6 +556,29 @@ class ParallelTreeSearch:
 
         return queries
 
+    # here we use all of the existing solutions for each problem, and try to divide the available num_samples in a way that
+    # focuses mostly on the most promising solutions
+    # we could employ a number of strategies here
+    def get_next_queries(self):
+        queries = []
+
+        num_samples = self.config.num_samples
+
+        curr_sample_id = 0
+        for problem_id, solutions in self.all_solutions:
+            sorted(solutions, key=lambda x: x["runtime"])
+
+            raw_queries = query_strategies.simple_branching_strategy(solutions, num_samples, problem_id)
+
+            if len(raw_queries) == 0:
+                print(f"WARNING: No queries generated for task {problem_id}")
+
+            for raw_q in raw_queries:
+                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, query=raw_q))
+                curr_sample_id += 1
+
+        return queries
+
     def run(self):
         # initial_queries = self.get_initial_queries()
         # samples = self.gen_samples(initial_queries)
@@ -570,8 +594,8 @@ class ParallelTreeSearch:
             if phase == 0:
                 queries = self.get_init_queries()
             else:
-                # TODO: use the saved solutions to build queries for the next phase (branching in the parallel tree search)
-                pass
+                # use the saved solutions to build queries for the next phase (branching in the parallel tree search)
+                queries = self.get_next_queries()
 
             for fix_iter in range(self.config.max_fix_attempts):
                 print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")

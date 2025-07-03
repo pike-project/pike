@@ -41,7 +41,7 @@ You have complete freedom to choose the set of operators you want to replace. Yo
 PROBLEM_INSTRUCTION = """
 Optimize the architecture named Model with custom CUDA operators! Name your optimized output architecture ModelNew. Output the new code in codeblocks.
 Please generate real code, NOT pseudocode. Just output the new model code, no other text, and NO testing code!
-Try to make a radical change which will significantly improve performance over the given architecture.
+Try to make changes which will significantly improve performance over the given architecture.
 You should try to make sure the code compiles and is fully functional, but we will attempt to fix errors and correctness issues if it does not.
 """
 

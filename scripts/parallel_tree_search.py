@@ -44,11 +44,13 @@ class EvalState(Enum):
 
 @dataclass
 class Query:
+    problem_id: int
     sample_id: int
     query: str
 
 @dataclass
 class QueryResult:
+    problem_id: int
     sample_id: int
     result: str
 
@@ -69,7 +71,8 @@ class GenerationConfig(Config):
         # Problem Specification
         self.level = REQUIRED
 
-        self.task = REQUIRED
+        self.task_start = REQUIRED
+        self.task_end = REQUIRED
         
         # subset of problems to generate, otherwise generate on all problems in the level
         # both sides are inclusive
@@ -105,7 +108,7 @@ class GenerationConfig(Config):
         self.worker_output_dir = REQUIRED
     
         self.verbose = False
-        self.store_type = "local" # TODO: add Database Integration
+        self.store_type = "local"
 
         # Future support
         # Migrate Monkeys code base to KernelBench
@@ -150,7 +153,7 @@ class ParallelTreeSearch:
 
         # num_problems_in_level = len(curr_level_dataset)
 
-        problem_id_range = range(config.task, config.task + 1)
+        problem_id_range = range(self.config.task_start, self.config.task_end + 1)
         # if config.subset == (None, None):
         #     problem_id_range = range(1, num_problems_in_level)
         # else:
@@ -191,9 +194,8 @@ class ParallelTreeSearch:
                                                                 max_tokens=self.config.max_tokens,
                                                                 verbose=self.config.verbose)
 
-    def get_problem_code(self):
+    def get_problem_code(self, problem_id):
         dataset = self.curr_level_dataset
-        problem_id = self.config.task
 
         # Fetch problem source code
         if self.config.dataset_src == "huggingface":
@@ -223,64 +225,58 @@ class ParallelTreeSearch:
 
         return res
 
-    # TODO: pass in problem_id
-    def get_task_dir(self):
+    def get_task_dir(self, problem_id):
         level = self.config.level
-        problem_id = self.config.task
 
         task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}"
 
         return task_dir
 
-    # TODO: pass in problem_id
-    def get_phase_dir(self):
-        phase_dir = self.get_task_dir() / f"phases/phase_{self.curr_phase}"
+    def get_phase_dir(self, problem_id):
+        phase_dir = self.get_task_dir(problem_id) / f"phases/phase_{self.curr_phase}"
         return phase_dir
 
-    # TODO: pass in problem_id too
-    def get_solutions_dir(self, solution_id):
-        solutions_dir = self.get_phase_dir() / f"solutions/solution_{solution_id}"
+    def get_solutions_dir(self, solution_id, problem_id):
+        solutions_dir = self.get_phase_dir(problem_id) / f"solutions/solution_{solution_id}"
         os.makedirs(solutions_dir, exist_ok=True)
 
         return solutions_dir
 
-    # TODO: pass in problem_id too
-    def get_sample_dir(self, sample_id):
-        sample_dir = self.get_phase_dir() / f"agents/agent_{sample_id}/step_{self.curr_step}"
+    def get_sample_dir(self, problem_id, sample_id):
+        sample_dir = self.get_phase_dir(problem_id) / f"agents/agent_{sample_id}/step_{self.curr_step}"
         os.makedirs(sample_dir, exist_ok=True)
 
         return sample_dir
 
-    # TODO: pass in problem_id too
-    def write_sample_data(self, sample_id, filename, data):
-        file_path = self.get_sample_dir(sample_id) / filename
+    def write_sample_data(self, problem_id, sample_id, filename, data):
+        file_path = self.get_sample_dir(problem_id, sample_id) / filename
         with open(file_path, "w") as f:
             f.write(data)
 
     def query_and_save(self, queries: list[Query]):
         raw_queries = []
-        sample_ids = []
+        sample_id_problem_id = []
 
         for q in queries:
-            self.write_sample_data(q.sample_id, "prompt.md", q.query)
+            self.write_sample_data(q.problem_id, q.sample_id, "prompt.md", q.query)
             raw_queries.append(q.query)
-            sample_ids.append(q.sample_id)
+            sample_id_problem_id.append((q.sample_id, q.problem_id))
 
         query_results = self.query_llm_parallel(raw_queries)
 
         filtered_query_results = []
 
         # important: this assumes results arrive back in the order they were sent
-        for sample_id, res_data in zip(sample_ids, query_results):
+        for (sample_id, problem_id), res_data in zip(sample_id_problem_id, query_results):
             if res_data is None:
                 print(f"No query result for sample: {sample_id}")
                 continue
 
             (query_result, full_response) = res_data
 
-            self.write_sample_data(sample_id, "query_result.md", query_result)
-            self.write_sample_data(sample_id, "full_llm_response.json", json.dumps(full_response.to_dict(), indent=4))
-            filtered_query_results.append(QueryResult(sample_id=sample_id, result=query_result))
+            self.write_sample_data(problem_id, sample_id, "query_result.md", query_result)
+            self.write_sample_data(problem_id, sample_id, "full_llm_response.json", json.dumps(full_response.to_dict(), indent=4))
+            filtered_query_results.append(QueryResult(problem_id=problem_id, sample_id=sample_id, result=query_result))
         
         return filtered_query_results
 
@@ -316,7 +312,7 @@ class ParallelTreeSearch:
 
             # print(f"Received eval result for sample: {sample_id}")
 
-            self.write_sample_data(sample_id, "eval_results.json", json.dumps(results, indent=4))
+            self.write_sample_data(problem_id, sample_id, "eval_results.json", json.dumps(results, indent=4))
 
             results_data = {
                 "sample_id": sample_id,
@@ -344,9 +340,11 @@ class ParallelTreeSearch:
             results = results_data["results"]
 
             code = None
+            problem_id = None
             for sample in samples:
                 if sample["sample_id"] == sample_id:
                     code = sample["code"]
+                    problem_id = sample["problem_id"]
             
             assert code is not None, "sample_id code was not found in original samples"
 
@@ -358,7 +356,8 @@ class ParallelTreeSearch:
             sample_data = {
                 "state": EvalState.ERROR,
                 "code": code,
-                "sample_id": sample_id
+                "sample_id": sample_id,
+                "problem_id": problem_id,
             }
 
             model_loaded = True
@@ -432,7 +431,7 @@ class ParallelTreeSearch:
                 continue
 
             solution_id = len(self.phase_solutions)
-            solutions_dir = self.get_solutions_dir(solution_id)
+            solutions_dir = self.get_solutions_dir(solution_id, sample_data["problem_id"])
 
             code_path = solutions_dir / "kernel.py"
             data_path = solutions_dir / "data.json"
@@ -448,6 +447,7 @@ class ParallelTreeSearch:
 
     # returns the prompts to make in the next error/correctness-fixing step, if any are needed
     # (if no error/correctness-fixing is needed, simply proceed to the next code gen step)
+    # TODO: this is broken
     def get_correction_queries_and_bad_solutions(self, eval_data):
         (_, correctness_fails_samples, error_samples) = eval_data
 
@@ -472,57 +472,43 @@ class ParallelTreeSearch:
     def get_direct_fix_queries(self, eval_data) -> list[Query]:
         queries = []
 
-        problem_code = self.get_problem_code()
-
         for sample_data in eval_data:
             sample_id = sample_data["sample_id"]
+            problem_id = sample_data["problem_id"]
             state = sample_data["state"]
+
+            problem_code = self.get_problem_code(problem_id)
 
             if state == EvalState.INCORRECT:
                 code = sample_data["code"]
                 max_diff = sample_data["max_diff"]
                 query = prompt.prompt_fix_correctness(problem_code, code, max_diff)
-                queries.append(Query(sample_id=sample_id, query=query))
+                queries.append(Query(problem_id=problem_id, sample_id=sample_id, query=query))
             elif state == EvalState.ERROR:
                 code = sample_data["code"]
                 results = sample_data["results"]
                 query = prompt.prompt_fix_compile_stdout_stderr(problem_code, code, results)
-                queries.append(Query(sample_id=sample_id, query=query))
+                queries.append(Query(problem_id=problem_id, sample_id=sample_id, query=query))
 
         return queries
 
-    # this is an example of the first round of querying the LLM, before there is any prior output
-    def run_init_queries(self, num_queries):
-        problem_code = self.get_problem_code()
-
-        custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
-
-        queries = []
-
-        for _ in range(num_queries):
-            queries.append(custom_cuda_prompt)
-
-        res = self.query_llm_parallel(queries)
-
-        return res
-
     # TODO: the initial queries are currently all the same, we should vary them to diversify the initial set of solutions
     def get_init_queries(self) -> list[Query]:
-        problem_code = self.get_problem_code()
-
         queries = []
 
-        for sample_id in range(self.config.num_samples):
-            custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
-            queries.append(Query(sample_id=sample_id, query=custom_cuda_prompt))
+        curr_sample_id = 0
+        for problem_id in self.problem_id_range:
+            problem_code = self.get_problem_code(problem_id)
+            for _ in range(self.config.num_samples):
+                custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
+                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, query=custom_cuda_prompt))
+                curr_sample_id += 1
         
         return queries
 
     # sample_ids_and_queries is a zipped list of pairs (sample_id, query)
     def gen_samples(self, queries: list[Query]):
         query_results = self.query_and_save(queries)
-
-        problem_id = self.config.task
 
         res = []
         for qr in query_results:
@@ -532,11 +518,11 @@ class ParallelTreeSearch:
                 print(f"Failed to parse custom kernel for sample: {qr.sample_id}")
                 continue
 
-            self.write_sample_data(qr.sample_id, "kernel.py", custom_kernel)
+            self.write_sample_data(qr.problem_id, qr.sample_id, "kernel.py", custom_kernel)
         
             res.append({
                 "sample_id": qr.sample_id,
-                "problem_id": problem_id,
+                "problem_id": qr.problem_id,
                 "code": custom_kernel,
             })
 
@@ -544,6 +530,7 @@ class ParallelTreeSearch:
 
     # in this case, we are having a "summary agent" summarize the errors, not
     # attempt to fix the errors
+    # TODO: this is currently broken
     def gen_summarized_fix_messages(self, eval_data):
         correction_queries, bad_solutions = self.get_correction_queries_and_bad_solutions(eval_data)
         res = self.query_and_save(correction_queries)

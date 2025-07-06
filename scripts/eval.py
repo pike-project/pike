@@ -245,21 +245,13 @@ class Eval:
 
         return runtime
 
-    def collect_model_results(self, name, with_compile=True):
+    def collect_model_results(self, name, compile):
         # no reason to collect runtime results if correctness does not pass
         res = self.results[name]
         if not res["loaded"] or not res["correct"]:
             return
 
-        runtimes = {}
-        runtime_eager = self.time_model(name, False)
-        runtimes["eager"] = runtime_eager
-
-        if with_compile:
-            runtime_compile = self.time_model(name, True)
-            runtimes["compile"] = runtime_compile
-
-        res["runtimes"] = runtimes
+        res["runtime"] = self.time_model(name, compile)
 
     def run(self):
         for name in self.models.keys():
@@ -428,7 +420,7 @@ def main():
     try:
         ev.check_correctness()
         # ev.collect_model_results("baseline", with_compile=True)
-        ev.collect_model_results("llm", with_compile=False)
+        ev.collect_model_results("llm", compile=False)
         ev.cleanup()
     finally:
         ev.release_gpu_lock()

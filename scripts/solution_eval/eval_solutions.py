@@ -20,9 +20,9 @@ class EvalSolutions:
         self.results_dir = (curr_dir / "../../results/eval_solutions").resolve()
         os.makedirs(self.results_dir, exist_ok=True)
 
-        self.dup_count = 5
+        self.dup_count = 1
 
-        self.level = 3
+        self.level = 1
     
     def metr_solutions(self):
         kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
@@ -128,12 +128,12 @@ class EvalSolutions:
         return all_results
 
     async def run(self):
-        # samples = self.ground_truth_solutions()
-        samples = self.metr_solutions()
+        samples = self.ground_truth_solutions()
+        # samples = self.metr_solutions()
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / "metr_out_6.json"
+        results_path = self.results_dir / "baseline_level_1_compile.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)

@@ -176,9 +176,10 @@ class EvalWorker:
                 eval_results["correct"] = assert_type_and_unpack(model_res, "correct", bool)
                 eval_results["max_diff"] = assert_type_and_unpack(model_res, "max_diff", float)
 
-                if "runtimes" in model_res:
-                    runtimes_dict = model_res["runtimes"]
-                    eval_results["runtime"] = assert_type_and_unpack(runtimes_dict, "eager", float)
+                eval_results["runtime"] = assert_type_and_unpack(model_res, "runtime", float)
+                # if "runtimes" in model_res:
+                #     runtimes_dict = model_res["runtimes"]
+                #     eval_results["runtime"] = assert_type_and_unpack(runtimes_dict, "compile", float)
         except Exception as e:
             print(e)
 
@@ -210,7 +211,7 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            while self.active_task_count.peek() >= 50:
+            while self.active_task_count.peek() >= 20:
                 await asyncio.sleep(1)
 
             active_task_count = await self.active_task_count.inc()

@@ -115,7 +115,7 @@ class GenerationConfig(Config):
         # Migrate Monkeys code base to KernelBench
         self.num_samples = REQUIRED # for sampling multiple samples per problem
 
-        self.num_phases = 2
+        self.num_phases = 3
         self.max_fix_attempts = 3
 
     def greedy(self):
@@ -566,10 +566,10 @@ class ParallelTreeSearch:
 
         curr_sample_id = 0
         for problem_id, solutions in self.all_solutions.items():
-            sorted(solutions, key=lambda x: x["runtime"])
+            sorted_sols = sorted(solutions, key=lambda x: x["runtime"])
 
             problem_code = self.get_problem_code(problem_id)
-            raw_queries = query_strategies.simple_branching_strategy(solutions, num_samples, problem_code)
+            raw_queries = query_strategies.simple_branching_strategy(sorted_sols, num_samples, problem_code)
 
             if len(raw_queries) == 0:
                 print(f"WARNING: No queries generated for task {problem_id}")

@@ -22,7 +22,7 @@ class EvalSolutions:
 
         self.dup_count = 1
 
-        self.level = 1
+        self.level = 3
     
     def metr_solutions(self):
         kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
@@ -133,7 +133,7 @@ class EvalSolutions:
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / "baseline_level_1_compile.json"
+        results_path = self.results_dir / f"baseline_level_{self.level}_compile.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)

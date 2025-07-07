@@ -115,7 +115,7 @@ class GenerationConfig(Config):
         # Migrate Monkeys code base to KernelBench
         self.num_samples = REQUIRED # for sampling multiple samples per problem
 
-        self.num_phases = 3
+        self.num_phases = 5
         self.max_fix_attempts = 3
 
     def greedy(self):
@@ -276,10 +276,17 @@ class ParallelTreeSearch:
         # important: this assumes results arrive back in the order they were sent
         for (sample_id, problem_id), res_data in zip(sample_id_problem_id, query_results):
             if res_data is None:
-                print(f"No query result for sample: {sample_id}")
+                print(f"No LLM response for sample: {sample_id}")
                 continue
 
             (query_result, full_response) = res_data
+            if query_result is None:
+                print(f"No query result for sample: {sample_id}")
+                print(full_response)
+                if full_response is not None:
+                    self.write_sample_data(problem_id, sample_id, "error_llm_response.json", json.dumps(full_response.to_dict(), indent=4))
+
+                continue
 
             self.write_sample_data(problem_id, sample_id, "query_result.md", query_result)
             self.write_sample_data(problem_id, sample_id, "full_llm_response.json", json.dumps(full_response.to_dict(), indent=4))

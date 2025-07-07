@@ -142,10 +142,10 @@ class EvalWorker:
 
             stdout = stdout_raw.decode()
 
-            print(f"[stdout]\n{stdout}")
+            # print(f"[stdout]\n{stdout}")
             if stderr_raw:
                 stderr = stderr_raw.decode()
-                print(f"[stderr]\n{stderr}")
+                # print(f"[stderr]\n{stderr}")
 
         except asyncio.TimeoutError:
             proc.kill()

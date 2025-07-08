@@ -17,7 +17,7 @@ from tqdm import tqdm
 # API clients
 from together import Together
 from openai import OpenAI
-import google.generativeai as genai
+from google import genai
 import anthropic
 
 # from datasets import load_dataset
@@ -149,7 +149,7 @@ def query_server(
             )
             model = model_name
         case "google":
-            genai.configure(api_key=GEMINI_KEY)
+            client = genai.Client(api_key=GEMINI_KEY)
             model = model_name
         case "together":
             client = Together(api_key=TOGETHER_KEY)
@@ -211,23 +211,24 @@ def query_server(
     elif server_type == "google":
         # assert model_name == "gemini-1.5-flash-002", "Only test this for now"
 
-        generation_config = {
-            "temperature": temperature,
-            "top_p": top_p,
-            "top_k": top_k,
-            "max_output_tokens": max_tokens,
-            "response_mime_type": "text/plain",
-        }
-
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=system_prompt,
-            generation_config=generation_config,
+        config = genai.types.GenerateContentConfig(
+            candidate_count=1,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            max_output_tokens=max_tokens,
+            response_mime_type="text/plain"
         )
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=config
+        )
 
-        return response.text
+        full_response = json.loads(response.model_dump_json())
+
+        return response.text, full_response
 
     elif server_type == "deepseek":
         
@@ -302,7 +303,7 @@ def query_server(
         )
         outputs = [choice.message.content for choice in response.choices]
 
-        full_response = response
+        full_response = response.to_dict()
 
     elif server_type == "together":
         response = client.chat.completions.create(

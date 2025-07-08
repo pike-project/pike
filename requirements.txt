@@ -8,7 +8,7 @@ torch==2.7.1
 tqdm
 datasets
 transformers
-google-generativeai
+google-genai
 together
 pytest
 ninja

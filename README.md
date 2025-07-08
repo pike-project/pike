@@ -58,7 +58,7 @@ python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data d
 
 python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=cborg model_name=google/gemini-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
 
-python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=google model_name=gemini-2.5-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
+python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=google model_name=gemini-2.5-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=1 num_samples=1
 ```
 
 How to use the new eval script for a single task

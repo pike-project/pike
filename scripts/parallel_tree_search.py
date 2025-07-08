@@ -116,6 +116,7 @@ class GenerationConfig(Config):
         self.num_samples = REQUIRED # for sampling multiple samples per problem
 
         self.num_phases = 5
+        # note: this does not include the initial attempt
         self.max_fix_attempts = 3
 
     def greedy(self):
@@ -284,12 +285,12 @@ class ParallelTreeSearch:
                 print(f"No query result for sample: {sample_id}")
                 print(full_response)
                 if full_response is not None:
-                    self.write_sample_data(problem_id, sample_id, "error_llm_response.json", json.dumps(full_response.to_dict(), indent=4))
+                    self.write_sample_data(problem_id, sample_id, "error_llm_response.json", json.dumps(full_response, indent=4))
 
                 continue
 
             self.write_sample_data(problem_id, sample_id, "query_result.md", query_result)
-            self.write_sample_data(problem_id, sample_id, "full_llm_response.json", json.dumps(full_response.to_dict(), indent=4))
+            self.write_sample_data(problem_id, sample_id, "full_llm_response.json", json.dumps(full_response, indent=4))
             filtered_query_results.append(QueryResult(problem_id=problem_id, sample_id=sample_id, result=query_result))
         
         return filtered_query_results
@@ -605,7 +606,8 @@ class ParallelTreeSearch:
                 # use the saved solutions to build queries for the next phase (branching in the parallel tree search)
                 queries = self.get_next_queries()
 
-            for fix_iter in range(self.config.max_fix_attempts):
+            # add 1 to max_fix_attempts since we need to include the initial attempt too
+            for fix_iter in range(self.config.max_fix_attempts + 1):
                 print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")
                 new_samples = self.gen_samples(queries)
                 eval_data = self.run_eval(new_samples)

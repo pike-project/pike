@@ -13,3 +13,4 @@ cache/*
 worker_io/
 
 test/lock_test/locks/
+log/

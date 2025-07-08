@@ -57,11 +57,15 @@ How to run parallel tree search:
 python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=cborg model_name=lbl/llama num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
 
 python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=cborg model_name=google/gemini-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
+
+python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=google model_name=gemini-2.5-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
 ```
 
 How to use the new eval script for a single task
 
 ```bash
+python scripts/eval.py --level 3 --task 27 --code_path KernelBench/level3/27_RegNet.py --gpu_locks_dir worker_io/gpu_locks
+
 python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated_kernel_level_1_problem_1.py --gpu_locks_dir worker_io/gpu_locks
 ```
 

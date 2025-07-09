@@ -49,12 +49,6 @@ def load_module_from_path(path):
 
 
 def time_model(model, module_fn, inputs, device, compile, name):
-    if compile:
-        if module_fn is None:
-            model = torch.compile(model, mode="max-autotune")
-        else:
-            module_fn = torch.compile(module_fn, mode="max-autotune")
-
     model_invocation = "model(*inputs)"
     if module_fn is not None:
         model_invocation = "model(*inputs, module_fn)"
@@ -63,11 +57,17 @@ def time_model(model, module_fn, inputs, device, compile, name):
     moved_model = model
     if hasattr(model, "to"):
         moved_model = model.to(device)
+    
+    moved_inputs = easy_to_device(inputs, device)
+
+    if compile:
+        if module_fn is None:
+            moved_model = torch.compile(moved_model, mode="max-autotune")
+        else:
+            module_fn = torch.compile(module_fn, mode="max-autotune")
 
     if TIME_WITH_TRITON:
         with torch.no_grad():
-            moved_inputs = easy_to_device(inputs, device)
-
             if module_fn is None:
                 bench = lambda: moved_model(*moved_inputs)
             else:
@@ -80,7 +80,7 @@ def time_model(model, module_fn, inputs, device, compile, name):
             stmt=f"with torch.no_grad(): {model_invocation}",
             globals={
                 "model": moved_model,
-                "inputs": easy_to_device(inputs, device),
+                "inputs": moved_inputs,
                 "module_fn": module_fn
             },
         )
@@ -417,13 +417,17 @@ def main():
     # sanity check print, make sure the GPU is completely free to work with
     ev.print_gpu_mem()
 
-    try:
-        ev.check_correctness()
-        # ev.collect_model_results("baseline", with_compile=True)
-        ev.collect_model_results("llm", compile=False)
-        ev.cleanup()
-    finally:
-        ev.release_gpu_lock()
+    # HACK: do not actually release gpu lock, just let it get released by process exiting
+    ev.check_correctness()
+    ev.collect_model_results("llm", compile=False)
+    ev.cleanup()
+
+    # try:
+    #     ev.check_correctness()
+    #     ev.collect_model_results("llm", compile=True)
+    #     ev.cleanup()
+    # finally:
+    #     ev.release_gpu_lock()
 
     if output_path is not None:
         ev.save_results(output_path)

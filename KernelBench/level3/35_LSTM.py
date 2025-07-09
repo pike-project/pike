@@ -30,12 +30,12 @@ class Model(nn.Module):
         self.c0 = self.c0.to(x.device)
         
         # Forward propagate LSTM
-        out, hn = self.lstm(x, (self.h0, self.c0))  # out: tensor of shape (batch_size, seq_length, hidden_size)
+        out, state = self.lstm(x, (self.h0, self.c0))  # out: tensor of shape (batch_size, seq_length, hidden_size)
         
         # Decode the hidden state of the last time step
         out = self.fc(out[:, -1, :])  # out: tensor of shape (batch_size, output_size)
         
-        return out
+        return out, state[0], state[1]
 
 # Test code
 batch_size = 10

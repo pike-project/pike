@@ -22,7 +22,7 @@ class EvalSolutions:
 
         self.dup_count = 1
 
-        self.level = 3
+        self.level = 0
     
     def metr_solutions(self):
         kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
@@ -83,6 +83,36 @@ class EvalSolutions:
 
         return tasks
 
+    def good_kernels_blog_solutions(self):
+        sols_dir = (curr_dir / "../../../good-kernels/solutions").resolve()
+
+        tasks = []
+
+        for filename in os.listdir(sols_dir):
+            if not filename.endswith(".py"):
+                continue
+
+            task = int(filename.split("_")[1].split(".py")[0])
+            
+            file_path = sols_dir / filename
+
+            with open(file_path) as f:
+                code = f.read()
+            
+            for _ in range(self.dup_count):
+                tasks.append({
+                    "code": code,
+                    "problem_id": task
+                })
+
+        tasks.sort(key=lambda x: x["problem_id"])
+
+        for idx, task in enumerate(tasks):
+            task["sample_id"] = idx
+
+        return tasks
+
+
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
 
@@ -128,12 +158,14 @@ class EvalSolutions:
         return all_results
 
     async def run(self):
-        samples = self.ground_truth_solutions()
+        # samples = self.ground_truth_solutions()
         # samples = self.metr_solutions()
+        samples = self.good_kernels_blog_solutions()
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / f"baseline_level_{self.level}_compile.json"
+        # results_path = self.results_dir / f"baseline_level_{self.level}_eager_new.json"
+        results_path = self.results_dir / f"good_kernels_src_2.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)

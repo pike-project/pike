@@ -408,8 +408,8 @@ def main():
     parser.add_argument("--code_path", type=str)
     parser.add_argument("--output_path", type=str, required=False)
     parser.add_argument("--gpu_locks_dir", type=str, required=False)
-    parser.add_argument("--op_atol", type=float, default=1e-3)
-    parser.add_argument("--op_rtol", type=float, default=1e-1)
+    parser.add_argument("--op_atol", type=float, default=1e-2)
+    parser.add_argument("--op_rtol", type=float, default=1e-2)
     args = parser.parse_args()
 
     level = args.level

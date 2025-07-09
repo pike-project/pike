@@ -31,7 +31,7 @@ class Model(nn.Module):
         combined = torch.cat((x, hidden), dim=1)  # Concatenate input and hidden state
         new_hidden = self.tanh(self.i2h(combined))  # Update hidden state
         output = self.h2o(new_hidden)  # Compute output
-        return output
+        return output, new_hidden
 
 # increased from 8 to 1024
 batch_size = 1024

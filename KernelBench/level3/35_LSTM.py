@@ -27,7 +27,7 @@ class Model(nn.Module):
         :return: The output tensor, shape (batch_size, sequence_length, output_size)
         """
         self.h0 = self.h0.to(x.device)
-        self.c0 = self.h0.to(x.device)
+        self.c0 = self.c0.to(x.device)
         
         # Forward propagate LSTM
         out, hn = self.lstm(x, (self.h0, self.c0))  # out: tensor of shape (batch_size, seq_length, hidden_size)

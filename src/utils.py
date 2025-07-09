@@ -170,12 +170,8 @@ def query_server(
         case _:
             raise NotImplementedError
 
-    if server_type != "google":
-        assert client is not None, "Client is not set, cannot proceed to generations"
-    else:
-        print(
-            f"Querying {server_type} {model} with temp {temperature} max tokens {max_tokens}"
-        )
+    assert client is not None, "Client is not set, cannot proceed to generations"
+
     # Logic to query the LLM
     if server_type == "anthropic":
         assert type(prompt) == str

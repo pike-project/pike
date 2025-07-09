@@ -176,6 +176,32 @@ class Eval:
         else:
             return model.to(self.locked_device)(*easy_to_device(self.inputs, self.locked_device), module_fn)
 
+    # returns all_correct, max_diffs list
+    def compare_output(self, baseline_output, comp_output):
+        all_correct = True
+        max_diffs = []
+
+        if not isinstance(baseline_output, tuple):
+            baseline_output = (baseline_output,)
+            comp_output = (comp_output,)
+
+        for idx, (b, c) in enumerate(zip(baseline_output, comp_output)):
+            correct = torch.allclose(
+                b.cpu(),
+                c.cpu(),
+                rtol=self.op_rtol,
+                atol=self.op_atol,
+            )
+
+            max_diff = torch.max(torch.abs(b.cpu() - c.cpu())).item()
+
+            max_diffs.append(max_diff)
+
+            if not correct:
+                all_correct = False
+        
+        return all_correct, max_diffs
+
     def check_correctness(self):
         start_time = time.time()
 
@@ -190,14 +216,7 @@ class Eval:
 
                 comp_output = self.get_model_output(name)
 
-                correct = torch.allclose(
-                    baseline_output.cpu(),
-                    comp_output.cpu(),
-                    rtol=self.op_rtol,
-                    atol=self.op_atol,
-                )
-
-                max_diff = torch.max(torch.abs(baseline_output.cpu() - comp_output.cpu())).item()
+                correct, max_diff = self.compare_output(baseline_output, comp_output)
                 print(f"Tested {name} - Correct: {correct}, Max Diff: {max_diff}")
 
                 self.results[name]["correct"] = correct

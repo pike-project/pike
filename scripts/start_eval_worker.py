@@ -174,7 +174,12 @@ class EvalWorker:
 
                 eval_results["loaded"] = assert_type_and_unpack(model_res, "loaded", bool)
                 eval_results["correct"] = assert_type_and_unpack(model_res, "correct", bool)
-                eval_results["max_diff"] = assert_type_and_unpack(model_res, "max_diff", float)
+
+                assert isinstance(model_res["max_diff"], list), f"assertion failed for max_diff"
+                eval_results["max_diff"] = []
+                for v in model_res["max_diff"]:
+                    assert isinstance(v, float), f"assertion failed for max_diff value"
+                    eval_results["max_diff"].append(v)
 
                 eval_results["runtime"] = assert_type_and_unpack(model_res, "runtime", float)
                 # if "runtimes" in model_res:

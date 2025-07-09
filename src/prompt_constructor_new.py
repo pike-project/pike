@@ -162,10 +162,10 @@ You generated the following solution architecture previously:
 {custom_cuda}
 ```
 
-It compiled and ran, but failed to pass correctness checks.
+It compiled and ran, but failed to pass correctness checks. Your code exceeded the error tolerance from the ground-truth result.
 
-Your code exceeded the error tolerance from the ground-truth result, with a max value diff of: {max_diff}
-    
+The max value diffs for each of the outputs are: {max_diff}
+
 Fix the correctness issue in the new model code. Output the corrected code in codeblocks.
 Just output the new model code, no other text.
 """

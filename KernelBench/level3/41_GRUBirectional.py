@@ -26,7 +26,7 @@ class Model(nn.Module):
         """
         self.h0 = self.h0.to(x.device)
         output, h_n = self.gru(x, self.h0)
-        return output
+        return output, h_n
 
 # Test code
 batch_size = 10

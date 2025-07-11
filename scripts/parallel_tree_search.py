@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 import asyncio
 import uuid
+import random
 from enum import Enum
 
 
@@ -81,8 +82,11 @@ class GenerationConfig(Config):
         # self.subset = (self.task, self.task) # range of problems to generate samples for
 
         timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        # self.run_name = REQUIRED # name of the run
         self.run_name = timestamp_str
+
+        run_name_env = os.environ.get("KERNEL_BENCH_RUN_NAME")
+        if run_name_env is not None:
+            self.run_name = run_name_env
 
         # num of thread pool to call inference server in parallel
         self.num_workers = 1
@@ -107,6 +111,9 @@ class GenerationConfig(Config):
         # these are for the eval worker
         self.worker_input_dir = REQUIRED
         self.worker_output_dir = REQUIRED
+
+        # TODO: maybe add dry_run_eval and dry_run_queries
+        self.dry_run = False
     
         self.verbose = False
         self.store_type = "local"
@@ -194,10 +201,16 @@ class ParallelTreeSearch:
 
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
+        server_type = self.config.server_type
+        model_name = self.config.model_name
+        if self.config.dry_run:
+            server_type = "cborg"
+            model_name = "lbl/llama"
+
         # Create inference function with config parameters
         # We provide some presets in utils but you can also pass in your own, see query_server for more details
-        self.inference_server = create_inference_server_from_presets(server_type=self.config.server_type,
-                                                                model_name=self.config.model_name,
+        self.inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                model_name=model_name,
                                                                 temperature=self.config.temperature,
                                                                 max_tokens=self.config.max_tokens,
                                                                 verbose=self.config.verbose)
@@ -270,7 +283,13 @@ class ParallelTreeSearch:
             raw_queries.append(q.query)
             sample_id_problem_id.append((q.sample_id, q.problem_id))
 
-        query_results = self.query_llm_parallel(raw_queries)
+
+        if self.config.dry_run:
+            query_results = []
+            for q in queries:
+                query_results.append(("```exit(0)```", {}))
+        else:
+            query_results = self.query_llm_parallel(raw_queries)
 
         filtered_query_results = []
 
@@ -342,7 +361,25 @@ class ParallelTreeSearch:
         return all_results
 
     def run_eval(self, samples):
-        all_results = asyncio.run(self.eval_samples(samples))
+        if self.config.dry_run:
+            all_results = []
+            for s in samples:
+                all_results.append({
+                    "sample_id": s["sample_id"],
+                    "results": {
+                        "stdout": "this is dry_run stdout",
+                        "stderr": "this is dry_run stderr",
+                        "timed_out": False,
+                        "eval_results": {
+                            "loaded": True,
+                            "correct": True,
+                            "runtime": random.random() * 10,
+                            "max_diff": [0.0001],
+                        }
+                    }
+                })
+        else:
+            all_results = asyncio.run(self.eval_samples(samples))
 
         final_results = []
 

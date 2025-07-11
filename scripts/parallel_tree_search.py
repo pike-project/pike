@@ -329,7 +329,8 @@ class ParallelTreeSearch:
                 "id": eval_id,
                 "level": self.config.level,
                 "task": problem_id,
-                "code": code
+                "code": code,
+                "mode": "eager"
             })
 
         all_results = []

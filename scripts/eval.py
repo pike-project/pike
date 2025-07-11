@@ -410,6 +410,7 @@ def main():
     parser.add_argument("--gpu_locks_dir", type=str, required=False)
     parser.add_argument("--op_atol", type=float, default=1e-2)
     parser.add_argument("--op_rtol", type=float, default=1e-2)
+    parser.add_argument("--compile", action='store_true')
     args = parser.parse_args()
 
     level = args.level
@@ -438,7 +439,7 @@ def main():
 
     # HACK: do not actually release gpu lock, just let it get released by process exiting
     ev.check_correctness()
-    ev.collect_model_results("llm", compile=False)
+    ev.collect_model_results("llm", compile=args.compile)
     ev.cleanup()
 
     # try:

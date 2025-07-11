@@ -89,6 +89,7 @@ class EvalWorker:
         task = msg["task"]
         code_str = msg["code"]
         eval_id = msg["id"]
+        mode = msg["mode"]
 
         # 1. write the LLM-generated code to scratch dir with a unique name
         code_path = self.code_dir / f"task_{level}_{task}_{task_number}.py"
@@ -130,6 +131,13 @@ class EvalWorker:
             "--code_path", str(code_path),
             "--output_path", str(eval_output_path),
             "--gpu_locks_dir", str(self.gpu_locks_dir)]
+
+        if mode == "compile":
+            cmd.append("--compile")
+        elif mode == "eager":
+            # nothing to do for this mode
+            pass
+
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,

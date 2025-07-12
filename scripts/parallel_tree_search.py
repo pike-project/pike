@@ -81,12 +81,7 @@ class GenerationConfig(Config):
         # (None, None) -> full range
         # self.subset = (self.task, self.task) # range of problems to generate samples for
 
-        timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        self.run_name = timestamp_str
-
-        run_name_env = os.environ.get("KERNEL_BENCH_RUN_NAME")
-        if run_name_env is not None:
-            self.run_name = run_name_env
+        self.run_dir = None
 
         # num of thread pool to call inference server in parallel
         self.num_workers = 1
@@ -173,14 +168,17 @@ class ParallelTreeSearch:
 
         data_dir = Path(config.data_dir)
 
-        runs_dir = data_dir / "runs"
+        if config.run_dir is None:
+            run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            runs_dir = data_dir / "runs"
+            run_dir = runs_dir / run_name
+            self.run_dir = run_dir
+        else:
+            self.run_dir = Path(config.run_dir)
+        
+        os.makedirs(self.run_dir, exist_ok=True)
 
-        # set up run directory
-        run_dir = runs_dir / config.run_name
-        os.makedirs(run_dir, exist_ok=True)
-        self.run_dir = run_dir
-
-        pydra.save_yaml(config.to_dict(), run_dir / "generation_config.yaml")
+        pydra.save_yaml(config.to_dict(), self.run_dir / "generation_config.yaml")
 
         self.all_solutions = {}
         self.phase_solutions = {}

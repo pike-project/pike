@@ -16,6 +16,8 @@ class EvalSolutions:
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
+        print(tx_dir, rx_dir)
+
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
         self.results_dir = results_dir
@@ -191,12 +193,12 @@ async def main():
     worker_input_dir = (curr_dir / "../../worker_io/input").resolve()
 
     if args.worker_input_dir is not None:
-        worker_input_dir = Path(worker_input_dir)
+        worker_input_dir = Path(args.worker_input_dir)
 
-    worker_output_dir = (curr_dir / "../../worker_io/input").resolve()
+    worker_output_dir = (curr_dir / "../../worker_io/output").resolve()
 
     if args.worker_output_dir is not None:
-        worker_output_dir = Path(worker_output_dir)
+        worker_output_dir = Path(args.worker_output_dir)
 
     eval_sol = EvalSolutions(args.level, args.mode, results_dir, worker_input_dir, worker_output_dir)
     await eval_sol.run()

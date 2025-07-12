@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import subprocess
 import argparse
+import math
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -46,15 +47,64 @@ class ImprovementPlotter:
             print("Run backed up.")
 
     def plot(self):
+        """
+        Generates a single figure containing a grid of all task plots.
+        """
         config = self.config
-
         level = config["level"]
-
         task_start = config["task_start"]
         task_end = config["task_end"]
 
-        for task in range(task_start, task_end + 1):
-            self.plot_task(level, task)
+        tasks_to_plot = list(range(task_start, task_end + 1))
+        num_plots = len(tasks_to_plot)
+
+        if num_plots == 0:
+            print("No tasks to plot.")
+            return
+
+        # Determine the grid size for the subplots
+        cols = int(math.ceil(math.sqrt(num_plots)))
+        rows = int(math.ceil(num_plots / cols))
+
+        # Create a single large figure with a grid of subplots
+        fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 4.5), squeeze=False)
+        # Flatten the 2D array of axes for easy iteration
+        axes = axes.flatten()
+
+        print(f"Generating a {rows}x{cols} grid for {num_plots} tasks...")
+
+        # Plot each task on its corresponding subplot
+        for i, task in enumerate(tasks_to_plot):
+            ax = axes[i]
+            self.plot_task(level, task, ax)
+
+        # Turn off any unused subplots in the grid
+        for i in range(num_plots, len(axes)):
+            axes[i].axis('off')
+
+        # Add a title for the entire figure
+        fig.suptitle(f"Improvement Plots for Level {level}", fontsize=20)
+        
+        # Adjust layout to prevent titles/labels from overlapping
+        # The rect parameter makes space for the suptitle
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+        # Define file paths for saving the combined figure
+        fig_filename = f"level_{level}_all_tasks_improvement.pdf"
+
+        figs_dir = self.run_dir / "figs"
+        os.makedirs(figs_dir, exist_ok=True)
+        save_path1 = figs_dir / fig_filename
+        plt.savefig(save_path1)
+        print(f"Saved combined plot to: {save_path1}")
+
+        figs_dir_2 = curr_dir / "../../figs/improvement"
+        os.makedirs(figs_dir_2, exist_ok=True)
+        save_path2 = figs_dir_2 / fig_filename
+        plt.savefig(save_path2)
+        print(f"Saved combined plot to: {save_path2}")
+        
+        plt.close(fig) # Close the figure to free up memory
 
     def get_baseline_runtime(self, data, task):
         for v in data:
@@ -66,136 +116,103 @@ class ImprovementPlotter:
     def get_baseline_runtimes(self, task):
         runtime_eager = self.get_baseline_runtime(self.baseline_eager, task)
         runtime_compile = self.get_baseline_runtime(self.baseline_compile, task)
-
         return (runtime_eager, runtime_compile)
 
-    def plot_task(self, level, task):
+    def plot_task(self, level, task, ax):
+        """
+        Plots the improvement for a single task onto a given Axes object.
+        """
+        print(f"Plotting Level {level}, Task {task}...")
         run_dir = self.run_dir
-        
         phases_dir = run_dir / f"levels/level_{level}/task_{task}/phases"
 
-        phase_nums = []
+        if not os.path.exists(phases_dir):
+            print(f"  Warning: Directory not found for task {task}. Skipping plot.")
+            ax.text(0.5, 0.5, f"No data for Task {task}", ha='center', va='center')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            return
 
-        for dirname in os.listdir(phases_dir):
-            phase_nums.append(int(dirname.split("_")[1]))
+        phase_nums = [int(dirname.split("_")[1]) for dirname in os.listdir(phases_dir)]
+        if not phase_nums:
+            print(f"  Warning: No phases found for task {task}. Skipping plot.")
+            ax.text(0.5, 0.5, f"No data for Task {task}", ha='center', va='center')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            return
 
         phase_count = np.max(np.array(phase_nums)) + 1
-
-        print(f"Phase count: {phase_count}")
-
         phases = list(range(phase_count))
         best_runtimes = []
-
         all_solutions = []
 
-        best_solutions_dir = Path.resolve(run_dir / "best_solutions")
+        best_solutions_dir = self.run_dir / "best_solutions"
         os.makedirs(best_solutions_dir, exist_ok=True)
         best_solution_path = best_solutions_dir / f"level_{level}_task_{task}.py"
 
         for phase in range(phase_count):
             phase_dir = phases_dir / f"phase_{phase}"
             solutions_dir = phase_dir / "solutions"
-
             phase_solutions = []
 
             for sol_dirname in os.listdir(solutions_dir):
-                sol_dir = solutions_dir / sol_dirname
-                data_path = sol_dir / "data.json"
-
+                data_path = solutions_dir / sol_dirname / "data.json"
                 with open(data_path) as f:
                     data = json.load(f)
-                    # print(f"Phase: {phase}, runtime: {data['runtime']}")
                     phase_solutions.append(data)
+            
+            if not phase_solutions:
+                best_runtimes.append(np.nan) # Use NaN for missing data
+                continue
 
-            all_solutions += phase_solutions
-            all_solutions = sorted(all_solutions, key=lambda x: x["runtime"])
-            phase_solutions = sorted(phase_solutions, key=lambda x: x["runtime"])
+            all_solutions.extend(phase_solutions)
+            all_solutions.sort(key=lambda x: x["runtime"])
+            best_runtime_so_far = all_solutions[0]["runtime"]
+            best_runtimes.append(best_runtime_so_far)
 
-            best_sol = phase_solutions[0]
-            best_sol_all = all_solutions[0]
-
-            # best_runtime = best_sol["runtime"]
-            best_runtime = best_sol_all["runtime"]
-
-            best_runtimes.append(best_runtime)
-            print(f"Phase {phase} best solution runtime: {best_runtime}")
+        if not all_solutions:
+            print(f"  Warning: No solutions found for task {task}. Skipping plot.")
+            ax.text(0.5, 0.5, f"No solution data for Task {task}", ha='center', va='center')
+            return
 
         best_overall_sol = all_solutions[0]
-        best_overall_runtime = best_overall_sol["runtime"]
-        print(f"Best overall solution runtime: {best_overall_runtime}")
-
         with open(best_solution_path, "w") as f:
             f.write(best_overall_sol["code"])
 
-        # df = pd.DataFrame(self.runtime_results)
+        col = ["#2aadb6", "#ff6583", "#aa6fc5", "#ffa600"]
 
-        # f, ax = plt.subplots(1, figsize=(4, 3))
+        ax.set_title(f"Level {level} - Task {task} Improvement")
+        ax.set_xlabel("Parallel Tree Search Phase")
+        ax.set_ylabel('Runtime (ms)')
 
-        # labels = df["label"]
-        # values = df["runtime"]
-
-        col = [
-            "#2aadb6",
-            "#ff6583",
-            "#aa6fc5",
-            "#ffa600",
-        ]
-
-        # colors = []
-
-        # for _, row in df.iterrows():
-        #     model_idx = row['model_idx']
-        #     colors.append(col[model_idx])
-
-        plt.figure(figsize=(4, 3))
-
-        plt.title(f"Level {level} - Task {task} Improvement")
-        plt.xlabel("Parallel Tree Search Phase")
-        plt.ylabel('Runtime (ms)')
-
-        plt.plot(phases, best_runtimes, linewidth=1)
-        # plt.bar(labels, values, color=colors, linewidth=1, edgecolor='black')
-
-        # plt.xticks(rotation=30, ha='right')
-        # plt.grid(axis='y')
-        # plt.gca().set_axisbelow(True)
-
-        plt.xticks(phases)
-
-        # plt.ylim(bottom=1.5, top=4)
-
-        plt.subplots_adjust(left=0.2, bottom=0.18)
+        ax.plot(phases, best_runtimes, linewidth=1.5, marker='o', markersize=4, label='Best Found')
+        ax.set_xticks(phases)
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+        ax.set_axisbelow(True)
 
         baseline_runtime_eager, baseline_runtime_compile = self.get_baseline_runtimes(task)
+        if baseline_runtime_eager is not None:
+            ax.axhline(y=baseline_runtime_eager, color=col[1], linestyle='--', linewidth=1.5, label='Baseline Eager')
+        if baseline_runtime_compile is not None:
+            ax.axhline(y=baseline_runtime_compile, color=col[2], linestyle=':', linewidth=1.5, label='Baseline Compile')
 
-        plt.axhline(y=baseline_runtime_eager, color=col[1], linestyle='--', linewidth=1, label='baseline eager')
-        plt.axhline(y=baseline_runtime_compile, color=col[2], linestyle=':', linewidth=1, label='baseline compile')
-
-        plt.legend(loc='upper right')
-
-        fig_filename = f"level_{level}_task_{task}.pdf"
-
-        figs_dir = Path.resolve(run_dir / "figs")
-        os.makedirs(figs_dir, exist_ok=True)
-        plt.savefig(figs_dir / fig_filename)
-
-        figs_dir_2 = Path.resolve(curr_dir / "../../figs/improvement")
-        os.makedirs(figs_dir_2, exist_ok=True)
-        plt.savefig(figs_dir_2 / fig_filename)
+        ax.legend(loc='upper right')
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run_dir", type=str)
+    parser = argparse.ArgumentParser(description="Plot improvement across multiple tasks from a run directory.")
+    parser.add_argument("--run_dir", type=str, required=True, help="Path to the specific run directory.")
     args = parser.parse_args()
 
-    # runs_dir = Path("/pscratch/sd/k/kir/llm/KernelBench-data/runs")
-    # run_dir = runs_dir / run_id
-
     run_dir = Path(args.run_dir)
+    if not run_dir.is_dir():
+        print(f"Error: Run directory not found at '{run_dir}'")
+        return
 
     plotter = ImprovementPlotter(run_dir)
     # plotter.backup()
     plotter.plot()
 
 if __name__ == "__main__":
+    # Example usage from command line:
+    # python your_script_name.py --run_dir /path/to/your/run/directory
     main()

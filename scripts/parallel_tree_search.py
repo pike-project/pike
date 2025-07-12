@@ -178,7 +178,8 @@ class ParallelTreeSearch:
         
         os.makedirs(self.run_dir, exist_ok=True)
 
-        pydra.save_yaml(config.to_dict(), self.run_dir / "generation_config.yaml")
+        with open(self.run_dir / "config.json", "w") as f:
+            json.dump(config.to_dict(), f)
 
         self.all_solutions = {}
         self.phase_solutions = {}

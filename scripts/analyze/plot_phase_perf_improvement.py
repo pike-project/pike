@@ -88,12 +88,19 @@ class ImprovementPlotter:
         all_speedups_eager = np.zeros(all_speedups_shape)
         all_speedups_compile = np.zeros(all_speedups_shape)
 
+        max_phases_completed = 0
+
         # Plot each task on its corresponding subplot
         for i, task in enumerate(tasks_to_plot):
             ax = axes[i]
             speedups_eager, speedups_compile = self.plot_task(level, task, ax)
-            all_speedups_eager[i] = np.array(speedups_eager)
-            all_speedups_compile[i] = np.array(speedups_compile)
+            all_speedups_eager[i, :len(speedups_eager)] = np.array(speedups_eager)
+            all_speedups_compile[i, :len(speedups_compile)] = np.array(speedups_compile)
+
+            max_phases_completed = max(max_phases_completed, len(speedups_eager))
+
+        all_speedups_eager = all_speedups_eager[:, :max_phases_completed]
+        all_speedups_compile = all_speedups_compile[:, :max_phases_completed]
 
         # print(all_speedups_eager.shape, all_speedups_compile.shape)
 
@@ -129,7 +136,7 @@ class ImprovementPlotter:
 
         plt.tight_layout(rect=[0.05, 0.05, 1, 0.96])
 
-        phases = list(range(0, self.num_phases))
+        phases = list(range(0, geomean_eager.shape[0]))
 
         ax.plot(phases, geomean_eager, label="eager")
         ax.plot(phases, geomean_compile, label="compile")

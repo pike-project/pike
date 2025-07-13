@@ -25,6 +25,9 @@ class ImprovementPlotter:
         with open(run_dir / "config.json") as f:
             self.config = json.load(f)
         
+        self.level = self.config["level"]
+        self.num_phases = self.config["num_phases"]
+
         with open(run_dir / "baseline_compile.json") as f:
             self.baseline_compile = json.load(f)
         
@@ -51,11 +54,12 @@ class ImprovementPlotter:
         """
         Generates a single figure containing a grid of all task plots.
         """
+        level = self.level
+        num_phases = self.num_phases
+
         config = self.config
-        level = config["level"]
         task_start = config["task_start"]
         task_end = config["task_end"]
-        num_phases = config["num_phases"]
 
         tasks_to_plot = list(range(task_start, task_end + 1))
         num_plots = len(tasks_to_plot)
@@ -91,12 +95,12 @@ class ImprovementPlotter:
             all_speedups_eager[i] = np.array(speedups_eager)
             all_speedups_compile[i] = np.array(speedups_compile)
 
-        print(all_speedups_eager.shape, all_speedups_compile.shape)
+        # print(all_speedups_eager.shape, all_speedups_compile.shape)
 
         geomean_eager = gmean(all_speedups_eager, axis=0)
         geomean_compile = gmean(all_speedups_compile, axis=0)
 
-        print(geomean_eager.shape, geomean_compile.shape)
+        # print(geomean_eager.shape, geomean_compile.shape)
 
         # Turn off any unused subplots in the grid
         for i in range(num_plots, len(axes)):
@@ -112,19 +116,48 @@ class ImprovementPlotter:
         # Define file paths for saving the combined figure
         fig_filename = f"level_{level}_all_tasks_improvement.pdf"
 
+        self.save_fig(fig_filename)
+        
+        plt.close(fig)
+
+        self.plot_speedup_geomeans(geomean_eager, geomean_compile)
+
+    def plot_speedup_geomeans(self, geomean_eager, geomean_compile):
+        level = self.level
+
+        fig, ax = plt.subplots(figsize=(3, 2.5))
+
+        plt.tight_layout(rect=[0.05, 0.05, 1, 0.96])
+
+        phases = list(range(0, self.num_phases))
+
+        ax.plot(phases, geomean_eager, label="eager")
+        ax.plot(phases, geomean_compile, label="compile")
+
+        ax.set_title(f"Level {level} Geomean Speedup")
+        ax.set_xlabel("Parallel Tree Search Phase")
+        ax.set_ylabel('Speedup')
+
+        ax.legend(loc='upper left')
+
+        ax.axhline(y=1, linestyle='--', linewidth=1.5, color='gray')
+
+        filename = f"level_{level}_speedup_geomeans.pdf"
+
+        self.save_fig(filename)
+
+        plt.close(fig)
+
+    def save_fig(self, filename):
         figs_dir = self.run_dir / "figs"
         os.makedirs(figs_dir, exist_ok=True)
-        save_path1 = figs_dir / fig_filename
+        save_path1 = figs_dir / filename
         plt.savefig(save_path1)
-        print(f"Saved combined plot to: {save_path1}")
 
         figs_dir_2 = curr_dir / "../../figs/improvement"
         os.makedirs(figs_dir_2, exist_ok=True)
-        save_path2 = figs_dir_2 / fig_filename
+        save_path2 = figs_dir_2 / filename
         plt.savefig(save_path2)
-        print(f"Saved combined plot to: {save_path2}")
-        
-        plt.close(fig) # Close the figure to free up memory
 
     def get_baseline_runtime(self, data, task):
         for v in data:

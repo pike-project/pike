@@ -7,6 +7,7 @@ import json
 import subprocess
 import argparse
 import math
+from scipy.stats import gmean
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -54,6 +55,7 @@ class ImprovementPlotter:
         level = config["level"]
         task_start = config["task_start"]
         task_end = config["task_end"]
+        num_phases = config["num_phases"]
 
         tasks_to_plot = list(range(task_start, task_end + 1))
         num_plots = len(tasks_to_plot)
@@ -73,10 +75,28 @@ class ImprovementPlotter:
 
         print(f"Generating a {rows}x{cols} grid for {num_plots} tasks...")
 
+        # TODO: need to take geomean of eager speedups and geomean of compile speedups
+        # at each phase:
+        # so build a numpy array and apply geomean along the correct dimension
+
+        all_speedups_shape = (len(tasks_to_plot), num_phases)
+
+        all_speedups_eager = np.zeros(all_speedups_shape)
+        all_speedups_compile = np.zeros(all_speedups_shape)
+
         # Plot each task on its corresponding subplot
         for i, task in enumerate(tasks_to_plot):
             ax = axes[i]
-            self.plot_task(level, task, ax)
+            speedups_eager, speedups_compile = self.plot_task(level, task, ax)
+            all_speedups_eager[i] = np.array(speedups_eager)
+            all_speedups_compile[i] = np.array(speedups_compile)
+
+        print(all_speedups_eager.shape, all_speedups_compile.shape)
+
+        geomean_eager = gmean(all_speedups_eager, axis=0)
+        geomean_compile = gmean(all_speedups_compile, axis=0)
+
+        print(geomean_eager.shape, geomean_compile.shape)
 
         # Turn off any unused subplots in the grid
         for i in range(num_plots, len(axes)):
@@ -118,6 +138,7 @@ class ImprovementPlotter:
         runtime_compile = self.get_baseline_runtime(self.baseline_compile, task)
         return (runtime_eager, runtime_compile)
 
+    # returns a pair of (speedups_eager, speedups_compile)
     def plot_task(self, level, task, ax):
         """
         Plots the improvement for a single task onto a given Axes object.
@@ -197,6 +218,15 @@ class ImprovementPlotter:
             ax.axhline(y=baseline_runtime_compile, color=col[2], linestyle=':', linewidth=1.5, label='Baseline Compile')
 
         ax.legend(loc='upper right')
+
+        speedups_eager = []
+        speedups_compile = []
+
+        for runtime in best_runtimes:
+            speedups_eager.append(baseline_runtime_eager / runtime)
+            speedups_compile.append(baseline_runtime_compile / runtime)
+        
+        return speedups_eager, speedups_compile
 
 def main():
     parser = argparse.ArgumentParser(description="Plot improvement across multiple tasks from a run directory.")

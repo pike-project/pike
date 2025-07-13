@@ -119,9 +119,15 @@ def prompt_fix_compile_stdout_stderr(ref_arch_src, custom_cuda, results, max_std
     stdout = results["stdout"]
     stderr = results["stderr"]
 
+    stdout_trimmed = ""
+    stderr_trimmed = ""
+
     # trimmed stdout and stderr
-    stdout_trimmed = stdout[-max_stdio_chars:]
-    stderr_trimmed = stderr[-max_stdio_chars:]
+    if stdout is not None:
+        stdout_trimmed = stdout[-max_stdio_chars:]
+    
+    if stderr is not None:
+        stderr_trimmed = stderr[-max_stdio_chars:]
 
     timed_out = results["timed_out"]
 

@@ -6,7 +6,7 @@ TASK_START=1
 TASK_END=6
 
 # True or False
-DRY_RUN=True
+DRY_RUN=False
 
 DATA_DIR=$PSCRATCH/llm/KernelBench-data
 RUN_NAME=$(date +"%Y_%m_%d_%H_%M_%S")

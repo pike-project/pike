@@ -154,7 +154,9 @@ class ImprovementPlotter:
         save_path1 = figs_dir / filename
         plt.savefig(save_path1)
 
-        figs_dir_2 = curr_dir / "../../figs/improvement"
+        run_name = self.run_dir.name
+
+        figs_dir_2 = curr_dir / f"../../figs/improvement/{run_name}"
         os.makedirs(figs_dir_2, exist_ok=True)
         save_path2 = figs_dir_2 / filename
         plt.savefig(save_path2)

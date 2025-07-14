@@ -254,6 +254,8 @@ class ParallelTreeSearch:
 
     def get_phase_dir(self, problem_id):
         phase_dir = self.get_task_dir(problem_id) / f"phases/phase_{self.curr_phase}"
+        os.makedirs(phase_dir, exist_ok=True)
+
         return phase_dir
 
     def get_solutions_dir(self, solution_id, problem_id):
@@ -269,7 +271,12 @@ class ParallelTreeSearch:
         return sample_dir
 
     def write_sample_data(self, problem_id, sample_id, filename, data):
-        file_path = self.get_sample_dir(problem_id, sample_id) / filename
+        if sample_id is None:
+            # this is for saving ideas that are general to the phase, not specific to an agent
+            file_path = self.get_phase_dir(problem_id) / filename
+        else:
+            # this is for saving agent progress
+            file_path = self.get_sample_dir(problem_id, sample_id) / filename
         with open(file_path, "w") as f:
             f.write(data)
 
@@ -562,7 +569,7 @@ class ParallelTreeSearch:
         return queries
 
     # sample_ids_and_queries is a zipped list of pairs (sample_id, query)
-    def gen_samples(self, queries: list[Query]):
+    def gen_samples(self, queries: list[Query], extract_code=False):
         query_results = self.query_and_save(queries)
 
         res = []
@@ -628,18 +635,25 @@ class ParallelTreeSearch:
     def get_idea_queries(self):
         queries = []
 
-        curr_sample_id = 0
         for problem_id in self.problem_id_range:
             problem_code = self.get_problem_code(problem_id)
-            for _ in range(self.config.num_samples):
-                idea_prompt = prompt.prompt_generate_ideas(problem_code)
-                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, query=idea_prompt))
-                curr_sample_id += 1
+            idea_prompt = prompt.prompt_generate_ideas(problem_code)
+            queries.append(Query(problem_id=problem_id, sample_id=None, query=idea_prompt))
         
         return queries
 
-    def extract_ideas(self, brainstormin):
+    def gen_and_extract_ideas(self, queries):
+        query_results = self.query_and_save(queries)
+
         ideas = []
+        for qr in query_results:
+            pass
+            # l = extract_idea_list()
+        
+            # ideas.append({
+            #     "problem_id": qr.problem_id,
+            #     "code": custom_kernel,
+            # })
         
         self.curr_step += 1
 
@@ -648,8 +662,7 @@ class ParallelTreeSearch:
     def run(self):
         for phase in range(self.config.num_phases):
             # idea_queries = self.get_idea_queries()
-            # idea_samples = self.gen_samples(idea_queries)
-            # ideas = self.extract_ideas(idea_samples)
+            # ideas = self.gen_and_extract_ideas(idea_queries)
 
             if phase == 0:
                 queries = self.get_init_queries()

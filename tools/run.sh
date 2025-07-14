@@ -3,7 +3,7 @@ set -ex
 LEVEL=0
 # inclusive range
 TASK_START=1
-TASK_END=6
+TASK_END=5
 
 # True or False
 DRY_RUN=False

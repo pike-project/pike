@@ -625,18 +625,32 @@ class ParallelTreeSearch:
 
         return queries
 
+    def get_idea_queries(self):
+        queries = []
+
+        curr_sample_id = 0
+        for problem_id in self.problem_id_range:
+            problem_code = self.get_problem_code(problem_id)
+            for _ in range(self.config.num_samples):
+                idea_prompt = prompt.prompt_generate_ideas(problem_code)
+                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, query=idea_prompt))
+                curr_sample_id += 1
+        
+        return queries
+
+    def extract_ideas(self, brainstormin):
+        ideas = []
+        
+        self.curr_step += 1
+
+        return ideas
+
     def run(self):
-        # initial_queries = self.get_initial_queries()
-        # samples = self.gen_samples(initial_queries)
-        # eval_data = self.run_eval(samples)
-        # self.save_working_solutions(eval_data)
-
-        # error_summary_queries = self.gen_error_summary_messages(eval_data)
-        # new_samples = self.gen_samples(error_summary_queries)
-        # new_eval_data = self.run_eval(new_samples)
-        # self.save_working_solutions(new_eval_data)
-
         for phase in range(self.config.num_phases):
+            # idea_queries = self.get_idea_queries()
+            # idea_samples = self.gen_samples(idea_queries)
+            # ideas = self.extract_ideas(idea_samples)
+
             if phase == 0:
                 queries = self.get_init_queries()
             else:

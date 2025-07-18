@@ -1,16 +1,22 @@
 import src.prompt_constructor_new as prompt
 import src.util.query_util as query_util
+from dataclasses import dataclass
 
-# the simple branching strategy requires at least 3 correct solutions, and it
-# returns queries which focus on one of the top 3 solutions (in terms of runtime)
-# splitting work evenly between the 3 solutions
+@dataclass
+class StrategyQuery:
+    query: str
+    branch: int
+
+# the simple branching strategy requires at least num_branches correct solutions, and it
+# returns queries which focus on one of the top num_branches solutions (in terms of runtime)
+# splitting work evenly between the num_branches solutions
 # - returns a list of prompts
-def simple_branching_strategy(sorted_solutions, num_samples, problem_code, phase=0) -> list[str]:
+def simple_branching_strategy(sorted_solutions, num_samples, problem_code, num_branches=3, phase=0) -> list[StrategyQuery]:
     # TODO: should we create a next round based on just 1-2 solutions, if there are only that many?
-    if len(sorted_solutions) < 3:
+    if len(sorted_solutions) < num_branches:
         return []
 
-    bin_sizes = query_util.get_bin_sizes(num_samples, 3)
+    bin_sizes = query_util.get_bin_sizes(num_samples, num_branches)
 
     queries = []
 
@@ -20,8 +26,9 @@ def simple_branching_strategy(sorted_solutions, num_samples, problem_code, phase
         runtime = sol["runtime"]
 
         for _ in range(bin_size):
-            query = prompt.prompt_improve_solution(problem_code, code)
-            queries.append(query)
+            query_str = prompt.prompt_improve_solution(problem_code, code)
+            strat_query = StrategyQuery(query=query_str, branch=sol_idx)
+            queries.append(strat_query)
 
     return queries
 

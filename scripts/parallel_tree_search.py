@@ -23,6 +23,7 @@ import src.query_strategies as query_strategies
 from src.utils import extract_first_code, extract_idea_list, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 from src.util.disk_channel import DiskChannel
+import src.util.query_util as query_util
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -423,6 +424,7 @@ class ParallelTreeSearch:
                 "sample_id": sample_id,
                 "problem_id": problem_id,
                 "branch": branch,
+                "phase": self.curr_phase,
             }
 
             model_loaded = True
@@ -539,7 +541,7 @@ class ParallelTreeSearch:
                 if len(solutions) > 0:
                     best_problem_solutions.append(solutions[0])
 
-            best_solutions[problem_id] = best_problem_solutions
+            best_solutions[problem_id] = sorted(best_problem_solutions, key=lambda x: x["runtime"])
         
         return best_solutions
 
@@ -655,17 +657,21 @@ class ParallelTreeSearch:
         num_samples = self.config.num_samples
 
         curr_sample_id = 0
-        for problem_id, solutions in self.all_solutions.items():
+
+        # sols_by_problem = self.all_solutions
+        sols_by_problem = self.gather_best_solutions_by_branch()
+
+        for problem_id, solutions in sols_by_problem.items():
             sorted_sols = sorted(solutions, key=lambda x: x["runtime"])
 
             problem_code = self.get_problem_code(problem_id)
-            raw_queries = query_strategies.simple_branching_strategy(sorted_sols, num_samples, problem_code)
+            strat_queries = query_strategies.simple_branching_strategy(sorted_sols, num_samples, problem_code, num_branches=4)
 
-            if len(raw_queries) == 0:
+            if len(strat_queries) == 0:
                 print(f"WARNING: No queries generated for task {problem_id}")
 
-            for raw_q in raw_queries:
-                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, branch=0, query=raw_q))
+            for strat_q in strat_queries:
+                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, branch=strat_q.branch, query=strat_q.query))
                 curr_sample_id += 1
 
         return queries
@@ -692,6 +698,9 @@ class ParallelTreeSearch:
             l = extract_idea_list(qr.result)
 
             self.write_sample_data(qr.problem_id, None, "ideas.json", json.dumps(l, indent=4))
+
+            # if there are less or more than 10 ideas, need to trim or duplicate accordingly
+            l = query_util.resize_list(l, self.config.num_samples)
         
             ideas.append({
                 "problem_id": qr.problem_id,
@@ -703,12 +712,10 @@ class ParallelTreeSearch:
         return ideas
 
     def run(self):
+        idea_queries = self.get_idea_queries()
+        ideas = self.gen_and_extract_ideas(idea_queries)
+
         for phase in range(self.config.num_phases):
-            idea_queries = self.get_idea_queries()
-            ideas = self.gen_and_extract_ideas(idea_queries)
-
-            # TODO: if there are less or more than 10 ideas, need to trim or duplicate accordingly
-
             if phase == 0:
                 queries = self.get_init_queries()
             else:

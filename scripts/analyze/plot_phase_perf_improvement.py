@@ -242,22 +242,22 @@ class ImprovementPlotter:
         with open(best_solution_path, "w") as f:
             f.write(best_overall_sol["code"])
 
-        col = ["#2aadb6", "#ff6583", "#aa6fc5", "#ffa600"]
+        col = ["#2aadb6", "#ff6583", "#aa6fc5", "#ffa600", "#8bc346"]
 
         ax.set_title(f"Level {level} - Task {task} Improvement")
         ax.set_xlabel("Parallel Tree Search Phase")
         ax.set_ylabel('Runtime (ms)')
 
-        ax.plot(phases, best_runtimes, linewidth=1.5, marker='o', markersize=4, label='Best Found')
+        ax.plot(phases, best_runtimes, linewidth=3, marker='o', markersize=6, label='Best Found')
         ax.set_xticks(phases)
         ax.grid(axis='y', linestyle='--', alpha=0.7)
         ax.set_axisbelow(True)
 
         baseline_runtime_eager, baseline_runtime_compile = self.get_baseline_runtimes(task)
         if baseline_runtime_eager is not None:
-            ax.axhline(y=baseline_runtime_eager, color=col[1], linestyle='--', linewidth=1.5, label='Baseline Eager')
+            ax.axhline(y=baseline_runtime_eager, color=col[4], linestyle='--', linewidth=3, label='Baseline Eager')
         if baseline_runtime_compile is not None:
-            ax.axhline(y=baseline_runtime_compile, color=col[2], linestyle=':', linewidth=1.5, label='Baseline Compile')
+            ax.axhline(y=baseline_runtime_compile, color=col[1], linestyle=':', linewidth=3, label='Baseline Compile')
 
         ax.legend(loc='upper right')
 

@@ -119,9 +119,9 @@ class GenerationConfig(Config):
         # Migrate Monkeys code base to KernelBench
         self.num_samples = REQUIRED # for sampling multiple samples per problem
 
-        self.num_phases = 5
+        self.num_phases = REQUIRED
         # note: this does not include the initial attempt
-        self.max_fix_attempts = 3
+        self.max_fix_attempts = REQUIRED
 
     def greedy(self):
         # For greedy decoding, epsecially baseline eval

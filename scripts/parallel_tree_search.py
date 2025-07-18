@@ -185,7 +185,7 @@ class ParallelTreeSearch:
             json.dump(config.to_dict(), f, indent=4)
 
         self.all_solutions = {}
-        self.all_solutions_by_branch = {}
+        self.phase_solutions_by_branch = {}
         self.phase_solutions = {}
 
         self.curr_phase = 0
@@ -198,7 +198,7 @@ class ParallelTreeSearch:
         for problem_id in self.problem_id_range:
             self.phase_solutions[problem_id] = []
             self.all_solutions[problem_id] = []
-            self.all_solutions_by_branch[problem_id] = {}
+            self.phase_solutions_by_branch[problem_id] = {}
 
         tx_dir = Path(config.worker_input_dir)
         rx_dir = Path(config.worker_output_dir)
@@ -515,7 +515,7 @@ class ParallelTreeSearch:
             self.phase_solutions[problem_id].append(sample_data)
             self.all_solutions[problem_id].append(sample_data)
 
-            base_sample_sols = self.all_solutions_by_branch[problem_id]
+            base_sample_sols = self.phase_solutions_by_branch[problem_id]
             if branch in base_sample_sols:
                 base_sample_sols[branch].append(sample_data)
             else:
@@ -527,14 +527,14 @@ class ParallelTreeSearch:
         for problem_id, solutions in self.all_solutions.items():
             self.all_solutions[problem_id] = sorted(solutions, key=lambda x: x["runtime"])
         
-        for solutions_by_branch in self.all_solutions_by_branch.values():
+        for solutions_by_branch in self.phase_solutions_by_branch.values():
             for branch, solutions in solutions_by_branch.items():
                 solutions_by_branch[branch] = sorted(solutions, key=lambda x: x["runtime"])
 
     def gather_best_solutions_by_branch(self):
         best_solutions = {}
 
-        for problem_id, solutions_by_branch in self.all_solutions_by_branch.items():
+        for problem_id, solutions_by_branch in self.phase_solutions_by_branch.items():
             best_problem_solutions = []
 
             for _, solutions in solutions_by_branch.items():
@@ -593,15 +593,17 @@ class ParallelTreeSearch:
 
         return queries
 
-    # TODO: the initial queries are currently all the same, we should vary them to diversify the initial set of solutions
-    def get_init_queries(self) -> list[Query]:
+    # the initial queries were all the same before, so we vary them to diversify the initial set of solutions
+    # via ideas from the brainstorming agent
+    def get_init_queries(self, ideas) -> list[Query]:
         queries = []
 
         curr_sample_id = 0
         for problem_id in self.problem_id_range:
             problem_code = self.get_problem_code(problem_id)
-            for _ in range(self.config.num_samples):
-                custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
+            problem_ideas = ideas[problem_id]
+            for idea in problem_ideas:
+                custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code, idea)
                 queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, branch=curr_sample_id, query=custom_cuda_prompt))
                 curr_sample_id += 1
         
@@ -692,7 +694,7 @@ class ParallelTreeSearch:
     def gen_and_extract_ideas(self, queries):
         query_results = self.query_and_save(queries, prompt_name="ideas_prompt", result_name="ideas_result")
 
-        ideas = []
+        ideas = {}
         for qr in query_results:
             pass
             l = extract_idea_list(qr.result)
@@ -702,10 +704,7 @@ class ParallelTreeSearch:
             # if there are less or more than 10 ideas, need to trim or duplicate accordingly
             l = query_util.resize_list(l, self.config.num_samples)
         
-            ideas.append({
-                "problem_id": qr.problem_id,
-                "ideas": l,
-            })
+            ideas[qr.problem_id] = l
         
         self.curr_step += 1
 
@@ -717,7 +716,7 @@ class ParallelTreeSearch:
 
         for phase in range(self.config.num_phases):
             if phase == 0:
-                queries = self.get_init_queries()
+                queries = self.get_init_queries(ideas)
             else:
                 # use the saved solutions to build queries for the next phase (branching in the parallel tree search)
                 queries = self.get_next_queries()
@@ -745,6 +744,7 @@ class ParallelTreeSearch:
 
             for problem_id in self.phase_solutions.keys():
                 self.phase_solutions[problem_id] = []
+                self.phase_solutions_by_branch[problem_id] = {}
 
 
 @pydra.main(base=GenerationConfig)

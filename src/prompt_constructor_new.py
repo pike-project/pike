@@ -126,7 +126,7 @@ def full_problem_instruction(ref_arch_src: str) -> str:
 
     return _full_problem_instruction_with_example(arch, example_arch, example_new_arch)
 
-def prompt_generate_custom_cuda_from_prompt_template(ref_arch_src: str) -> str:
+def prompt_generate_custom_cuda_from_prompt_template(ref_arch_src: str, idea: str) -> str:
     """
     Using prompt example (an element-wise addition) for prompt templates
     The most basic form of example just to show LLM the task and the expected output format
@@ -135,6 +135,8 @@ def prompt_generate_custom_cuda_from_prompt_template(ref_arch_src: str) -> str:
     prompt += full_problem_instruction(ref_arch_src)
 
     prompt += INIT_INSTRUCTION
+
+    prompt += f"Focus specifically on the following optimization task: {idea}"
 
     return prompt
 

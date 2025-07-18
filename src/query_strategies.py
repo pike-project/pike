@@ -1,23 +1,5 @@
-import numpy as np
 import src.prompt_constructor_new as prompt
-
-# bin_count should be the minimum of some value (e.g. 4) and the number of solutions
-# that we have available
-def get_bin_sizes(num_samples: int, bin_count: int) -> list[int]:
-    """
-    Takes as input a target number of samples, along with the number of "bins" we want to create
-    to divide up the number of samples
-
-    Returns the size of each bin such that num_samples can be divided approximately evenly into bin_count
-
-    Example:
-    -> num_samples = 10, bin_count = 3, returns [4, 3, 3]
-    """
-    sample_idxs = np.array(list(range(num_samples)))
-    bins_np = np.array_split(sample_idxs, bin_count)
-    bin_sizes = [len(b) for b in bins_np]
-
-    return bin_sizes
+import src.util.query_util as query_util
 
 # the simple branching strategy requires at least 3 correct solutions, and it
 # returns queries which focus on one of the top 3 solutions (in terms of runtime)
@@ -28,7 +10,7 @@ def simple_branching_strategy(sorted_solutions, num_samples, problem_code, phase
     if len(sorted_solutions) < 3:
         return []
 
-    bin_sizes = get_bin_sizes(num_samples, 3)
+    bin_sizes = query_util.get_bin_sizes(num_samples, 3)
 
     queries = []
 
@@ -72,7 +54,7 @@ def test_simple_branching_strategy():
     # for q in qs:
     #     print(q)
 
-    print("✅ All tests passed")
-
 if __name__ == "__main__":
     test_simple_branching_strategy()
+
+    print("✅ All tests passed")

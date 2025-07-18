@@ -530,6 +530,18 @@ def extract_first_code(output_string: str, code_language_types: list[str]) -> st
     return None
 
 
+def extract_idea_list(output_string: str) -> list[str]:
+    """
+    This takes all the bullet point lines in output_string of the form "- <idea>" and appends <idea> to the list of ideas,
+    then returns the resulting list of ideas
+    """
+    ideas = []
+    for line in output_string.splitlines():
+        line = line.strip()
+        if line.startswith("- "):
+            ideas.append(line[2:].strip())
+    return ideas
+
 def extract_last_code(output_string: str, code_language_types: list[str]) -> str | None:
     """
     Extract last code block from model output, specified by code_language_type

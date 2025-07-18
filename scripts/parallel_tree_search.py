@@ -20,7 +20,7 @@ from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
 import src.prompt_constructor_new as prompt
 import src.query_strategies as query_strategies
-from src.utils import extract_first_code, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
+from src.utils import extract_first_code, extract_idea_list, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 from src.util.disk_channel import DiskChannel
 
@@ -48,12 +48,14 @@ class EvalState(Enum):
 class Query:
     problem_id: int
     sample_id: int
+    base_sample_id: int
     query: str
 
 @dataclass
 class QueryResult:
     problem_id: int
     sample_id: int
+    base_sample_id: int
     result: str
 
 class EnumEncoder(json.JSONEncoder):
@@ -280,14 +282,14 @@ class ParallelTreeSearch:
         with open(file_path, "w") as f:
             f.write(data)
 
-    def query_and_save(self, queries: list[Query]):
+    def query_and_save(self, queries: list[Query], prompt_name="prompt", result_name="query_result"):
         raw_queries = []
         sample_id_problem_id = []
 
         for q in queries:
-            self.write_sample_data(q.problem_id, q.sample_id, "prompt.md", q.query)
+            self.write_sample_data(q.problem_id, q.sample_id, f"{prompt_name}.md", q.query)
             raw_queries.append(q.query)
-            sample_id_problem_id.append((q.sample_id, q.problem_id))
+            sample_id_problem_id.append((q.sample_id, q.problem_id, q.base_sample_id))
 
 
         if self.config.dry_run:
@@ -300,7 +302,7 @@ class ParallelTreeSearch:
         filtered_query_results = []
 
         # important: this assumes results arrive back in the order they were sent
-        for (sample_id, problem_id), res_data in zip(sample_id_problem_id, query_results):
+        for (sample_id, problem_id, base_sample_id), res_data in zip(sample_id_problem_id, query_results):
             if res_data is None:
                 print(f"No LLM response for sample: {sample_id}")
                 continue
@@ -310,13 +312,13 @@ class ParallelTreeSearch:
                 print(f"No query result for sample: {sample_id}")
                 print(full_response)
                 if full_response is not None:
-                    self.write_sample_data(problem_id, sample_id, "error_llm_response.json", json.dumps(full_response, indent=4))
+                    self.write_sample_data(problem_id, sample_id, f"{result_name}_error_llm_response.json", json.dumps(full_response, indent=4))
 
                 continue
 
-            self.write_sample_data(problem_id, sample_id, "query_result.md", query_result)
-            self.write_sample_data(problem_id, sample_id, "full_llm_response.json", json.dumps(full_response, indent=4))
-            filtered_query_results.append(QueryResult(problem_id=problem_id, sample_id=sample_id, result=query_result))
+            self.write_sample_data(problem_id, sample_id, f"{result_name}.md", query_result)
+            self.write_sample_data(problem_id, sample_id, f"{result_name}_full_llm_response.json", json.dumps(full_response, indent=4))
+            filtered_query_results.append(QueryResult(problem_id=problem_id, sample_id=sample_id, base_sample_id=base_sample_id, result=query_result))
         
         return filtered_query_results
 
@@ -404,6 +406,7 @@ class ParallelTreeSearch:
                 if sample["sample_id"] == sample_id:
                     code = sample["code"]
                     problem_id = sample["problem_id"]
+                    base_sample_id = sample["base_sample_id"]
             
             assert code is not None, "sample_id code was not found in original samples"
 
@@ -417,6 +420,7 @@ class ParallelTreeSearch:
                 "code": code,
                 "sample_id": sample_id,
                 "problem_id": problem_id,
+                "base_sample_id": base_sample_id,
             }
 
             model_loaded = True
@@ -536,6 +540,7 @@ class ParallelTreeSearch:
 
         for sample_data in eval_data:
             sample_id = sample_data["sample_id"]
+            base_sample_id = sample_data["base_sample_id"]
             problem_id = sample_data["problem_id"]
             state = sample_data["state"]
 
@@ -545,12 +550,12 @@ class ParallelTreeSearch:
                 code = sample_data["code"]
                 max_diff = sample_data["max_diff"]
                 query = prompt.prompt_fix_correctness(problem_code, code, max_diff)
-                queries.append(Query(problem_id=problem_id, sample_id=sample_id, query=query))
+                queries.append(Query(problem_id=problem_id, sample_id=sample_id, base_sample_id=base_sample_id, query=query))
             elif state == EvalState.ERROR:
                 code = sample_data["code"]
                 results = sample_data["results"]
                 query = prompt.prompt_fix_compile_stdout_stderr(problem_code, code, results)
-                queries.append(Query(problem_id=problem_id, sample_id=sample_id, query=query))
+                queries.append(Query(problem_id=problem_id, sample_id=sample_id, base_sample_id=base_sample_id, query=query))
 
         return queries
 
@@ -563,7 +568,7 @@ class ParallelTreeSearch:
             problem_code = self.get_problem_code(problem_id)
             for _ in range(self.config.num_samples):
                 custom_cuda_prompt = prompt.prompt_generate_custom_cuda_from_prompt_template(problem_code)
-                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, query=custom_cuda_prompt))
+                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, base_sample_id=curr_sample_id, query=custom_cuda_prompt))
                 curr_sample_id += 1
         
         return queries
@@ -585,6 +590,7 @@ class ParallelTreeSearch:
             res.append({
                 "sample_id": qr.sample_id,
                 "problem_id": qr.problem_id,
+                "base_sample_id": qr.base_sample_id,
                 "code": custom_kernel,
             })
 
@@ -627,7 +633,7 @@ class ParallelTreeSearch:
                 print(f"WARNING: No queries generated for task {problem_id}")
 
             for raw_q in raw_queries:
-                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, query=raw_q))
+                queries.append(Query(problem_id=problem_id, sample_id=curr_sample_id, base_sample_id=0, query=raw_q))
                 curr_sample_id += 1
 
         return queries
@@ -637,23 +643,28 @@ class ParallelTreeSearch:
 
         for problem_id in self.problem_id_range:
             problem_code = self.get_problem_code(problem_id)
+            # TODO: want to pass in a prior best solution (sampled) that we want to get ideas for
+            # but we also want to ensure the diversity of the solutions
+            # - should we ask the LLM to reason about which solutions are best to focus on, passing in a bunch of the prior good solutions?
             idea_prompt = prompt.prompt_generate_ideas(problem_code)
-            queries.append(Query(problem_id=problem_id, sample_id=None, query=idea_prompt))
+            queries.append(Query(problem_id=problem_id, sample_id=None, base_sample_id=None, query=idea_prompt))
         
         return queries
 
     def gen_and_extract_ideas(self, queries):
-        query_results = self.query_and_save(queries)
+        query_results = self.query_and_save(queries, prompt_name="ideas_prompt", result_name="ideas_result")
 
         ideas = []
         for qr in query_results:
             pass
-            # l = extract_idea_list()
+            l = extract_idea_list(qr.result)
+
+            self.write_sample_data(qr.problem_id, None, "ideas.json", json.dumps(l, indent=4))
         
-            # ideas.append({
-            #     "problem_id": qr.problem_id,
-            #     "code": custom_kernel,
-            # })
+            ideas.append({
+                "problem_id": qr.problem_id,
+                "ideas": l,
+            })
         
         self.curr_step += 1
 
@@ -661,8 +672,8 @@ class ParallelTreeSearch:
 
     def run(self):
         for phase in range(self.config.num_phases):
-            # idea_queries = self.get_idea_queries()
-            # ideas = self.gen_and_extract_ideas(idea_queries)
+            idea_queries = self.get_idea_queries()
+            ideas = self.gen_and_extract_ideas(idea_queries)
 
             if phase == 0:
                 queries = self.get_init_queries()

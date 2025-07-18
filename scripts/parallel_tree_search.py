@@ -184,6 +184,7 @@ class ParallelTreeSearch:
             json.dump(config.to_dict(), f, indent=4)
 
         self.all_solutions = {}
+        self.all_solutions_by_base_sample_id = {}
         self.phase_solutions = {}
 
         self.curr_phase = 0
@@ -196,6 +197,7 @@ class ParallelTreeSearch:
         for problem_id in self.problem_id_range:
             self.phase_solutions[problem_id] = []
             self.all_solutions[problem_id] = []
+            self.all_solutions_by_base_sample_id[problem_id] = {}
 
         tx_dir = Path(config.worker_input_dir)
         rx_dir = Path(config.worker_output_dir)
@@ -494,6 +496,7 @@ class ParallelTreeSearch:
                 continue
 
             problem_id = sample_data["problem_id"]
+            base_sample_id = sample_data["base_sample_id"]
 
             solution_id = len(self.phase_solutions[problem_id])
             solutions_dir = self.get_solutions_dir(solution_id, problem_id)
@@ -510,6 +513,35 @@ class ParallelTreeSearch:
             self.phase_solutions[problem_id].append(sample_data)
             self.all_solutions[problem_id].append(sample_data)
 
+            base_sample_sols = self.all_solutions_by_base_sample_id[problem_id]
+            if base_sample_id in base_sample_sols:
+                base_sample_sols[base_sample_id].append(sample_data)
+            else:
+                base_sample_sols[base_sample_id] = [sample_data]
+
+        self.sort_solutions()
+
+    def sort_solutions(self):
+        for problem_id, solutions in self.all_solutions.items():
+            self.all_solutions[problem_id] = sorted(solutions, key=lambda x: x["runtime"])
+        
+        for solutions_by_base_sample_id in self.all_solutions_by_base_sample_id.values():
+            for base_sample_id, solutions in solutions_by_base_sample_id.items():
+                solutions_by_base_sample_id[base_sample_id] = sorted(solutions, key=lambda x: x["runtime"])
+
+    def gather_best_solutions_by_base_sample_id(self):
+        best_solutions = {}
+
+        for problem_id, solutions_by_base_sample_id in self.all_solutions_by_base_sample_id.items():
+            best_problem_solutions = []
+
+            for _, solutions in solutions_by_base_sample_id.items():
+                if len(solutions) > 0:
+                    best_problem_solutions.append(solutions[0])
+
+            best_solutions[problem_id] = best_problem_solutions
+        
+        return best_solutions
 
     # returns the prompts to make in the next error/correctness-fixing step, if any are needed
     # (if no error/correctness-fixing is needed, simply proceed to the next code gen step)
@@ -674,6 +706,8 @@ class ParallelTreeSearch:
         for phase in range(self.config.num_phases):
             idea_queries = self.get_idea_queries()
             ideas = self.gen_and_extract_ideas(idea_queries)
+
+            # TODO: if there are less or more than 10 ideas, need to trim or duplicate accordingly
 
             if phase == 0:
                 queries = self.get_init_queries()

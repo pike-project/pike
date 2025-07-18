@@ -34,6 +34,7 @@ You should try to make sure the code compiles and is fully functional, but we wi
 BRAINSTORMING_INSTRUCTION = """
 Create a list of ideas for tasks that performance engineers should work on to optimize the given architecture.
 Just output the list of tasks, no other text. A maximum of 10 ideas are allowed, so prioritize the best ideas first.
+Fewer ideas are also acceptable if there are not many unique tasks to work on.
 """
 
 def _full_problem_instruction_with_example(

@@ -721,6 +721,12 @@ class ParallelTreeSearch:
                 # use the saved solutions to build queries for the next phase (branching in the parallel tree search)
                 queries = self.get_next_queries()
 
+            # IMPORTANT: clear this right after the call to get_next_queries, since these phase solutions
+            # may be used to seed the following set of queries
+            for problem_id in self.phase_solutions.keys():
+                self.phase_solutions[problem_id] = []
+                self.phase_solutions_by_branch[problem_id] = {}
+
             # add 1 to max_fix_attempts since we need to include the initial attempt too
             for fix_iter in range(self.config.max_fix_attempts + 1):
                 print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")
@@ -741,10 +747,6 @@ class ParallelTreeSearch:
 
             self.curr_phase += 1
             self.curr_step = 0
-
-            for problem_id in self.phase_solutions.keys():
-                self.phase_solutions[problem_id] = []
-                self.phase_solutions_by_branch[problem_id] = {}
 
 
 @pydra.main(base=GenerationConfig)

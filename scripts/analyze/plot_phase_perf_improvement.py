@@ -18,6 +18,28 @@ def get_baseline_runtime(path, task):
             if v["problem_id"] == task:
                 return v["results"]["eval_results"]["runtime"]
 
+def get_task_label(level, task):
+    task_labels = []
+
+    if level == 0:
+        task_labels = [
+            "Conv2D",
+            "Conv2D-ReLU-MaxPool",
+            "LayerNorm",
+            "MatMul",
+            "Softmax"
+        ]
+
+    # 1-indexed task numbers
+    idx = task - 1
+    if idx < 0:
+        return None
+
+    if idx >= len(task_labels):
+        return None
+    
+    return task_labels[idx]
+
 class ImprovementPlotter:
     def __init__(self, run_dir: Path):
         self.run_dir = run_dir
@@ -245,7 +267,13 @@ class ImprovementPlotter:
 
         col = ["#2aadb6", "#ff6583", "#aa6fc5", "#ffa600", "#8bc346"]
 
-        ax.set_title(f"Level {level} - Task {task} Improvement")
+        title_task_label = ""
+        
+        task_label = get_task_label(level, task)
+        if task_label is not None:
+            title_task_label = f" ({task_label})"
+
+        ax.set_title(f"Level {level} - Task {task}{title_task_label}")
         ax.set_xlabel("Parallel Tree Search Phase")
         ax.set_ylabel('Runtime (ms)')
 

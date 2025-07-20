@@ -247,9 +247,7 @@ class ImprovementPlotter:
             ax.set_yticks([])
             return None
         
-        phase_nums = [int(dirname.split("_")[1]) for dirname in phase_dirs]
-        phase_count = np.max(np.array(phase_nums)) + 1
-        phases = list(range(phase_count))
+        phases = list(range(self.num_phases))
         best_runtimes = []
         all_solutions = []
 
@@ -257,7 +255,7 @@ class ImprovementPlotter:
         os.makedirs(best_solutions_dir, exist_ok=True)
         best_solution_path = best_solutions_dir / f"level_{level}_task_{task}.py"
 
-        for phase in range(phase_count):
+        for phase in range(self.num_phases):
             phase_dir = phases_dir / f"phase_{phase}"
             solutions_dir = phase_dir / "solutions"
             phase_solutions = []
@@ -270,9 +268,9 @@ class ImprovementPlotter:
                             data = json.load(f)
                             phase_solutions.append(data)
                 
-            if len(phase_solutions) == 0:
-                best_runtimes.append(np.nan)
-                continue
+            # if len(phase_solutions) == 0:
+            #     best_runtimes.append(np.nan)
+            #     continue
 
             all_solutions.extend(phase_solutions)
             all_solutions.sort(key=lambda x: x["runtime"])

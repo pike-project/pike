@@ -75,6 +75,8 @@ class ImprovementPlotter:
     def plot(self):
         """
         Generates a single figure containing a grid of all task plots.
+        If there are fewer plots on the bottom row, they will be centered
+        while maintaining the same size as plots in the rows above.
         """
         level = self.level
         num_phases = self.num_phases
@@ -94,62 +96,81 @@ class ImprovementPlotter:
         cols = int(math.ceil(math.sqrt(num_plots)))
         rows = int(math.ceil(num_plots / cols))
 
-        # Create a single large figure with a grid of subplots
-        fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 4.5), squeeze=False)
-        # Flatten the 2D array of axes for easy iteration
-        axes = axes.flatten()
+        # Create a figure and a fine-grained GridSpec. Each plot will span 2 columns.
+        fig = plt.figure(figsize=(cols * 5, rows * 4.5))
+        gs = fig.add_gridspec(rows, cols * 2, wspace=0.6, hspace=0.45)
 
-        print(f"Generating a {rows}x{cols} grid for {num_plots} tasks...")
+        axes_list = []
+        
+        # Calculate the number of plots in the last row
+        num_in_last_row = num_plots % cols
+        if num_in_last_row == 0 and num_plots > 0:
+            num_in_last_row = cols
 
-        # TODO: need to take geomean of eager speedups and geomean of compile speedups
-        # at each phase:
-        # so build a numpy array and apply geomean along the correct dimension
+        print(f"Generating a {rows}x{cols} grid for {num_plots} tasks (with centering)...")
 
+        for i in range(num_plots):
+            current_row = i // cols
+            col_in_row = i % cols
+
+            offset = 0
+            # If we are in the last row, calculate the offset to center the plots
+            if current_row == rows - 1:
+                total_cells = cols * 2
+                plots_width_in_cells = num_in_last_row * 2
+                empty_space_in_cells = total_cells - plots_width_in_cells
+                offset = empty_space_in_cells // 2
+
+            # Each plot spans 2 columns in the fine-grained grid
+            start_col = offset + col_in_row * 2
+            ax = fig.add_subplot(gs[current_row, start_col:start_col + 2])
+            axes_list.append(ax)
+
+        axes = axes_list
+        
         all_speedups_shape = (len(tasks_to_plot), num_phases)
-
         all_speedups_eager = np.zeros(all_speedups_shape)
         all_speedups_compile = np.zeros(all_speedups_shape)
-
         max_phases_completed = 0
 
         # Plot each task on its corresponding subplot
         for i, task in enumerate(tasks_to_plot):
             ax = axes[i]
-            speedups_eager, speedups_compile = self.plot_task(level, task, ax)
+            plot_data = self.plot_task(level, task, ax)
+            
+            # Skip if plot_task returned no data
+            if plot_data is None:
+                continue
+            
+            speedups_eager, speedups_compile = plot_data
             all_speedups_eager[i, :len(speedups_eager)] = np.array(speedups_eager)
             all_speedups_compile[i, :len(speedups_compile)] = np.array(speedups_compile)
 
             max_phases_completed = max(max_phases_completed, len(speedups_eager))
 
+        # Trim arrays to the actual max number of phases completed across all tasks
         all_speedups_eager = all_speedups_eager[:, :max_phases_completed]
         all_speedups_compile = all_speedups_compile[:, :max_phases_completed]
 
-        # print(all_speedups_eager.shape, all_speedups_compile.shape)
-
-        geomean_eager = gmean(all_speedups_eager, axis=0)
-        geomean_compile = gmean(all_speedups_compile, axis=0)
-
-        # print(geomean_eager.shape, geomean_compile.shape)
-
-        # Turn off any unused subplots in the grid
-        for i in range(num_plots, len(axes)):
-            axes[i].axis('off')
+        # Calculate geomean, ignoring NaNs
+        geomean_eager = gmean(all_speedups_eager[~np.isnan(all_speedups_eager).any(axis=1)], axis=0)
+        geomean_compile = gmean(all_speedups_compile[~np.isnan(all_speedups_compile).any(axis=1)], axis=0)
 
         # Add a title for the entire figure
         fig.suptitle(f"Improvement Plots for Level {level}", fontsize=20)
         
         # Adjust layout to prevent titles/labels from overlapping
-        # The rect parameter makes space for the suptitle
-        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Define file paths for saving the combined figure
         fig_filename = f"level_{level}_all_tasks_improvement.pdf"
 
-        self.save_fig(fig_filename)
+        self.save_fig(fig, fig_filename)
         
         plt.close(fig)
 
-        self.plot_speedup_geomeans(geomean_eager, geomean_compile)
+        if geomean_eager.size > 0 and geomean_compile.size > 0:
+            self.plot_speedup_geomeans(geomean_eager, geomean_compile)
 
     def plot_speedup_geomeans(self, geomean_eager, geomean_compile):
         level = self.level
@@ -173,22 +194,22 @@ class ImprovementPlotter:
 
         filename = f"level_{level}_speedup_geomeans.pdf"
 
-        self.save_fig(filename)
+        self.save_fig(fig, filename)
 
         plt.close(fig)
 
-    def save_fig(self, filename):
+    def save_fig(self, fig_object, filename):
         figs_dir = self.run_dir / "figs"
         os.makedirs(figs_dir, exist_ok=True)
         save_path1 = figs_dir / filename
-        plt.savefig(save_path1)
+        fig_object.savefig(save_path1)
 
         run_name = self.run_dir.name
 
         figs_dir_2 = curr_dir / f"../../figs/improvement/{run_name}"
         os.makedirs(figs_dir_2, exist_ok=True)
         save_path2 = figs_dir_2 / filename
-        plt.savefig(save_path2)
+        fig_object.savefig(save_path2)
 
     def get_baseline_runtime(self, data, task):
         for v in data:
@@ -202,10 +223,10 @@ class ImprovementPlotter:
         runtime_compile = self.get_baseline_runtime(self.baseline_compile, task)
         return (runtime_eager, runtime_compile)
 
-    # returns a pair of (speedups_eager, speedups_compile)
     def plot_task(self, level, task, ax):
         """
         Plots the improvement for a single task onto a given Axes object.
+        Returns None if no data is found, otherwise returns speedups.
         """
         print(f"Plotting Level {level}, Task {task}...")
         run_dir = self.run_dir
@@ -216,16 +237,17 @@ class ImprovementPlotter:
             ax.text(0.5, 0.5, f"No data for Task {task}", ha='center', va='center')
             ax.set_xticks([])
             ax.set_yticks([])
-            return
+            return None
 
-        phase_nums = [int(dirname.split("_")[1]) for dirname in os.listdir(phases_dir)]
-        if not phase_nums:
+        phase_dirs = [d for d in os.listdir(phases_dir) if d.startswith("phase_")]
+        if not phase_dirs:
             print(f"  Warning: No phases found for task {task}. Skipping plot.")
             ax.text(0.5, 0.5, f"No data for Task {task}", ha='center', va='center')
             ax.set_xticks([])
             ax.set_yticks([])
-            return
-
+            return None
+        
+        phase_nums = [int(dirname.split("_")[1]) for dirname in phase_dirs]
         phase_count = np.max(np.array(phase_nums)) + 1
         phases = list(range(phase_count))
         best_runtimes = []
@@ -243,13 +265,14 @@ class ImprovementPlotter:
             if os.path.isdir(solutions_dir):
                 for sol_dirname in os.listdir(solutions_dir):
                     data_path = solutions_dir / sol_dirname / "data.json"
-                    with open(data_path) as f:
-                        data = json.load(f)
-                        phase_solutions.append(data)
+                    if os.path.exists(data_path):
+                        with open(data_path) as f:
+                            data = json.load(f)
+                            phase_solutions.append(data)
                 
-                if len(phase_solutions) == 0:
-                    best_runtimes.append(np.nan) # Use NaN for missing data
-                    continue
+            if len(phase_solutions) == 0:
+                best_runtimes.append(np.nan)
+                continue
 
             all_solutions.extend(phase_solutions)
             all_solutions.sort(key=lambda x: x["runtime"])
@@ -259,19 +282,18 @@ class ImprovementPlotter:
         if not all_solutions:
             print(f"  Warning: No solutions found for task {task}. Skipping plot.")
             ax.text(0.5, 0.5, f"No solution data for Task {task}", ha='center', va='center')
-            return
+            ax.set_xticks([])
+            ax.set_yticks([])
+            return None
 
         best_overall_sol = all_solutions[0]
         with open(best_solution_path, "w") as f:
             f.write(best_overall_sol["code"])
 
         col = ["#2aadb6", "#ff6583", "#aa6fc5", "#ffa600", "#8bc346"]
-
-        title_task_label = ""
         
-        task_label = get_task_label(level, task)
-        if task_label is not None:
-            title_task_label = f" ({task_label})"
+        task_label_str = get_task_label(level, task)
+        title_task_label = f" ({task_label_str})" if task_label_str else ""
 
         ax.set_title(f"Level {level} - Task {task}{title_task_label}")
         ax.set_xlabel("Parallel Tree Search Phase")
@@ -294,8 +316,15 @@ class ImprovementPlotter:
         speedups_compile = []
 
         for runtime in best_runtimes:
-            speedups_eager.append(baseline_runtime_eager / runtime)
-            speedups_compile.append(baseline_runtime_compile / runtime)
+            if baseline_runtime_eager is not None and not np.isnan(runtime) and runtime > 0:
+                speedups_eager.append(baseline_runtime_eager / runtime)
+            else:
+                speedups_eager.append(np.nan)
+            
+            if baseline_runtime_compile is not None and not np.isnan(runtime) and runtime > 0:
+                speedups_compile.append(baseline_runtime_compile / runtime)
+            else:
+                speedups_compile.append(np.nan)
         
         return speedups_eager, speedups_compile
 

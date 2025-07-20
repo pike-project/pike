@@ -536,12 +536,21 @@ class ParallelTreeSearch:
 
         for problem_id, solutions_by_branch in self.phase_solutions_by_branch.items():
             best_problem_solutions = []
+            remaining_solutions = []
 
             for _, solutions in solutions_by_branch.items():
                 if len(solutions) > 0:
                     best_problem_solutions.append(solutions[0])
+                
+                    # gather any remaining solutions, in case a particular branch had no correct solutions,
+                    # in which case we pull from the best other solutions
+                    for sol in solutions[1:]:
+                        remaining_solutions.append(sol)
 
-            best_solutions[problem_id] = sorted(best_problem_solutions, key=lambda x: x["runtime"])
+            all_sols = sorted(best_problem_solutions, key=lambda x: x["runtime"])
+            all_sols += sorted(remaining_solutions, key=lambda x: x["runtime"])
+
+            best_solutions[problem_id] = all_sols
         
         return best_solutions
 

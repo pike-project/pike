@@ -218,15 +218,16 @@ class ImprovementPlotter:
             solutions_dir = phase_dir / "solutions"
             phase_solutions = []
 
-            for sol_dirname in os.listdir(solutions_dir):
-                data_path = solutions_dir / sol_dirname / "data.json"
-                with open(data_path) as f:
-                    data = json.load(f)
-                    phase_solutions.append(data)
-            
-            if not phase_solutions:
-                best_runtimes.append(np.nan) # Use NaN for missing data
-                continue
+            if os.path.isdir(solutions_dir):
+                for sol_dirname in os.listdir(solutions_dir):
+                    data_path = solutions_dir / sol_dirname / "data.json"
+                    with open(data_path) as f:
+                        data = json.load(f)
+                        phase_solutions.append(data)
+                
+                if len(phase_solutions) == 0:
+                    best_runtimes.append(np.nan) # Use NaN for missing data
+                    continue
 
             all_solutions.extend(phase_solutions)
             all_solutions.sort(key=lambda x: x["runtime"])

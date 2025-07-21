@@ -47,6 +47,4 @@ def main():
     plt.savefig(figs_dir / "speedup1.pdf")
 
 if __name__ == "__main__":
-    # Example usage from command line:
-    # python your_script_name.py --run_dir /path/to/your/run/directory
     main()

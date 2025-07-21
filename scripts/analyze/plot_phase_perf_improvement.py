@@ -170,6 +170,11 @@ class ImprovementPlotter:
         plt.close(fig)
 
         if geomean_eager.size > 0 and geomean_compile.size > 0:
+            eager_final = geomean_eager[-1]
+            compile_final = geomean_compile[-1]
+
+            print(f"Final eager speedup: {eager_final}, final compile speedup: {compile_final}")
+
             self.plot_speedup_geomeans(geomean_eager, geomean_compile)
 
     def plot_speedup_geomeans(self, geomean_eager, geomean_compile):
@@ -323,7 +328,7 @@ class ImprovementPlotter:
                 speedups_compile.append(baseline_runtime_compile / runtime)
             else:
                 speedups_compile.append(np.nan)
-        
+
         return speedups_eager, speedups_compile
 
 def main():

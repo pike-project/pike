@@ -9,12 +9,14 @@ def main():
 
     labels = [
         "No Ideas\nTop-3 Branch",
-        "Init Ideas\nTop-4 Diverse"
+        "Init Ideas\nTop-4 Diverse",
+        "Blog Post\n(not A100-tuned)"
     ]
 
     values = [
         1.086,
-        1.16
+        1.16,
+        0.984
     ]
 
     col = [
@@ -34,11 +36,11 @@ def main():
 
     plt.bar(labels, values, color=colors, linewidth=1, edgecolor='black')
 
-    plt.xticks(rotation=20, ha='right')
+    plt.xticks(rotation=25, ha='right')
     plt.grid(axis='y')
     plt.gca().set_axisbelow(True)
 
-    plt.subplots_adjust(left=0.25, bottom=0.3)
+    plt.subplots_adjust(left=0.25, bottom=0.35)
 
     figs_dir = Path.resolve(curr_dir / "../../figs/overall_speedup")
 

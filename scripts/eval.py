@@ -228,7 +228,7 @@ class Eval:
     def profile(self):
         with torch.no_grad():
             for name in self.models.keys():
-                if name == "metr":
+                if name == "llm":
                     comp_output = self.get_model_output(name)
                     print(comp_output)
 
@@ -411,6 +411,7 @@ def main():
     parser.add_argument("--op_atol", type=float, default=1e-2)
     parser.add_argument("--op_rtol", type=float, default=1e-2)
     parser.add_argument("--compile", action='store_true')
+    parser.add_argument("--profile", action='store_true')
     args = parser.parse_args()
 
     level = args.level
@@ -434,50 +435,27 @@ def main():
     ev.create_model("llm", llm_path)
 
     ev.acquire_gpu_lock()
-    # sanity check print, make sure the GPU is completely free to work with
-    ev.print_gpu_mem()
 
-    # HACK: do not actually release gpu lock, just let it get released by process exiting
-    ev.check_correctness()
-    ev.collect_model_results("llm", compile=args.compile)
-    ev.cleanup()
+    if args.profile:
+        ev.profile()
+    else:
+        # sanity check print, make sure the GPU is completely free to work with
+        ev.print_gpu_mem()
 
-    # try:
-    #     ev.check_correctness()
-    #     ev.collect_model_results("llm", compile=True)
-    #     ev.cleanup()
-    # finally:
-    #     ev.release_gpu_lock()
+        # HACK: do not actually release gpu lock, just let it get released by process exiting
+        ev.check_correctness()
+        ev.collect_model_results("llm", compile=args.compile)
+        ev.cleanup()
 
-    if output_path is not None:
-        ev.save_results(output_path)
+        # try:
+        #     ev.check_correctness()
+        #     ev.collect_model_results("llm", compile=True)
+        #     ev.cleanup()
+        # finally:
+        #     ev.release_gpu_lock()
 
-    # level = 3
-
-    # # NOTE: task 3-36, 3-37, 3-39, 3-40, 3-42 in METR has modified inputs, so skip it for now
-    # # METR 3-43 complains with invalid argument
-    # # Sakana - something is broken with 3-47
-    # skip_level_3 = [36, 37, 39, 40, 42, 43, 47]
-
-    # incorrect_metr = [8, 13, 19, 22, 23, 41, 50]
-
-    # for task in range(27, 28):
-    #     print(f"Task: {level}-{task}")
-
-    #     if level == 3:
-    #         if task in skip_level_3:
-    #             print(f"Skipping task: {level}-{task}")
-    #             continue
-
-    #     ev = Eval(level, task, args.op_atol, args.op_rtol)
-    #     try:
-    #         ev.init_models()
-    #         ev.profile()
-    #         # ev.check_correctness()
-    #         # ev.run()
-    #         # ev.save_results()
-    #     except Exception as e:
-    #         print(e)
+        if output_path is not None:
+            ev.save_results(output_path)
 
 if __name__ == "__main__":
     main()

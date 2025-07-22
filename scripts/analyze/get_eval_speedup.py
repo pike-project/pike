@@ -8,7 +8,7 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 def main():
     baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench-data/runs/final_run2/baseline_compile.json")
-    comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/good_kernels_src_ground_truth_eager_filtered.json")
+    comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/good_kernels_src_filtered.json")
 
     with open(baseline_path) as f:
         baseline_data = json.load(f)

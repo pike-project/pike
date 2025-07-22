@@ -4,6 +4,7 @@ import asyncio
 import uuid
 import json
 import argparse
+from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
@@ -12,7 +13,7 @@ from src.util.disk_channel import DiskChannel
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path):
+    def __init__(self, level: int, mode: str, solutions_name: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
@@ -26,6 +27,7 @@ class EvalSolutions:
 
         self.level = level
         self.mode = mode
+        self.solutions_name = solutions_name
     
     def metr_solutions(self):
         kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
@@ -162,13 +164,21 @@ class EvalSolutions:
         return all_results
 
     async def run(self):
-        samples = self.ground_truth_solutions()
-        # samples = self.metr_solutions()
-        # samples = self.good_kernels_blog_solutions()
+        if self.solutions_name == "baseline":
+            samples = self.ground_truth_solutions()
+        elif self.solutions_name == "metr":
+            samples = self.metr_solutions()
+        elif self.solutions_name == "good_kernels":
+            samples = self.good_kernels_blog_solutions()
+        else:
+            raise Exception(f"Unexpected solutions name value: {self.solutions_name}")
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / f"baseline_{self.mode}.json"
+        run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+
+        results_path = self.results_dir / f"{run_name}.json"
+        # results_path = self.results_dir / f"baseline_{self.mode}.json"
         # results_path = self.results_dir / f"good_kernels_src_2.json"
 
         with open(results_path, "w") as f:
@@ -178,13 +188,33 @@ class EvalSolutions:
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--level", type=int)
+    parser.add_argument("--solutions", type=str, default="baseline")
     parser.add_argument("--mode", type=str, default="eager")
     parser.add_argument("--run_dir", type=str, required=False)
     parser.add_argument("--worker_input_dir", type=str, required=False)
     parser.add_argument("--worker_output_dir", type=str, required=False)
     args = parser.parse_args()
 
-    results_dir = (curr_dir / "../../results/eval_solutions").resolve()
+    valid_modes = [
+        "eager",
+        "compile"
+    ]
+
+    mode = args.mode
+    if mode not in valid_modes:
+        raise Exception(f"Invalid mode: {mode}. Valid modes are: {valid_modes}")
+
+    valid_solutions_names = [
+        "baseline",
+        "metr",
+        "good_kernels" # (Stanford blog post with preliminary good kernels)
+    ]
+
+    solutions_name = args.solutions
+    if solutions_name not in valid_solutions_names:
+        raise Exception(f"Invalid solutions value: {solutions_name}. Valid solutions values are: {valid_solutions_names}")
+
+    results_dir = (curr_dir / "../../results/eval_solutions" / solutions_name / mode).resolve()
     if args.run_dir is not None:
         results_dir = Path(args.run_dir)
 
@@ -200,7 +230,7 @@ async def main():
     if args.worker_output_dir is not None:
         worker_output_dir = Path(args.worker_output_dir)
 
-    eval_sol = EvalSolutions(args.level, args.mode, results_dir, worker_input_dir, worker_output_dir)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, results_dir, worker_input_dir, worker_output_dir)
     await eval_sol.run()
 
 if __name__ == "__main__":

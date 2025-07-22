@@ -8,7 +8,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 def main():
     baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench-data/runs/final_run2/baseline_compile.json")
-    comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/good_kernels_src_filtered.json")
+    # comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/good_kernels_src_filtered.json")
+    comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/metr/2025_07_22_14_41_23.json")
 
     with open(baseline_path) as f:
         baseline_data = json.load(f)
@@ -16,22 +17,39 @@ def main():
     with open(comp_path) as f:
         comp_data = json.load(f)
     
-    if len(baseline_data) != len(comp_data):
-        raise Exception("baseline and comp data not same length")
+    # if len(baseline_data) != len(comp_data):
+    #     raise Exception("baseline and comp data not same length")
 
-    speedups_np = np.zeros(len(baseline_data))
+    speedups = []
 
-    for idx, (b_val, c_val) in enumerate(zip(baseline_data, comp_data)):
-        if b_val["problem_id"] != c_val["problem_id"]:
-            raise Exception("problem_id values do not match")
+    for c_val in comp_data:
+        problem_id = c_val["problem_id"]
+
+        c_results = c_val["results"]["eval_results"]
+        if not c_results["loaded"] or not c_results["correct"]:
+            continue
+        
+        runtime_comp = c_results["runtime"]
+
+        b_val = None
+        for b_res in baseline_data:
+            if b_res["problem_id"] == problem_id:
+                b_val = b_res
+                break
+
+        if b_val is None:
+            raise Exception("Matching problem id in baseline not found")
         
         runtime_baseline = b_val["results"]["eval_results"]["runtime"]
-        runtime_comp = c_val["results"]["eval_results"]["runtime"]
 
         speedup = runtime_baseline / runtime_comp
 
-        speedups_np[idx] = speedup
+        print(f"Task {problem_id} speedup: {speedup}")
+
+        speedups.append(speedup)
     
+    speedups_np = np.array(speedups)
+
     speedup_gmean = gmean(speedups_np)
 
     print(f"Speedup Geomean: {speedup_gmean}")

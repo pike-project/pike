@@ -117,8 +117,8 @@ class EvalWorker:
 
         task_start_time = time.time()
 
-        # 20 minutes
-        timeout_sec = 20 * 60
+        # 15 minutes
+        timeout_sec = 15 * 60
 
         stdout = None
         stderr = None

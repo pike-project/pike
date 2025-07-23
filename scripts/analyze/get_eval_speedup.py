@@ -28,28 +28,33 @@ def main(baseline_path, comp_path):
         problem_id = c_val["problem_id"]
 
         c_res_full = c_val["results"]
-        if "eval_results" not in c_res_full:
-            continue
 
-        c_results = c_res_full["eval_results"]
+        try:
+            if "eval_results" not in c_res_full:
+                continue
 
-        if "loaded" not in c_results or not c_results["loaded"] or "correct" not in c_results or not c_results["correct"]:
-            continue
-        
-        runtime_comp = c_results["runtime"]
+            c_results = c_res_full["eval_results"]
 
-        b_val = None
-        for b_res in baseline_data:
-            if b_res["problem_id"] == problem_id:
-                b_val = b_res
-                break
+            if "loaded" not in c_results or not c_results["loaded"] or "correct" not in c_results or not c_results["correct"]:
+                continue
+            
+            runtime_comp = c_results["runtime"]
 
-        if b_val is None:
-            raise Exception(f"Matching problem id in baseline not found: {problem_id}")
-        
-        runtime_baseline = b_val["results"]["eval_results"]["runtime"]
+            b_val = None
+            for b_res in baseline_data:
+                if b_res["problem_id"] == problem_id:
+                    b_val = b_res
+                    break
 
-        speedup = runtime_baseline / runtime_comp
+            if b_val is None:
+                raise Exception(f"Matching problem id in baseline not found: {problem_id}")
+            
+            runtime_baseline = b_val["results"]["eval_results"]["runtime"]
+
+            speedup = runtime_baseline / runtime_comp
+        except Exception as e:
+            print(c_res_full)
+            raise e
 
         print(f"Task {problem_id} speedup: {speedup}")
 

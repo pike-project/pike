@@ -51,6 +51,13 @@ podman-hpc push docker.io/<username>/kernel-bench-deps:v0.1
 python sandbox/tools/start_worker_container.py
 ```
 
+Apptainer:
+
+```bash
+apptainer registry login --username loonride docker://docker.io
+APPTAINER_TMPDIR=$SCRATCH/apptainer/tmp APPTAINER_CACHEDIR=$SCRATCH/apptainer/cache apptainer pull kernel-bench-deps.sif docker://docker.io/<username>/kernel-bench-deps:v0.3
+```
+
 How to run parallel tree search:
 
 ```bash

@@ -30,6 +30,12 @@ def main(baseline_path, comp_path):
         c_res_full = c_val["results"]
 
         try:
+            runtime_baseline = b_val["results"]["eval_results"]["runtime"]
+        except Exception as e:
+            print(f"Baseline execution failed for task: {problem_id}")
+            continue
+
+        try:
             if "eval_results" not in c_res_full:
                 continue
 
@@ -48,8 +54,6 @@ def main(baseline_path, comp_path):
 
             if b_val is None:
                 raise Exception(f"Matching problem id in baseline not found: {problem_id}")
-            
-            runtime_baseline = b_val["results"]["eval_results"]["runtime"]
 
             speedup = runtime_baseline / runtime_comp
         except Exception as e:

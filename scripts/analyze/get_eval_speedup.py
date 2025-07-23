@@ -3,14 +3,15 @@ import json
 from pathlib import Path
 import numpy as np
 from scipy.stats import gmean
+import argparse
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-def main():
+def main(baseline_path, comp_path):
     # baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench-data/runs/final_run2/baseline_compile.json")
     # comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/good_kernels_src_filtered.json")
-    baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/baseline/compile/2025_07_22_15_33_29.json")
-    comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/metr/2025_07_22_14_41_23.json")
+    # baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/baseline/compile/2025_07_22_15_33_29.json")
+    # comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/metr/2025_07_22_14_41_23.json")
 
     with open(baseline_path) as f:
         baseline_data = json.load(f)
@@ -61,4 +62,9 @@ def main():
     print(f"Speedup Geomean: {speedup_gmean}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--baseline_path", type=str, required=True)
+    parser.add_argument("--comp_path", type=str, required=True)
+    args = parser.parse_args()
+
+    main(Path(args.baseline_path), Path(args.comp_path))

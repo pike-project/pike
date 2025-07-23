@@ -36,7 +36,8 @@ def main(baseline_path, comp_path):
                 break
 
         if b_val is None:
-            raise Exception(f"Matching problem id in baseline not found: {problem_id}")
+            print(f"Matching problem id in baseline not found: {problem_id}")
+            continue
 
         try:
             runtime_baseline = b_val["results"]["eval_results"]["runtime"]

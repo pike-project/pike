@@ -29,6 +29,15 @@ def main(baseline_path, comp_path):
 
         c_res_full = c_val["results"]
 
+        b_val = None
+        for b_res in baseline_data:
+            if b_res["problem_id"] == problem_id:
+                b_val = b_res
+                break
+
+        if b_val is None:
+            raise Exception(f"Matching problem id in baseline not found: {problem_id}")
+
         try:
             runtime_baseline = b_val["results"]["eval_results"]["runtime"]
         except Exception as e:
@@ -45,15 +54,6 @@ def main(baseline_path, comp_path):
                 continue
             
             runtime_comp = c_results["runtime"]
-
-            b_val = None
-            for b_res in baseline_data:
-                if b_res["problem_id"] == problem_id:
-                    b_val = b_res
-                    break
-
-            if b_val is None:
-                raise Exception(f"Matching problem id in baseline not found: {problem_id}")
 
             speedup = runtime_baseline / runtime_comp
         except Exception as e:

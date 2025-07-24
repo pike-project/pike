@@ -10,11 +10,31 @@ def clean_whitespace(s):
     return ' '.join(s.split())
 
 def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--engine", type=str, required=False, default="docker")
+    parser.add_argument("--sif_path", type=str, required=False)
+    args = parser.parse_args()
+
+    valid_engines = [
+        "docker",
+        "podman-hpc",
+        "apptainer"
+    ]
+
+    if args.engine not in valid_engines:
+        raise Exception(f"Invalid engine provided: {args.engine}, Valid engines: {valid_engines}")
+
+    if args.engine == "apptainer" and args.sif_path is None:
+        raise Exception("sif_path argument must be provided if engine is Apptainer")
+    
+    sif_path = args.sif_path
+
     # could be replaced with docker, the only flag that will need to be adjusted is --gpu (podman-hpc specific)
-    container_cmd = "podman-hpc"
+    container_cmd = args.engine
 
     local_image_name = "kernel-bench-deps"
-    remote_image_name = "docker.io/loonride/kernel-bench-deps:v0.2"
+    remote_image_name = "docker.io/loonride/kernel-bench-deps:v0.3"
 
     non_root_user = False
     read_only_fs = True

@@ -42,13 +42,15 @@ def main():
 
     root_dir = Path.resolve(curr_path / "../..")
 
-    # this command will be run in the container
-    # IMPORTANT: DO NOT MAKE IT AN ABSOLUTE PATH, KEEP IT RELATIVE
-    eval_worker_path = "./scripts/start_eval_worker.py"
-    # run_cmd = ["bash", "-c", f"pip install . && python3 {eval_worker_path}"]
-    run_cmd = ["python3", eval_worker_path]
-
-    # run_cmd = ["bash"]
+    if args.engine == "apptainer":
+        eval_worker_path = root_dir / "scripts/start_eval_worker.py"
+    else:
+        # must be relative for docker and podman-hpc
+        # this command will be run in the container
+        # IMPORTANT: DO NOT MAKE IT AN ABSOLUTE PATH, KEEP IT RELATIVE
+        eval_worker_path = Path("./scripts/start_eval_worker.py")
+    # run_cmd = ["python", str(eval_worker_path)]
+    run_cmd = ["bash"]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)

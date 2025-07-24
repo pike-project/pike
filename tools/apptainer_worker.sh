@@ -1,1 +1,1 @@
-srun -A ac_binocular -t 1:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:2 --cpus-per-task=64 python sandbox/tools/start_worker_container.py --engine apptainer --sif_path ./kernel-bench-deps.sif
+srun -A ac_binocular -t 1:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:2 --cpus-per-task=64 --pty python sandbox/tools/start_worker_container.py --engine apptainer --sif_path ./kernel-bench-deps.sif

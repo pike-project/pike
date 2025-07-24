@@ -14,7 +14,7 @@ from src.util.disk_channel import DiskChannel
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
+    def __init__(self, level: int, mode: str, solutions_name: str, run_name: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
@@ -29,6 +29,7 @@ class EvalSolutions:
         self.level = level
         self.mode = mode
         self.solutions_name = solutions_name
+        self.run_name = run_name
         self.dry_run = dry_run
     
     def metr_solutions(self):
@@ -195,11 +196,7 @@ class EvalSolutions:
 
         results = await self.eval_samples(samples)
 
-        run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-
-        results_path = self.results_dir / f"{run_name}.json"
-        # results_path = self.results_dir / f"baseline_{self.mode}.json"
-        # results_path = self.results_dir / f"good_kernels_src_2.json"
+        results_path = self.results_dir / f"{self.run_name}.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)
@@ -210,6 +207,7 @@ async def main():
     parser.add_argument("--level", type=int)
     parser.add_argument("--solutions", type=str, default="baseline")
     parser.add_argument("--mode", type=str, default="eager")
+    parser.add_argument("--run_name", type=str, required=False)
     parser.add_argument("--run_dir", type=str, required=False)
     parser.add_argument("--worker_input_dir", type=str, required=False)
     parser.add_argument("--worker_output_dir", type=str, required=False)
@@ -251,7 +249,11 @@ async def main():
     if args.worker_output_dir is not None:
         worker_output_dir = Path(args.worker_output_dir)
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, results_dir, worker_input_dir, worker_output_dir, args.dry_run)
+    run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    if args.run_name is not None:
+        run_name = args.run_name
+
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, run_name, results_dir, worker_input_dir, worker_output_dir, args.dry_run)
     await eval_sol.run()
 
 if __name__ == "__main__":

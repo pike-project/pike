@@ -72,6 +72,9 @@ class EvalWorker:
         self.triton_cache_dir = self.scratch_dir / "triton_cache"
         os.makedirs(self.triton_cache_dir, exist_ok=True)
 
+        self.tmp_dir = self.scratch_dir / "tmp"
+        os.makedirs(self.tmp_dir, exist_ok=True)
+
         # remove any existing files in the eval output dir
         for file in self.eval_output_dir.iterdir():
             if file.is_file():
@@ -136,11 +139,19 @@ class EvalWorker:
         eval_triton_cache_dir = self.triton_cache_dir / str(task_number)
         os.makedirs(eval_triton_cache_dir, exist_ok=True)
 
+        # this keeps ninja builds separated, since ninja uses TMPDIR environment variable
+        # this may result in other things being placed in this dir, and it is still possible
+        # that /tmp will get used for other things without our consent, so just need to be aware
+        # of this when setting up our container
+        eval_tmp_dir = self.tmp_dir / str(task_number)
+        os.makedirs(eval_tmp_dir, exist_ok=True)
+
         env = os.environ.copy()
         # set this based on current GPU: Ampere or Hopper currently supported for certain
         env["TORCH_CUDA_ARCH_LIST"] = self.arch
         env["TORCH_EXTENSIONS_DIR"] = str(eval_torch_ext_dir)
         env["TRITON_CACHE_DIR"] = str(eval_triton_cache_dir)
+        env["TMPDIR"] = str(eval_tmp_dir)
 
         task_start_time = time.time()
 

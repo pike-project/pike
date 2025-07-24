@@ -2,15 +2,15 @@ set -ex
 
 LEVEL=0
 # inclusive range
-TASK_START=4
-TASK_END=4
+TASK_START=1
+TASK_END=1
 
 NUM_SAMPLES=10
 NUM_PHASES=5
 MAX_FIX_ATTEMPTS=3
 
 # True or False
-DRY_RUN=False
+DRY_RUN=True
 
 # IMPORTANT NOTE: this script currently makes a data directory outside of the current KernelBench
 # directory, this needs to be modified if this behavior is not desired

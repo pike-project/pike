@@ -222,12 +222,13 @@ class ParallelTreeSearch:
     async def init(self):
         print("Starting handshake with worker...")
 
-        await self.disk_channel.send({
-            "type": "handshake"
-        })
+        if not self.config.dry_run:
+            await self.disk_channel.send({
+                "type": "handshake"
+            })
 
-        # wait for the disk channel to send back handshake response
-        await self.disk_channel.recv()
+            # wait for the disk channel to send back handshake response
+            await self.disk_channel.recv()
 
         print("Worker handshake complete.")
 

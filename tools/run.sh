@@ -10,7 +10,12 @@ NUM_PHASES=5
 MAX_FIX_ATTEMPTS=3
 
 # True or False
-DRY_RUN=True
+DRY_RUN=False
+
+# SERVER_TYPE=google
+# MODEL_NAME=gemini-2.5-pro
+SERVER_TYPE=cborg
+MODEL_NAME=lbl/llama
 
 # IMPORTANT NOTE: this script currently makes a data directory outside of the current KernelBench
 # directory, this needs to be modified if this behavior is not desired
@@ -24,7 +29,7 @@ LOG_PATH=$RUN_DIR/out.log
 WORKER_INPUT_DIR=worker_io/input
 WORKER_OUTPUT_DIR=worker_io/output
 
-python scripts/parallel_tree_search.py data_dir=$DATA_DIR run_dir=$RUN_DIR dataset_src=local server_type=google model_name=gemini-2.5-pro num_workers=50 worker_input_dir=$WORKER_INPUT_DIR worker_output_dir=$WORKER_OUTPUT_DIR level=$LEVEL task_start=$TASK_START task_end=$TASK_END num_samples=$NUM_SAMPLES num_phases=$NUM_PHASES max_fix_attempts=$MAX_FIX_ATTEMPTS dry_run=$DRY_RUN | tee -a $LOG_PATH
+python scripts/parallel_tree_search.py data_dir=$DATA_DIR run_dir=$RUN_DIR dataset_src=local server_type=$SERVER_TYPE model_name=$MODEL_NAME num_workers=50 worker_input_dir=$WORKER_INPUT_DIR worker_output_dir=$WORKER_OUTPUT_DIR level=$LEVEL task_start=$TASK_START task_end=$TASK_END num_samples=$NUM_SAMPLES num_phases=$NUM_PHASES max_fix_attempts=$MAX_FIX_ATTEMPTS dry_run=$DRY_RUN | tee -a $LOG_PATH
 
 if [ "$DRY_RUN" = "True" ]; then
     DRY_RUN_FLAG="--dry_run"

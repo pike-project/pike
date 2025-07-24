@@ -32,10 +32,6 @@ def main():
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)
 
-    # TODO: need to let this data_dir get passed in
-    pscratch_dir = Path(os.getenv("PSCRATCH"))
-    data_dir = pscratch_dir / "llm/KernelBench-data"
-
     # worker_dir = data_dir / "workers" / worker_id
     worker_dir = root_dir / "worker_io"
 

@@ -5,7 +5,7 @@ RUN2=2025_07_20_07_56_15
 RUN3=2025_07_19_07_48_46
 MERGED_NAME=final_run2
 
-DATA_DIR=$PSCRATCH/llm/KernelBench-data
+DATA_DIR=$(realpath ../KernelBench-data)
 RUNS_DIR=$DATA_DIR/runs
 
 DIR1=$RUNS_DIR/$RUN1

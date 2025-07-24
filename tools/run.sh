@@ -12,7 +12,9 @@ MAX_FIX_ATTEMPTS=3
 # True or False
 DRY_RUN=False
 
-DATA_DIR=$PSCRATCH/llm/KernelBench-data
+# IMPORTANT NOTE: this script currently makes a data directory outside of the current KernelBench
+# directory, this needs to be modified if this behavior is not desired
+DATA_DIR=$(realpath ../KernelBench-data)
 RUN_NAME=$(date +"%Y_%m_%d_%H_%M_%S")
 RUN_DIR=$DATA_DIR/runs/$RUN_NAME
 

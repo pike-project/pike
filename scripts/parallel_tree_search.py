@@ -298,7 +298,7 @@ class ParallelTreeSearch:
         with open(file_path, "w") as f:
             f.write(data)
 
-    def query_and_save(self, queries: list[Query], prompt_name="prompt", result_name="query_result"):
+    def query_and_save(self, queries: list[Query], idea_queries=False, prompt_name="prompt", result_name="query_result"):
         raw_queries = []
         sample_id_problem_id = []
 
@@ -311,7 +311,12 @@ class ParallelTreeSearch:
         if self.config.dry_run:
             query_results = []
             for q in queries:
-                query_results.append(("```exit(0)```", {}))
+                if idea_queries:
+                    res_text = "- idea1\n- idea2\n- idea 3\n"
+                else:
+                    res_text = "```exit(0)```"
+                
+                query_results.append((res_text, {}))
         else:
             query_results = self.query_llm_parallel(raw_queries)
 
@@ -715,7 +720,7 @@ class ParallelTreeSearch:
         return queries
 
     def gen_and_extract_ideas(self, queries):
-        query_results = self.query_and_save(queries, prompt_name="ideas_prompt", result_name="ideas_result")
+        query_results = self.query_and_save(queries, idea_queries=True, prompt_name="ideas_prompt", result_name="ideas_result")
 
         ideas = {}
         for qr in query_results:

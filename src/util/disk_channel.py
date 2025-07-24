@@ -49,8 +49,8 @@ class DiskChannel:
         self.tx_dir.mkdir(parents=True, exist_ok=True)
         self.rx_dir.mkdir(parents=True, exist_ok=True)
 
-        # remove any existing files in the channel
-        for file in self.rx_dir.iterdir():
+        # remove any existing files in the sending channel
+        for file in self.tx_dir.iterdir():
             if file.is_file():
                 file.unlink()
 

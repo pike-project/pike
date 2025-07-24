@@ -84,7 +84,25 @@ class EvalWorker:
 
         self.active_task_count = AtomicIntAsync(0)
     
-    async def handle_msg(self, msg, task_number):
+    async def handle_msg(self, msg):
+        if msg["type"] == "handshake":
+            output_data = {
+                "type": "handshake"
+            }
+            await self.disk_channel.send(output_data)
+        else:
+            while self.active_task_count.peek() >= 20:
+                await asyncio.sleep(1)
+
+            active_task_count = await self.active_task_count.inc()
+            print(f"Active task count: {active_task_count}")
+
+            asyncio.create_task(self.handle_msg(msg, self.total_task_count))
+
+            self.total_task_count += 1
+
+
+    async def handle_task_msg(self, msg, task_number):
         level = msg["level"]
         task = msg["task"]
         code_str = msg["code"]
@@ -200,6 +218,7 @@ class EvalWorker:
 
         output_data = {
             "id": eval_id,
+            "type": "result",
             "results": {
                 "stdout": stdout,
                 "stderr": stderr,
@@ -224,15 +243,7 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            while self.active_task_count.peek() >= 20:
-                await asyncio.sleep(1)
-
-            active_task_count = await self.active_task_count.inc()
-            print(f"Active task count: {active_task_count}")
-            asyncio.create_task(self.handle_msg(msg, self.total_task_count))
-            # await self.handle_msg(msg)
-            self.total_task_count += 1
-            
+            await self.handle_msg(msg)
 
 async def main():
     parser = argparse.ArgumentParser()

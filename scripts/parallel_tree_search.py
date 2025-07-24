@@ -219,6 +219,18 @@ class ParallelTreeSearch:
                                                                 max_tokens=self.config.max_tokens,
                                                                 verbose=self.config.verbose)
 
+    async def init(self):
+        print("Starting handshake with worker...")
+
+        await self.disk_channel.send({
+            "type": "handshake"
+        })
+
+        # wait for the disk channel to send back handshake response
+        await self.disk_channel.recv()
+
+        print("Worker handshake complete.")
+
     def get_problem_code(self, problem_id):
         dataset = self.curr_level_dataset
 
@@ -338,6 +350,7 @@ class ParallelTreeSearch:
 
             await self.disk_channel.send({
                 "id": eval_id,
+                "type": "eval",
                 "level": self.config.level,
                 "task": problem_id,
                 "code": code,
@@ -767,6 +780,7 @@ def main(config: GenerationConfig):
     print(f"Starting Batch Generation with config: {config}")
 
     tree_search = ParallelTreeSearch(config)
+    asyncio.run(tree_search.init())
     tree_search.run()
 
 

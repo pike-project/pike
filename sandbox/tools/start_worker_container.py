@@ -12,8 +12,8 @@ def clean_whitespace(s):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--engine", type=str, required=False, default="docker")
-    parser.add_argument("--sif_path", type=str, required=False)
+    parser.add_argument("--engine", type=str, required=False, default="docker", help="Container engine to use.")
+    parser.add_argument("--sif_path", type=str, required=False, help="Path to the .sif file, required for Apptainer.")
     args = parser.parse_args()
 
     valid_engines = [
@@ -26,9 +26,9 @@ def main():
         raise Exception(f"Invalid engine provided: {args.engine}, Valid engines: {valid_engines}")
 
     if args.engine == "apptainer" and args.sif_path is None:
-        raise Exception("sif_path argument must be provided if engine is Apptainer")
+        raise Exception("--sif_path argument must be provided if engine is 'apptainer'")
     
-    sif_path = args.sif_path
+    sif_path = Path(args.sif_path) if args.sif_path else None
 
     # could be replaced with docker, the only flag that will need to be adjusted is --gpu (podman-hpc specific)
     container_cmd = args.engine
@@ -62,42 +62,83 @@ def main():
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    flags_str = f"""
-            --gpu --cap-drop=ALL --network=none
-            --tmpfs /cache
-            --tmpfs /scratch
-            --volume {input_dir}:/input
-            --volume {output_dir}:/output
-            --security-opt no-new-privileges --rm
-            -it
-        """
+    if args.engine == "apptainer":
+        # Apptainer command construction
+        # Use 'exec' to run a custom command inside the container
+        cmd = [container_cmd, "exec"]
+        
+        flags = [
+            # --nv is the apptainer equivalent of --gpus for nvidia gpus
+            "--nv",
+            # --containall is a powerful isolation flag. It disables networking,
+            # mounts a new /tmp, and uses a minimal /dev, which is a good
+            # equivalent for docker's --network=none and --cap-drop=ALL.
+            "--containall",
+            # --no-privs is equivalent to --security-opt no-new-privileges
+            "--no-privs",
+            # --scratch creates a temporary directory inside the container,
+            # equivalent to --tmpfs
+            "--scratch", "/cache",
+            "--scratch", "/scratch",
+            # --bind is the apptainer equivalent of --volume
+            "--bind", f"{input_dir}:/input",
+            "--bind", f"{output_dir}:/output",
+        ]
 
-    cleaned_flags_str = clean_whitespace(flags_str)
-    flags = cleaned_flags_str.split()
+        # Apptainer runs as the current user by default, so the logic for
+        # non_root_user and --userns keep-id is not needed.
 
-    if non_root_user:
-        flags += ["--userns", "keep-id"]
+        if read_only_fs:
+            # :ro makes the bind mount read-only
+            flags += ["--bind", f"{root_dir}:/app:ro"]
+        else:
+            flags += ["--bind", f"{root_dir}:/app"]
+        
+        cmd += flags
 
-    if read_only_fs:
-        # makes /app mount read-only as well
-        flags += ["--read-only", "--volume", f"{root_dir}:/app:ro"]
-    else:
-        # does not make /app mount read-only
-        flags += ["--volume", f"{root_dir}:/app"]
+        # Add the SIF file path and the command to run
+        cmd += [str(sif_path)]
+        cmd += run_cmd
 
-    cmd = [container_cmd, "run"]
-    cmd += flags
+    else: # docker or podman-hpc
+        flags_str = f"""
+                --gpus all --cap-drop=ALL --network=none
+                --tmpfs /cache
+                --tmpfs /scratch
+                --volume {input_dir}:/input
+                --volume {output_dir}:/output
+                --security-opt no-new-privileges --rm
+                -it
+            """
 
-    if pull_from_docker_hub:
-        cmd += ["--pull=always", remote_image_name]
-    else:
-        cmd += [local_image_name]
+        cleaned_flags_str = clean_whitespace(flags_str)
+        # For podman-hpc, replace '--gpus all' with its specific '--gpu' flag
+        if args.engine == "podman-hpc":
+            cleaned_flags_str = cleaned_flags_str.replace("--gpus all", "--gpu")
+            
+        flags = cleaned_flags_str.split()
 
-    cmd += run_cmd
+        if non_root_user:
+            flags += ["--userns", "keep-id"]
 
-    print(f"Running: {" ".join(cmd)}")
+        if read_only_fs:
+            # makes /app mount read-only as well
+            flags += ["--read-only", "--volume", f"{root_dir}:/app:ro"]
+        else:
+            # does not make /app mount read-only
+            flags += ["--volume", f"{root_dir}:/app"]
 
-    # TODO: may want to rebuild 'kernel-bench-deps' container beforehand
+        cmd = [container_cmd, "run"]
+        cmd += flags
+
+        if pull_from_docker_hub:
+            cmd += ["--pull=always", remote_image_name]
+        else:
+            cmd += [local_image_name]
+
+        cmd += run_cmd
+
+    print(f"Running: {' '.join(cmd)}")
 
     proc = subprocess.Popen(
         cmd,
@@ -108,4 +149,5 @@ def main():
     )
     proc.wait()
 
-main()
+if __name__ == "__main__":
+    main()

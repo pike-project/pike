@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 import argparse
+import shutil
 
 curr_path = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -74,6 +75,23 @@ def main():
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
+    tmp_dir = worker_dir / "tmp"
+    cache_dir = worker_dir / "cache"
+    scratch_dir = worker_dir / "scratch"
+
+    if os.path.isdir(tmp_dir):
+        shutil.rmtree(tmp_dir)
+
+    if os.path.isdir(cache_dir):
+        shutil.rmtree(cache_dir)
+    
+    if os.path.isdir(scratch_dir):
+        shutil.rmtree(scratch_dir)
+
+    os.makedirs(tmp_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(scratch_dir, exist_ok=True)
+
     if args.engine == "apptainer":
         # Apptainer command construction
         # Use 'exec' to run a custom command inside the container
@@ -90,9 +108,9 @@ def main():
             "--no-privs",
             # --scratch creates a temporary directory inside the container,
             # equivalent to --tmpfs
-            "--scratch", "/tmp",
-            "--scratch", "/cache",
-            "--scratch", "/scratch",
+            "--bind", f"{tmp_dir}:/tmp",
+            "--bind", f"{cache_dir}:/cache",
+            "--bind", f"{scratch_dir}:/scratch",
             # --bind is the apptainer equivalent of --volume
             "--bind", f"{input_dir}:/input",
             "--bind", f"{output_dir}:/output",

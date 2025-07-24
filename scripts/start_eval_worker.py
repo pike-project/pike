@@ -97,7 +97,7 @@ class EvalWorker:
             active_task_count = await self.active_task_count.inc()
             print(f"Active task count: {active_task_count}")
 
-            asyncio.create_task(self.handle_msg(msg, self.total_task_count))
+            asyncio.create_task(self.handle_task_msg(msg, self.total_task_count))
 
             self.total_task_count += 1
 

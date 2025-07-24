@@ -84,12 +84,17 @@ class EvalWorker:
 
         self.active_task_count = AtomicIntAsync(0)
     
+    # returns True if we should continue, False otherwise
     async def handle_msg(self, msg):
         if msg["type"] == "handshake":
+            print("Got handshake message")
             output_data = {
                 "type": "handshake"
             }
             await self.disk_channel.send(output_data)
+        elif msg["type"] == "close":
+            print("Got close message, closing worker.")
+            return False
         else:
             while self.active_task_count.peek() >= 20:
                 await asyncio.sleep(1)
@@ -100,6 +105,8 @@ class EvalWorker:
             asyncio.create_task(self.handle_task_msg(msg, self.total_task_count))
 
             self.total_task_count += 1
+        
+        return True
 
 
     async def handle_task_msg(self, msg, task_number):
@@ -243,7 +250,8 @@ class EvalWorker:
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
-            await self.handle_msg(msg)
+            if not await self.handle_msg(msg):
+                break
 
 async def main():
     parser = argparse.ArgumentParser()

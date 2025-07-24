@@ -134,6 +134,7 @@ class EvalSolutions:
 
             await self.disk_channel.send({
                 "id": eval_id,
+                "type": "eval",
                 "level": self.level,
                 "task": problem_id,
                 "code": code,
@@ -202,6 +203,13 @@ class EvalSolutions:
             json.dump(results, f, indent=4)
 
 
+    async def close(self):
+        print("Sending close message to worker...")
+
+        await self.disk_channel.send({
+            "type": "close"
+        })
+
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--level", type=int)
@@ -212,6 +220,7 @@ async def main():
     parser.add_argument("--worker_input_dir", type=str, required=False)
     parser.add_argument("--worker_output_dir", type=str, required=False)
     parser.add_argument("--dry_run", action='store_true')
+    parser.add_argument("--close_worker", action='store_true')
     args = parser.parse_args()
 
     valid_modes = [
@@ -255,6 +264,9 @@ async def main():
 
     eval_sol = EvalSolutions(args.level, mode, solutions_name, run_name, results_dir, worker_input_dir, worker_output_dir, args.dry_run)
     await eval_sol.run()
+
+    if args.close_worker:
+        await eval_sol.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

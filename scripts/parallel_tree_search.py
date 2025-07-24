@@ -232,6 +232,14 @@ class ParallelTreeSearch:
 
         print("Worker handshake complete.")
 
+    async def close(self):
+        print("Sending close message to worker...")
+
+        if not self.config.dry_run:
+            await self.disk_channel.send({
+                "type": "close"
+            })
+
     def get_problem_code(self, problem_id):
         dataset = self.curr_level_dataset
 

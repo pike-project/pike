@@ -2,8 +2,8 @@ set -ex
 
 LEVEL=0
 # inclusive range
-TASK_START=2
-TASK_END=2
+TASK_START=1
+TASK_END=5
 
 NUM_SAMPLES=10
 NUM_PHASES=5

@@ -14,6 +14,9 @@ def main():
 
     parser.add_argument("--engine", type=str, required=False, default="docker", help="Container engine to use.")
     parser.add_argument("--sif_path", type=str, required=False, help="Path to the .sif file, required for Apptainer.")
+    parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
+    parser.add_argument("--bash", action='store_true')
+
     args = parser.parse_args()
 
     valid_engines = [
@@ -27,6 +30,14 @@ def main():
 
     if args.engine == "apptainer" and args.sif_path is None:
         raise Exception("--sif_path argument must be provided if engine is 'apptainer'")
+    
+    valid_archs = [
+        "Ampere", # A100
+        "Hopper" # H100
+    ]
+
+    if args.arch not in valid_archs:
+        raise Exception(f"Invalid arch: {args.arch}, Valid archs: {valid_archs}")
     
     sif_path = Path(args.sif_path) if args.sif_path else None
 
@@ -45,9 +56,11 @@ def main():
     app_bind_dir = Path("/app")
 
     # IMPORTANT: this command will be run in the container, so it is relative to the app bind dir
-    eval_worker_path = app_bind_dir / "scripts/start_eval_worker.py"
-    run_cmd = ["python", str(eval_worker_path)]
-    # run_cmd = ["bash"]
+    if args.bash:
+        run_cmd = ["bash"]
+    else:
+        eval_worker_path = app_bind_dir / "scripts/start_eval_worker.py"
+        run_cmd = ["python", str(eval_worker_path), "--arch", args.arch]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)
@@ -77,6 +90,7 @@ def main():
             "--no-privs",
             # --scratch creates a temporary directory inside the container,
             # equivalent to --tmpfs
+            # "--scratch", "/tmp",
             "--scratch", "/cache",
             "--scratch", "/scratch",
             # --bind is the apptainer equivalent of --volume
@@ -102,6 +116,7 @@ def main():
     else: # docker or podman-hpc
         flags_str = f"""
                 --gpus all --cap-drop=ALL --network=none
+                --tmpfs /tmp
                 --tmpfs /cache
                 --tmpfs /scratch
                 --volume {input_dir}:/input

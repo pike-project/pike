@@ -1,1 +1,1 @@
-python sandbox/tools/start_worker_container.py
+python sandbox/tools/start_worker_container.py --engine podman-hpc --arch Ampere

@@ -51,10 +51,11 @@ def assert_type_and_unpack(untrusted_dict: dict, src_key: str, expected_type: ty
     return val
 
 class EvalWorker:
-    def __init__(self, tx_dir: Path, rx_dir: Path, scratch_dir: Path):
+    def __init__(self, tx_dir: Path, rx_dir: Path, scratch_dir: Path, arch: str):
         self.tx_dir = tx_dir
         self.rx_dir = rx_dir
         self.scratch_dir = scratch_dir
+        self.arch = arch
 
         self.code_dir = self.scratch_dir / "code"
         os.makedirs(self.code_dir, exist_ok=True)
@@ -136,7 +137,8 @@ class EvalWorker:
         os.makedirs(eval_triton_cache_dir, exist_ok=True)
 
         env = os.environ.copy()
-        env["TORCH_CUDA_ARCH_LIST"] = "Ampere"
+        # set this based on current GPU: Ampere or Hopper currently supported for certain
+        env["TORCH_CUDA_ARCH_LIST"] = self.arch
         env["TORCH_EXTENSIONS_DIR"] = str(eval_torch_ext_dir)
         env["TRITON_CACHE_DIR"] = str(eval_triton_cache_dir)
 
@@ -258,13 +260,14 @@ async def main():
     parser.add_argument("--input_dir", type=str, default="/input")
     parser.add_argument("--output_dir", type=str, default="/output")
     parser.add_argument("--scratch_dir", type=str, default="/scratch")
+    parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
     args = parser.parse_args()
 
     tx_dir = Path(args.output_dir)
     rx_dir = Path(args.input_dir)
     scratch_dir = Path(args.scratch_dir)
 
-    eval_worker = EvalWorker(tx_dir, rx_dir, scratch_dir)
+    eval_worker = EvalWorker(tx_dir, rx_dir, scratch_dir, args.arch)
     await eval_worker.run()
 
 asyncio.run(main())

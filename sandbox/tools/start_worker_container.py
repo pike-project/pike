@@ -42,15 +42,12 @@ def main():
 
     root_dir = Path.resolve(curr_path / "../..")
 
-    if args.engine == "apptainer":
-        eval_worker_path = root_dir / "scripts/start_eval_worker.py"
-    else:
-        # must be relative for docker and podman-hpc
-        # this command will be run in the container
-        # IMPORTANT: DO NOT MAKE IT AN ABSOLUTE PATH, KEEP IT RELATIVE
-        eval_worker_path = Path("./scripts/start_eval_worker.py")
-    # run_cmd = ["python", str(eval_worker_path)]
-    run_cmd = ["bash"]
+    app_bind_dir = Path("/app")
+
+    # IMPORTANT: this command will be run in the container, so it is relative to the app bind dir
+    eval_worker_path = app_bind_dir / "scripts/start_eval_worker.py"
+    run_cmd = ["python", str(eval_worker_path)]
+    # run_cmd = ["bash"]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)
@@ -92,9 +89,9 @@ def main():
 
         if read_only_fs:
             # :ro makes the bind mount read-only
-            flags += ["--bind", f"{root_dir}:/app:ro"]
+            flags += ["--bind", f"{root_dir}:{app_bind_dir}:ro"]
         else:
-            flags += ["--bind", f"{root_dir}:/app"]
+            flags += ["--bind", f"{root_dir}:{app_bind_dir}"]
         
         cmd += flags
 
@@ -125,10 +122,10 @@ def main():
 
         if read_only_fs:
             # makes /app mount read-only as well
-            flags += ["--read-only", "--volume", f"{root_dir}:/app:ro"]
+            flags += ["--read-only", "--volume", f"{root_dir}:{app_bind_dir}:ro"]
         else:
             # does not make /app mount read-only
-            flags += ["--volume", f"{root_dir}:/app"]
+            flags += ["--volume", f"{root_dir}:{app_bind_dir}"]
 
         cmd = [container_cmd, "run"]
         cmd += flags

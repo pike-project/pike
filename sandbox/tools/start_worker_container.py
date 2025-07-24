@@ -90,7 +90,7 @@ def main():
             "--no-privs",
             # --scratch creates a temporary directory inside the container,
             # equivalent to --tmpfs
-            # "--scratch", "/tmp",
+            "--scratch", "/tmp",
             "--scratch", "/cache",
             "--scratch", "/scratch",
             # --bind is the apptainer equivalent of --volume

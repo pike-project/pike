@@ -1,3 +1,4 @@
+import random
 import os, sys
 from pathlib import Path
 import asyncio
@@ -13,7 +14,7 @@ from src.util.disk_channel import DiskChannel
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path):
+    def __init__(self, level: int, mode: str, solutions_name: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
@@ -28,6 +29,7 @@ class EvalSolutions:
         self.level = level
         self.mode = mode
         self.solutions_name = solutions_name
+        self.dry_run = dry_run
     
     def metr_solutions(self):
         kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
@@ -139,10 +141,28 @@ class EvalSolutions:
 
         all_results = []
 
+        eval_ids = list(eval_id_to_sample.keys())
+
         num_samples = len(samples)
-        for _ in range(num_samples):
+        for recv_idx in range(num_samples):
             # recv, then get the sample based on the eval_id
-            res = await self.disk_channel.recv()
+            if self.dry_run:
+                res = {
+                    "id": eval_ids[recv_idx],
+                    "results": {
+                        "stdout": "this is dry_run stdout",
+                        "stderr": "this is dry_run stderr",
+                        "timed_out": False,
+                        "eval_results": {
+                            "loaded": True,
+                            "correct": True,
+                            "runtime": random.random() * 10,
+                            "max_diff": [0.0001],
+                        }
+                    }
+                }
+            else:
+                res = await self.disk_channel.recv()
             eval_id = res["id"]
             results = res["results"]
             sample = eval_id_to_sample[eval_id]
@@ -193,6 +213,7 @@ async def main():
     parser.add_argument("--run_dir", type=str, required=False)
     parser.add_argument("--worker_input_dir", type=str, required=False)
     parser.add_argument("--worker_output_dir", type=str, required=False)
+    parser.add_argument("--dry_run", action='store_true')
     args = parser.parse_args()
 
     valid_modes = [
@@ -230,7 +251,7 @@ async def main():
     if args.worker_output_dir is not None:
         worker_output_dir = Path(args.worker_output_dir)
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, results_dir, worker_input_dir, worker_output_dir)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, results_dir, worker_input_dir, worker_output_dir, args.dry_run)
     await eval_sol.run()
 
 if __name__ == "__main__":

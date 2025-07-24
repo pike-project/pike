@@ -2,8 +2,8 @@ set -ex
 
 LEVEL=0
 # inclusive range
-TASK_START=1
-TASK_END=1
+TASK_START=2
+TASK_END=2
 
 NUM_SAMPLES=10
 NUM_PHASES=5
@@ -12,10 +12,10 @@ MAX_FIX_ATTEMPTS=3
 # True or False
 DRY_RUN=False
 
-# SERVER_TYPE=google
-# MODEL_NAME=gemini-2.5-pro
-SERVER_TYPE=cborg
-MODEL_NAME=lbl/llama
+SERVER_TYPE=google
+MODEL_NAME=gemini-2.5-pro
+# SERVER_TYPE=cborg
+# MODEL_NAME=lbl/llama
 
 # IMPORTANT NOTE: this script currently makes a data directory outside of the current KernelBench
 # directory, this needs to be modified if this behavior is not desired

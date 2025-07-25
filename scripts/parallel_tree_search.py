@@ -67,12 +67,6 @@ class EnumEncoder(json.JSONEncoder):
 
 class GenerationConfig(Config):
     def __init__(self):
-        
-        self.dataset_src = REQUIRED # either huggingface or local
-
-        # name of dataset name on Hugging Face
-        self.dataset_name = "ScalingIntelligence/KernelBench"
-
         # Problem Specification
         self.level = REQUIRED
 
@@ -93,10 +87,10 @@ class GenerationConfig(Config):
         # Inference config
         self.server_type = "deepseek"
         self.model_name = "deepseek-coder"
-        # Max spend of $0.20 for a solution output with current Gemini pricing:
+        # Max spend of $0.30 for a solution output with current Gemini pricing:
         # $10.00 per 1M tokens
-        # 20000 * 10 / (10^6) = 0.20
-        self.max_tokens = 20000
+        # 30000 * 10 / (10^6) = 0.30
+        self.max_tokens = 30000
         self.temperature = 0.8
         
         # Logging
@@ -148,26 +142,23 @@ def query_llm(query: str, inference_server: callable):
 class ParallelTreeSearch:
     def __init__(self, config):
         self.config = config
-
-        # Dataset Configurations
-        if config.dataset_src == "huggingface":
-            dataset = load_dataset(config.dataset_name)
-            curr_level_dataset = dataset[f"level_{config.level}"]
-        elif config.dataset_src == "local":
-            curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
-
+        
+        curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
         self.curr_level_dataset = curr_level_dataset
 
         # num_problems_in_level = len(curr_level_dataset)
 
-        problem_id_range = range(self.config.task_start, self.config.task_end + 1)
-        # if config.subset == (None, None):
-        #     problem_id_range = range(1, num_problems_in_level)
-        # else:
-        #     # assert config.subset[0] >= 1 and config.subset[1] <= num_problems_in_level, f"Subset range {config.subset} out of range for Level {config.level}"
-        #     problem_id_range = range(config.subset[0], config.subset[1])
+        self.problem_id_to_path = {}
+        self.problem_ids = []
 
-        print(f"Generating {config.num_samples} samples each for level {config.level} problems: {problem_id_range}")
+        for problem_path in self.curr_level_dataset:
+            problem_id = int(os.path.basename(problem_path).split("_")[0])
+
+            if problem_id >= self.config.task_start and problem_id <= self.config.task_end:
+                self.problem_ids.append(problem_id)
+                self.problem_id_to_path[problem_id] = problem_path
+
+        print(f"Generating {config.num_samples} samples each for level {config.level} problems: {self.problem_ids}")
 
         data_dir = Path(config.data_dir)
 
@@ -193,9 +184,7 @@ class ParallelTreeSearch:
 
         assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
 
-        self.problem_id_range = problem_id_range
-
-        for problem_id in self.problem_id_range:
+        for problem_id in self.problem_ids:
             self.phase_solutions[problem_id] = []
             self.all_solutions[problem_id] = []
             self.phase_solutions_by_branch[problem_id] = {}
@@ -241,21 +230,7 @@ class ParallelTreeSearch:
             })
 
     def get_problem_code(self, problem_id):
-        dataset = self.curr_level_dataset
-
-        # Fetch problem source code
-        if self.config.dataset_src == "huggingface":
-            curr_problem_row = dataset.filter(lambda x: x["problem_id"] == problem_id, desc=None)
-
-            ref_arch_src = curr_problem_row["code"][0]
-            problem_name = curr_problem_row["name"][0]
-
-        elif self.config.dataset_src == "local":
-            problem_idx_in_dataset = problem_id - 1 # due to dataset list being 0-indexed locally
-            ref_arch_path = dataset[problem_idx_in_dataset]
-
-            problem_name = os.path.basename(ref_arch_path)
-            ref_arch_src = read_file(ref_arch_path)
+        ref_arch_src = read_file(self.problem_id_to_path[problem_id])
 
         return ref_arch_src
 
@@ -635,7 +610,7 @@ class ParallelTreeSearch:
         queries = []
 
         curr_sample_id = 0
-        for problem_id in self.problem_id_range:
+        for problem_id in self.problem_ids:
             problem_code = self.get_problem_code(problem_id)
             problem_ideas = ideas[problem_id]
             for idea in problem_ideas:
@@ -717,7 +692,7 @@ class ParallelTreeSearch:
     def get_idea_queries(self):
         queries = []
 
-        for problem_id in self.problem_id_range:
+        for problem_id in self.problem_ids:
             problem_code = self.get_problem_code(problem_id)
             # TODO: want to pass in a prior best solution (sampled) that we want to get ideas for
             # but we also want to ensure the diversity of the solutions

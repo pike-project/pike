@@ -8,9 +8,9 @@ def main():
     f, ax = plt.subplots(1, figsize=(3.25, 2.5))
 
     labels = [
-        "No Ideas\nTop-3 Branch",
-        "Init Ideas\nTop-4 Diverse",
-        "Blog Post\n(not A100-tuned)"
+        "Ours: No Ideas\nTop-3 Branch",
+        "Ours: Init Ideas\nTop-4 Branch",
+        "SI Lab Blog\n(not A100-tuned)"
     ]
 
     values = [

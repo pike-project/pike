@@ -10,7 +10,7 @@ NUM_PHASES=10
 MAX_FIX_ATTEMPTS=5
 
 # True or False
-DRY_RUN=True
+DRY_RUN=False
 
 SERVER_TYPE=google
 MODEL_NAME=gemini-2.5-pro

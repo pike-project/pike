@@ -260,11 +260,18 @@ class EvalWorker:
         print(f"CPU count: {os.cpu_count()}")
         print("Eval worker running...")
 
+        start_time = time.time()
+
         while True:
             msg = await self.disk_channel.recv()
             # print(f"Got message: {msg}")
             if not await self.handle_msg(msg):
                 break
+
+        end_time = time.time()
+        overall_time = end_time - start_time
+
+        print(f"Total worker running time: {overall_time:.2f}s")
 
 async def main():
     parser = argparse.ArgumentParser()

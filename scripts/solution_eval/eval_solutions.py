@@ -212,7 +212,9 @@ class EvalSolutions:
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--level", type=int)
+    # NOTE: this level must be a string, since we may be passing in level names like "3-metr" to distinguish from
+    # the original KernelBench level 3
+    parser.add_argument("--level", type=str)
     parser.add_argument("--solutions", type=str, default="baseline")
     parser.add_argument("--mode", type=str, default="eager")
     parser.add_argument("--run_name", type=str, required=False)

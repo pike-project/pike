@@ -489,6 +489,10 @@ class ParallelTreeSearch:
         print(f"CORRECT: {correct_count}, INCORRECT: {incorrect_count}, ERROR: {error_count}")
         print("------------------------------------------------\n")
 
+        if self.curr_phase == 0 and self.curr_step == 1 and correct_count == 0:
+            print("\n\nSOMETHING IS LIKELY WRONG: exiting early as a safeguard\n\n")
+            exit()
+
         self.curr_step += 1
 
         return final_results

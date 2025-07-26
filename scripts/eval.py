@@ -403,7 +403,8 @@ class Eval:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--level", type=int)
+    # NOTE: must be str because we could pass in variations of a level number like "3-metr"
+    parser.add_argument("--level", type=str)
     parser.add_argument("--task", type=int)
     parser.add_argument("--code_path", type=str)
     parser.add_argument("--output_path", type=str, required=False)

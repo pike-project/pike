@@ -2,8 +2,8 @@ set -ex
 
 LEVEL=3-metr
 # inclusive range
-TASK_START=1
-TASK_END=25
+TASK_START=26
+TASK_END=50
 
 NUM_SAMPLES=10
 NUM_PHASES=10

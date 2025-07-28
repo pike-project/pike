@@ -85,7 +85,15 @@ class ImprovementPlotter:
         task_start = config["task_start"]
         task_end = config["task_end"]
 
-        tasks_to_plot = list(range(task_start, task_end + 1))
+        level_dir = self.run_dir / f"levels/level_{level}"
+
+        tasks_to_plot = []
+
+        for task_dirname in os.listdir(level_dir):
+            task = int(task_dirname.split("_")[1])
+            tasks_to_plot.append(task)
+
+        # tasks_to_plot = list(range(task_start, task_end + 1))
         num_plots = len(tasks_to_plot)
 
         if num_plots == 0:

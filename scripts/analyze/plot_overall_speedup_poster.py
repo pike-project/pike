@@ -12,34 +12,24 @@ def main():
         "Ours (ideas)",
         "SI Lab Blog",
         "compile",
-        # ------ TODO: dashed divide needed here in the bar graph -------
-        "Ours (2)",
+
+        "Ours",
         "METR",
-        "compile (2)",
-        # "Ours: No Ideas\nTop-3 Branch",
-        # "Ours: Init Ideas\nTop-4 Branch",
-        # "SI Lab Blog\n(not A100-tuned)"
+        "compile",
     ]
 
     values = [
-        # 1.086,
-        # 1.16,
-        # 0.984
+        1.67,
+        1.79,
+        1.52,
+        1.54,
 
-        # 2.84,
-        # 1.77,
-
-        1.67, # (Level 0 eager - ours)
-        1.79, # (Level 0 eager - ours, ideas)
-        1.52, # (Level 0 eager - blog post)
-        1.54, # compile
-
-        2.29, # (Level 3 eager - ours)
-        2.46, # (Level 3 eager - metr)
-        1.4, # compile
+        2.29,
+        2.46,
+        1.4,
     ]
 
-    col = [
+    colors = [
         "#2aadb6",
         "#2aadb6",
         "#ff6583",
@@ -50,29 +40,34 @@ def main():
         "#aa6fc5",
     ]
 
-    # "#aa6fc5",
-    # "#ffa600",
+    x = list(range(len(labels)))
+    bar_width = 0.8  # narrower bars for more spacing
 
-    colors = []
+    ax.bar(x, values, width=bar_width, color=colors, edgecolor='black')
 
-    for idx in range(len(labels)):
-        colors.append(col[idx])
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=30, ha='right')
 
-    plt.title(f"Speedups (eager)")
-    plt.ylabel('Speedup')
+    # Dashed vertical divider between sections
+    divider_index = 4
+    ax.axvline(x=divider_index - 0.5, color='gray', linestyle='--', linewidth=1)
 
-    plt.bar(labels, values, color=colors, linewidth=1, edgecolor='black')
+    # Section labels (not bold)
+    ax.text(1.5, max(values) + 0.2, "Level 0", ha='center', fontsize=9)
+    ax.text(5.25, max(values) + 0.2, "Level 3", ha='center', fontsize=9)
 
-    plt.xticks(rotation=25, ha='right')
-    plt.grid(axis='y')
-    plt.gca().set_axisbelow(True)
+    ax.set_title("Speedups (eager)")
+    ax.set_ylabel("Speedup")
+    ax.grid(axis='y')
+    ax.set_axisbelow(True)
 
-    plt.subplots_adjust(left=0.25, bottom=0.25)
+    ax.set_ylim(0, 3)
+
+    # Shift bars downward (increase bottom margin)
+    plt.subplots_adjust(left=0.25, bottom=0.35)
 
     figs_dir = Path.resolve(curr_dir / "../../figs/overall_speedup_3_metr")
-
     os.makedirs(figs_dir, exist_ok=True)
-
     plt.savefig(figs_dir / "speedup1.pdf")
 
 if __name__ == "__main__":

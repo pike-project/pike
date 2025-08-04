@@ -35,7 +35,11 @@ class EvalSolutions:
     def metr_solutions(self):
         kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
 
-        level_dir = kernel_bench_dir / f"best_agent_solutions/level_{self.level}"
+        level = self.level
+        if level == "3-metr":
+            level = "3"
+
+        level_dir = kernel_bench_dir / f"best_agent_solutions/level_{level}"
 
         tasks = []
 

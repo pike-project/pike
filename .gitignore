@@ -17,3 +17,7 @@ test/lock_test/locks/
 log/
 figs/
 ncu/
+
+.DS_Store
+
+poster-examples/

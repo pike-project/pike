@@ -55,6 +55,10 @@ class ImprovementPlotter:
         
         with open(run_dir / "baseline_eager.json") as f:
             self.baseline_eager = json.load(f)
+        
+        # self.cuda_streams_solutions = [6, 8, 9, 14, 22, 23, 25, 40, 41, 48]
+        # self.cuda_streams_solutions = [6, 14]
+        self.cuda_streams_solutions = []
 
     def backup(self):
         run_dir = self.run_dir
@@ -91,7 +95,14 @@ class ImprovementPlotter:
 
         for task_dirname in os.listdir(level_dir):
             task = int(task_dirname.split("_")[1])
+            # TODO: figure out why torch.compile is broken here
+            if level == "3-metr":
+                if task == 33:
+                    continue
+
             tasks_to_plot.append(task)
+
+        tasks_to_plot = sorted(tasks_to_plot)
 
         # tasks_to_plot = list(range(task_start, task_end + 1))
         num_plots = len(tasks_to_plot)
@@ -160,6 +171,10 @@ class ImprovementPlotter:
         all_speedups_eager = all_speedups_eager[:, :max_phases_completed]
         all_speedups_compile = all_speedups_compile[:, :max_phases_completed]
 
+        all_speedups_eager_final = all_speedups_eager[:, -1].tolist()
+        all_speedups_compile_final = all_speedups_compile[:, -1].tolist()
+        self.handle_all_speedups_final(tasks_to_plot, all_speedups_eager_final, all_speedups_compile_final)
+
         # Calculate geomean, ignoring NaNs
         geomean_eager = gmean(all_speedups_eager[~np.isnan(all_speedups_eager).any(axis=1)], axis=0)
         geomean_compile = gmean(all_speedups_compile[~np.isnan(all_speedups_compile).any(axis=1)], axis=0)
@@ -197,7 +212,7 @@ class ImprovementPlotter:
         ax.plot(phases, geomean_eager, label="eager")
         ax.plot(phases, geomean_compile, label="compile")
 
-        ax.set_title(f"Level {level} Geomean Speedup")
+        ax.set_title(f"Level {level} gmean Speedup")
         ax.set_xlabel("Parallel Tree Search Phase")
         ax.set_ylabel('Speedup')
 
@@ -210,6 +225,68 @@ class ImprovementPlotter:
         self.save_fig(fig, filename)
 
         plt.close(fig)
+
+    def handle_all_speedups_final(self, tasks_to_plot, all_speedups_eager_final, all_speedups_compile_final):
+        try:
+            with open(self.run_dir / "comp_runtimes.json") as f:
+                comp_runtimes = json.load(f)
+        except Exception as e:
+            return
+    
+        assert len(all_speedups_eager_final) == len(tasks_to_plot), "All speedups eager final length should be same as tasks_to_plot length"
+        assert len(all_speedups_compile_final) == len(tasks_to_plot), "All speedups compile final length should be same as tasks_to_plot length"
+
+        included_tasks = []
+        v_rels = []
+        compile_rels = []
+        eager_rels = []
+
+        for idx, task in enumerate(tasks_to_plot):
+            eager_runtime, compile_runtime = self.get_baseline_runtimes(task)
+            v_runtime = self.get_baseline_runtime(comp_runtimes, task)
+
+            if v_runtime is None:
+                continue
+            
+            our_speedup = all_speedups_eager_final[idx]
+            v_speedup = eager_runtime / v_runtime
+            compile_speedup = eager_runtime / compile_runtime
+
+            v_rel = our_speedup / v_speedup
+            compile_rel = our_speedup / compile_speedup
+
+            v_rels.append(v_rel)
+            compile_rels.append(compile_rel)
+            eager_rels.append(our_speedup)
+            included_tasks.append(task)
+
+        fig, ax = plt.subplots(figsize=(13, 2.5))
+
+        ax.plot(included_tasks, v_rels, label="metr", marker='o', markersize=4)
+        ax.plot(included_tasks, compile_rels, label="compile", marker='o', markersize=4)
+        # ax.plot(included_tasks, eager_rels, label="eager", marker='o', markersize=4)
+
+        plt.title("Level 3 (filtered) Runtimes Relative to METR/torch.compile (H100)")
+
+        plt.xticks(range(1, 51))
+        plt.grid(True, axis='x', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+        plt.grid(True, axis='y', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+
+        plt.ylabel("Task Number")
+        plt.ylabel("Relative Runtime")
+
+        plt.yscale('log')
+        plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
+
+        ax.legend(loc='upper right')
+
+        filename = "comp.pdf"
+        run_name = self.run_dir.name
+        figs_dir_2 = curr_dir / f"../../figs/improvement/{run_name}"
+        os.makedirs(figs_dir_2, exist_ok=True)
+        save_path2 = figs_dir_2 / filename
+        fig.savefig(save_path2)
+
 
     def save_fig(self, fig_object, filename):
         figs_dir = self.run_dir / "figs"
@@ -227,7 +304,10 @@ class ImprovementPlotter:
     def get_baseline_runtime(self, data, task):
         for v in data:
             if v["problem_id"] == task:
-                return v["results"]["eval_results"]["runtime"]
+                try:
+                    return v["results"]["eval_results"]["runtime"]
+                except Exception as e:
+                    return None
         
         return None
 
@@ -241,7 +321,6 @@ class ImprovementPlotter:
         Plots the improvement for a single task onto a given Axes object.
         Returns None if no data is found, otherwise returns speedups.
         """
-        print(f"Plotting Level {level}, Task {task}...")
         run_dir = self.run_dir
         phases_dir = run_dir / f"levels/level_{level}/task_{task}/phases"
 
@@ -328,12 +407,22 @@ class ImprovementPlotter:
 
         for runtime in best_runtimes:
             if baseline_runtime_eager is not None and not np.isnan(runtime) and runtime > 0:
-                speedups_eager.append(baseline_runtime_eager / runtime)
+                speedup = baseline_runtime_eager / runtime
+                if speedup < 1 or task in self.cuda_streams_solutions:
+                    # print(f"Task {task} speedup is < 1, using baseline as best solution")
+                    speedup = 1
+
+                speedups_eager.append(speedup)
             else:
                 speedups_eager.append(np.nan)
             
             if baseline_runtime_compile is not None and not np.isnan(runtime) and runtime > 0:
-                speedups_compile.append(baseline_runtime_compile / runtime)
+                speedup = baseline_runtime_compile / runtime
+                if speedup < 1 or task in self.cuda_streams_solutions:
+                    # print(f"Task {task} speedup is < 1, using baseline as best solution")
+                    speedup = 1
+
+                speedups_compile.append(speedup)
             else:
                 speedups_compile.append(np.nan)
 

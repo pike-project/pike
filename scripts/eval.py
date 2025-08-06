@@ -161,20 +161,31 @@ class Eval:
         # self.create_model("sakana-cuda", functional_path, cuda_path=kernel_path)
         # self.create_model("metr", metr_path)
 
-    def get_model_output(self, name):
+    def get_model_device(self, name):
         model_data = self.models[name]
 
         model = model_data["model"]
-        module_fn = model_data["module_fn"]
 
         assert self.held_lock is not None, "Lock should be held"
         assert self.locked_device is not None, "Locked device should exist"
         
         # make sure we are not disrupting some other performance run by ensuring we have a lock while in this region
+        return model.to(self.locked_device)
+
+    def get_model_output(self, name, compile=False):
+        model_data = self.models[name]
+        module_fn = model_data["module_fn"]
+
+        model_device = self.get_model_device(name)
+
+        if compile:
+            model_device = torch.compile(model_device, mode="max-autotune")
+        
+        # make sure we are not disrupting some other performance run by ensuring we have a lock while in this region
         if module_fn is None:
-            return model.to(self.locked_device)(*easy_to_device(self.inputs, self.locked_device))
+            return model_device(*easy_to_device(self.inputs, self.locked_device))
         else:
-            return model.to(self.locked_device)(*easy_to_device(self.inputs, self.locked_device), module_fn)
+            return model_device(*easy_to_device(self.inputs, self.locked_device), module_fn)
 
     # returns all_correct, max_diffs list
     def compare_output(self, baseline_output, comp_output):
@@ -225,11 +236,11 @@ class Eval:
         end_time = time.time()
         print(f"Time to check correctness: {end_time - start_time:.2f}s")
 
-    def profile(self):
+    def profile(self, compile):
         with torch.no_grad():
             for name in self.models.keys():
                 if name == "llm":
-                    comp_output = self.get_model_output(name)
+                    comp_output = self.get_model_output(name, compile=compile)
                     print(comp_output)
 
     def time_model(self, name, compile):
@@ -438,7 +449,7 @@ def main():
     ev.acquire_gpu_lock()
 
     if args.profile:
-        ev.profile()
+        ev.profile(args.compile)
     else:
         # sanity check print, make sure the GPU is completely free to work with
         ev.print_gpu_mem()

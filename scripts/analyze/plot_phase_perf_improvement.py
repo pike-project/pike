@@ -280,13 +280,8 @@ class ImprovementPlotter:
 
         ax.legend(loc='upper right')
 
-        filename = "comp.pdf"
-        run_name = self.run_dir.name
-        figs_dir_2 = curr_dir / f"../../figs/improvement/{run_name}"
-        os.makedirs(figs_dir_2, exist_ok=True)
-        save_path2 = figs_dir_2 / filename
-        fig.savefig(save_path2)
-
+        filename = "individual_breakdown.pdf"
+        self.save_fig(fig, filename)
 
     def save_fig(self, fig_object, filename):
         figs_dir = self.run_dir / "figs"

@@ -16,7 +16,8 @@ def main():
     parser.add_argument("--engine", type=str, required=False, default="docker", help="Container engine to use.")
     parser.add_argument("--sif_path", type=str, required=False, help="Path to the .sif file, required for Apptainer.")
     parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
-    parser.add_argument("--bash", action='store_true')
+    parser.add_argument("--bash", action='store_true', help="Run bash inside of the container instead of the worker")
+    parser.add_argument("--pull_image", action='store_true', help="Pull the image from Dockerhub if using docker or podman-hpc")
 
     args = parser.parse_args()
 
@@ -50,7 +51,7 @@ def main():
 
     non_root_user = False
     read_only_fs = True
-    pull_from_docker_hub = False
+    pull_from_docker_hub = args.pull_image
 
     root_dir = Path.resolve(curr_path / "../..")
 

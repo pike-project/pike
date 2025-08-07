@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.dataset import construct_kernelbench_dataset
 from src.eval import eval_kernel_against_ref
-import src.prompt_constructor_new as prompt
+import src.prompt_constructor as prompt
 import src.query_strategies as query_strategies
 from src.utils import extract_first_code, extract_idea_list, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 

@@ -1,4 +1,4 @@
-import src.prompt_constructor_new as prompt
+import src.prompt_constructor as prompt
 import src.util.query_util as query_util
 from dataclasses import dataclass
 import random

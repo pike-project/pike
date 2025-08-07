@@ -6,8 +6,8 @@ To read about KernelBench itself, rather than our agent framework docs, see: htt
 
 ## Getting Started
 
-To learn more about using our agent framework, see `docs/README.md`.
+To learn more about using our agent framework, see `docs/README.md`
 
 ## Documentation
 
-All documention related to our agent framework is located in `docs/`.
+All documention related to our agent framework is located in `docs/`

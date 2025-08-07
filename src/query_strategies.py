@@ -15,9 +15,16 @@ class StrategyQuery:
 # splitting work evenly between the num_branches solutions
 # - returns a list of prompts
 def simple_branching_strategy(sorted_solutions, num_samples, problem_code, num_branches=3, phase=0) -> list[StrategyQuery]:
-    # TODO: should we create a next round based on just 1-2 solutions, if there are only that many?
+    # fall back on using the problem code as a "valid solution" if no other solutions exist
+    if len(sorted_solutions) == 0:
+        sorted_solutions = [{
+            "code": problem_code,
+            "runtime": None,
+        }]
+    
+    # should we create a next round based on just 1-2 solutions, if there are only that many
     if len(sorted_solutions) < num_branches:
-        return []
+        num_branches = len(sorted_solutions)
 
     bin_sizes = query_util.get_bin_sizes(num_samples, num_branches)
 
@@ -199,10 +206,35 @@ def test_simple_branching_strategy():
 
     assert len(qs) == 10, "Length of queries should be 10"
 
-    # for q in qs:
-    #     print(q)
+def test_simple_branching_strategy_2():
+    sorted_sols = [
+        {
+            "code": "code1",
+            "runtime": 0.1,
+            "phase": 0,
+            "branch": 0
+        },
+    ]
+
+    qs = simple_branching_strategy(sorted_sols, 10, "problem_code", phase=2)
+
+    assert len(qs) == 10, "Length of queries should be 10"
+    for q in qs:
+        assert q.query.count("problem_code") == 1, "all queries should state the problem_code"
+        assert q.query.count("code1") == 1, "all queries should use the single solution that is available as reference"
+
+def test_simple_branching_strategy_3():
+    sorted_sols = []
+
+    qs = simple_branching_strategy(sorted_sols, 10, "problem_code", phase=2)
+
+    assert len(qs) == 10, "Length of queries should be 10"
+    for q in qs:
+        assert q.query.count("problem_code") == 2, "all queries should fall back on problem_code since no valid solutions exist"
 
 if __name__ == "__main__":
     test_simple_branching_strategy()
+    test_simple_branching_strategy_2()
+    test_simple_branching_strategy_3()
 
     print("✅ All tests passed")

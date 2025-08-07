@@ -1,3 +1,5 @@
+# KernelBench Agent Framework
+
 ## Requirements
 
 Set up local environment for profiling:
@@ -85,6 +87,10 @@ python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated
 
 
 ## Old Tool Notes
+
+```bash
+python -u scripts/start_eval_worker.py --input_dir ./data/worker_io/input --output_dir ./data/worker_io/output --scratch_dir ./data/worker_io/scratch --arch <Ampere/Hopper>
+```
 
 How to generate samples:
 

@@ -96,7 +96,7 @@ class GenerationConfig(Config):
         # Logging
 
         # absolute path to data dir
-        self.data_dir = REQUIRED
+        self.data_dir = ""
         # Top Directory to Store Runs
         # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
 
@@ -160,9 +160,11 @@ class ParallelTreeSearch:
 
         print(f"Generating {config.num_samples} samples each for level {config.level} problems: {self.problem_ids}")
 
-        data_dir = Path(config.data_dir)
+        if config.run_dir is None and config.data_dir is None:
+            raise Exception("Either run_dir or data_dir must be set in config")
 
         if config.run_dir is None:
+            data_dir = Path(config.data_dir)
             run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             runs_dir = data_dir / "runs"
             run_dir = runs_dir / run_name

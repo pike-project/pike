@@ -5,7 +5,7 @@ RUN2=2025_07_27_08_10_33
 # RUN3=2025_07_19_07_48_46
 MERGED_NAME=final_metr-3
 
-DATA_DIR=$(realpath ../KernelBench-data)
+DATA_DIR=$(realpath ./data)
 RUNS_DIR=$DATA_DIR/runs
 
 DIR1=$RUNS_DIR/$RUN1

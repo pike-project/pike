@@ -14,7 +14,7 @@ DRY_RUN=False
 
 # IMPORTANT NOTE: this script currently makes a data directory outside of the current KernelBench
 # directory, this needs to be modified if this behavior is not desired
-DATA_DIR=$(realpath ../KernelBench-data)
+DATA_DIR=$(realpath ./data)
 RUN_NAME=$(date +"%Y_%m_%d_%H_%M_%S")
 RUN_DIR=$DATA_DIR/runs/$RUN_NAME
 

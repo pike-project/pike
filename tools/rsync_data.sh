@@ -1,5 +1,4 @@
-DATA_DIR=$(realpath ../KernelBench-data)
-
+# destination to rsync data to on local machine
 DST1=../KernelBench-data/perlmutter/
 DST2=../KernelBench-data/lrc/
 

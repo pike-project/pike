@@ -8,11 +8,6 @@ import argparse
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 def main(baseline_path, comp_path):
-    # baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench-data/runs/final_run2/baseline_compile.json")
-    # comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/good_kernels_src_filtered.json")
-    # baseline_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/baseline/compile/2025_07_22_15_33_29.json")
-    # comp_path = Path("/pscratch/sd/k/kir/llm/KernelBench/results/eval_solutions/metr/2025_07_22_14_41_23.json")
-
     with open(baseline_path) as f:
         baseline_data = json.load(f)
     

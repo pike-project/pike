@@ -33,8 +33,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 # e.g.
 #
-# KernelBench-data/workers/0/input -> /input
-# KernelBench-data/workers/0/output -> /output
+# KernelBench/data/workers/0/input -> /input
+# KernelBench/data/workers/0/output -> /output
 
 # the worker is then responsible for load balancing the evaluations onto the GPUs that it has available to it
 

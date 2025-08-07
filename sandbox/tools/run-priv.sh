@@ -3,8 +3,8 @@
 podman-hpc run --gpu \
     --tmpfs /cache \
     --volume $PSCRATCH/llm/KernelBench:/app \
-    --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \
-    --volume $PSCRATCH/llm/KernelBench-data/workers/0/output:/output \
+    --volume $PSCRATCH/llm/KernelBench/data/workers/0/input:/input:ro \
+    --volume $PSCRATCH/llm/KernelBench/data/workers/0/output:/output \
     --rm \
     -it kernel-bench-deps bash
 
@@ -14,8 +14,8 @@ podman-hpc run --gpu \
 #     --read-only \
 #     --tmpfs /cache \
 #     --volume $PSCRATCH/llm/KernelBench:/app:ro \
-#     --volume $PSCRATCH/llm/KernelBench-data/workers/0/input:/input:ro \
-#     --volume $PSCRATCH/llm/KernelBench-data/workers/0/output:/output \
+#     --volume $PSCRATCH/llm/KernelBench/data/workers/0/input:/input:ro \
+#     --volume $PSCRATCH/llm/KernelBench/data/workers/0/output:/output \
 #     --security-opt no-new-privileges --rm \
 #     -it kernel-bench-deps bash
 
@@ -24,7 +24,7 @@ podman-hpc run --gpu \
 #     --userns keep-id \
 #     --read-only \
 #     --tmpfs /cache \
-#     --volume $PSCRATCH/llm/KernelBench-data:/data \
+#     --volume $PSCRATCH/llm/KernelBench/data:/data \
 #     --security-opt no-new-privileges --rm \
 #     -it python-docker-app bash
     # python-docker-app

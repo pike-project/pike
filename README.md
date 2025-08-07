@@ -61,11 +61,11 @@ APPTAINER_TMPDIR=$SCRATCH/apptainer/tmp APPTAINER_CACHEDIR=$SCRATCH/apptainer/ca
 How to run parallel tree search:
 
 ```bash
-python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=cborg model_name=lbl/llama num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
+python scripts/parallel_tree_search.py data_dir=./data dataset_src=local server_type=cborg model_name=lbl/llama num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
 
-python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=cborg model_name=google/gemini-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
+python scripts/parallel_tree_search.py data_dir=./data dataset_src=local server_type=cborg model_name=google/gemini-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=2 num_samples=10
 
-python scripts/parallel_tree_search.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local server_type=google model_name=gemini-2.5-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=1 num_samples=1
+python scripts/parallel_tree_search.py data_dir=./data dataset_src=local server_type=google model_name=gemini-2.5-pro num_workers=50 worker_input_dir=worker_io/input worker_output_dir=worker_io/output level=1 task_start=1 task_end=1 num_samples=1
 ```
 
 How to use the new eval script for a single task
@@ -89,7 +89,7 @@ python scripts/eval.py --level 1 --task 1 --code_path results/o3-test1/generated
 How to generate samples:
 
 ```bash
-python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
+python3 scripts/generate_samples.py data_dir=./data dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
 ```
 
 Single run as a test:
@@ -105,7 +105,7 @@ python3 scripts/run_and_check.py ref_origin=local ref_arch_src_path=./KernelBenc
 This can be run outside of the Docker container:
 
 ```bash
-python3 scripts/generate_samples.py data_dir=$PSCRATCH/llm/KernelBench-data run_name=test1 dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
+python3 scripts/generate_samples.py data_dir=./data run_name=test1 dataset_src=local level=1 server_type=cborg model_name=lbl/llama num_workers=50
 ```
 
 This should be run within the Docker container:

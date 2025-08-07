@@ -1,4 +1,5 @@
 import os
+import sys
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -9,7 +10,8 @@ import argparse
 import math
 from scipy.stats import gmean
 
-p1 = Path("/Users/kir/dev/KernelBench-data/runs/final_metr-3/levels/level_3-metr")
+run_dir = Path(sys.argv[1])
+p1 = run_dir
 
 c = 0
 

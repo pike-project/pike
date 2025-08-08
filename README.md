@@ -72,7 +72,11 @@ Include the `--compile` flag if you want to the eval to run with `torch.compile`
 If you only want to time a particular set of solutions, without running the agent framework, you can do so like this:
 
 ```bash
-python scripts/solution_eval/eval_solutions.py --level 3 --solutions baseline --mode <eager/compile>
+# baseline solutions
+python scripts/solution_eval/eval_solutions.py --level 0 --solutions baseline --mode <eager/compile>
+
+# agent-generated solutions, must pass in the path to the run dir
+python scripts/solution_eval/eval_solutions.py --level 0 --solutions agent --run_dir <run_dir> --mode eager
 ```
 
 After you run this, start the eval worker in a separate window and the eval tasks will be sent there.

@@ -29,7 +29,7 @@ class EvalSolutions:
 
         self.output_dir = output_dir
 
-        self.dup_count = 1
+        # self.dup_count = 1
 
         self.level = level
         self.mode = mode
@@ -58,17 +58,11 @@ class EvalSolutions:
 
             with open(file_path) as f:
                 code = f.read()
-            
-            for _ in range(self.dup_count):
-                tasks.append({
-                    "code": code,
-                    "problem_id": task
-                })
 
-        tasks.sort(key=lambda x: x["problem_id"])
-
-        for idx, task in enumerate(tasks):
-            task["sample_id"] = idx
+            tasks.append({
+                "code": code,
+                "problem_id": task
+            })
 
         return tasks
 
@@ -92,11 +86,8 @@ class EvalSolutions:
             
             tasks.append({
                 "code": code,
-                "sample_id": task - 1,
                 "problem_id": task
             })
-
-        tasks.sort(key=lambda x: x["sample_id"])
 
         return tasks
 
@@ -115,23 +106,54 @@ class EvalSolutions:
 
             with open(file_path) as f:
                 code = f.read()
-            
-            for _ in range(self.dup_count):
-                tasks.append({
-                    "code": code,
-                    "problem_id": task
-                })
 
-        tasks.sort(key=lambda x: x["problem_id"])
-
-        for idx, task in enumerate(tasks):
-            task["sample_id"] = idx
+            tasks.append({
+                "code": code,
+                "problem_id": task
+            })
 
         return tasks
 
     def agent_solutions(self):
-        # use self.run_dir
-        return []
+        sols_dir = (self.run_dir / "best_solutions").resolve()
+
+        tasks = []
+
+        for filename in os.listdir(sols_dir):
+            if not filename.endswith(".py"):
+                continue
+
+            task = int(filename.split("_")[-1].split(".py")[0])
+            file_path = sols_dir / filename
+
+            with open(file_path) as f:
+                code = f.read()
+
+            tasks.append({
+                "code": code,
+                "problem_id": task
+            })
+
+        return tasks
+
+    def get_samples(self):
+        if self.solutions_name == "baseline":
+            samples = self.ground_truth_solutions()
+        elif self.solutions_name == "agent":
+            samples = self.agent_solutions()
+        elif self.solutions_name == "metr":
+            samples = self.metr_solutions()
+        elif self.solutions_name == "good_kernels":
+            samples = self.good_kernels_blog_solutions()
+        else:
+            raise Exception(f"Unexpected solutions name value: {self.solutions_name}")
+
+        samples.sort(key=lambda x: x["problem_id"])
+
+        for idx, task in enumerate(samples):
+            task["sample_id"] = idx
+
+        return samples
 
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
@@ -209,16 +231,7 @@ class EvalSolutions:
         return all_results
 
     async def run(self):
-        if self.solutions_name == "baseline":
-            samples = self.ground_truth_solutions()
-        elif self.solutions_name == "agent":
-            samples = self.agent_solutions()
-        elif self.solutions_name == "metr":
-            samples = self.metr_solutions()
-        elif self.solutions_name == "good_kernels":
-            samples = self.good_kernels_blog_solutions()
-        else:
-            raise Exception(f"Unexpected solutions name value: {self.solutions_name}")
+        samples = self.get_samples()
 
         results = await self.eval_samples(samples)
 

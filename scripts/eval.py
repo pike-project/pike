@@ -1,6 +1,7 @@
 import os
 import gc
 import torch
+import torch_tensorrt
 import argparse
 from torch.utils.cpp_extension import load
 from torch.utils._pytree import tree_map
@@ -62,7 +63,8 @@ def time_model(model, module_fn, inputs, device, compile, name):
 
     if compile:
         if module_fn is None:
-            moved_model = torch.compile(moved_model, mode="max-autotune")
+            # moved_model = torch.compile(moved_model, mode="max-autotune")
+            moved_model = torch.compile(moved_model, backend="tensorrt")
         else:
             module_fn = torch.compile(module_fn, mode="max-autotune")
 

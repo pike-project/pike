@@ -11,6 +11,12 @@ alias alloc_cpu="salloc -N 1 -A m4141 -t 3:00:00 -q interactive -C cpu"
 module load conda
 ```
 
+Migrate a Docker container on Perlmutter (for use in a job):
+
+```bash
+podman-hpc migrate <name>
+```
+
 ## Lawrencium
 
 Add the following to `~/.bashrc`:

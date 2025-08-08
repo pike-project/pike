@@ -14,7 +14,7 @@ from src.util.disk_channel import DiskChannel
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, run_name: str, results_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
+    def __init__(self, level: int, mode: str, solutions_name: str, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
@@ -22,14 +22,14 @@ class EvalSolutions:
 
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
 
-        self.results_dir = results_dir
+        self.output_dir = output_dir
 
         self.dup_count = 1
 
         self.level = level
         self.mode = mode
         self.solutions_name = solutions_name
-        self.run_name = run_name
+        self.output_name = output_name
         self.dry_run = dry_run
     
     def metr_solutions(self):
@@ -201,7 +201,7 @@ class EvalSolutions:
 
         results = await self.eval_samples(samples)
 
-        results_path = self.results_dir / f"{self.run_name}.json"
+        results_path = self.output_dir / f"{self.output_name}.json"
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)
@@ -221,8 +221,8 @@ async def main():
     parser.add_argument("--level", type=str)
     parser.add_argument("--solutions", type=str, default="baseline")
     parser.add_argument("--mode", type=str, default="eager")
-    parser.add_argument("--run_name", type=str, required=False)
-    parser.add_argument("--run_dir", type=str, required=False)
+    parser.add_argument("--output_name", type=str, required=False)
+    parser.add_argument("--output_dir", type=str, required=False)
     parser.add_argument("--worker_input_dir", type=str, required=False)
     parser.add_argument("--worker_output_dir", type=str, required=False)
     parser.add_argument("--dry_run", action='store_true')
@@ -248,11 +248,11 @@ async def main():
     if solutions_name not in valid_solutions_names:
         raise Exception(f"Invalid solutions value: {solutions_name}. Valid solutions values are: {valid_solutions_names}")
 
-    results_dir = (curr_dir / "../../results/eval_solutions" / solutions_name / mode).resolve()
-    if args.run_dir is not None:
-        results_dir = Path(args.run_dir)
+    output_dir = (curr_dir / "../../results/eval_solutions" / solutions_name / mode).resolve()
+    if args.output_dir is not None:
+        output_dir = Path(args.output_dir)
 
-    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
 
     worker_input_dir = (curr_dir / "../../worker_io/input").resolve()
 
@@ -264,11 +264,11 @@ async def main():
     if args.worker_output_dir is not None:
         worker_output_dir = Path(args.worker_output_dir)
 
-    run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    if args.run_name is not None:
-        run_name = args.run_name
+    output_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    if args.output_name is not None:
+        output_name = args.output_name
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, run_name, results_dir, worker_input_dir, worker_output_dir, args.dry_run)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run)
     await eval_sol.run()
 
     if args.close_worker:

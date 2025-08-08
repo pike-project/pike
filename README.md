@@ -20,9 +20,7 @@ pip install matplotlib pandas scipy
 
 Set API keys to environment variables, e.g. `export OPENAI_API_KEY=<...>`, ` export GEMINI_API_KEY=<...>`, etc.
 
-## Quick Start
-
-### Start Agent Framework
+## Start Agent Framework
 
 To start running the agent framework, first try a dry run (does not require the eval worker):
 
@@ -34,7 +32,7 @@ python -u scripts/parallel_tree_search.py data_dir=./data server_type=google mod
 
 If this works fine, you can switch to `dry_run=False`. Now, the agent framework will wait until the eval worker is running before it does anything.
 
-### Start Eval Worker
+## Start Eval Worker
 
 If you are working on a machine where you have root access, install Docker, along with the NVIDIA Container Toolkit (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 
@@ -51,6 +49,14 @@ Currently supported HPC systems:
 - LBL Lawrencium via apptainer, Hopper H100: `tools/worker_jobs/lrc.sh`
 
 As soon as the eval worker job starts, the waiting agent framework script will connect to it via NFS and start sending it eval tasks.
+
+## Eval-Only (No Agent Framework)
+
+If you only want to time a particular set of solutions, without running the agent framework, you can do so like this:
+
+```bash
+python scripts/solution_eval/eval_solutions.py --level 3 --solutions baseline --mode <eager/compile>
+```
 
 ## Documentation
 

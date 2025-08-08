@@ -38,8 +38,8 @@ else
     DRY_RUN_FLAG=""
 fi
 
-python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode eager --run_name baseline_eager --run_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG | tee -a $LOG_PATH
+python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode eager --output_name baseline_eager --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG | tee -a $LOG_PATH
 # IMPORTANT: the last eval_solutions call has the --close_worker flag to ensure the worker is closed on completion
-python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode compile --run_name baseline_compile --run_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG --close_worker | tee -a $LOG_PATH
+python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode compile --output_name baseline_compile --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG --close_worker | tee -a $LOG_PATH
 
 python -u scripts/analyze/plot_phase_perf_improvement.py --run_dir $RUN_DIR | tee -a $LOG_PATH

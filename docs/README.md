@@ -6,6 +6,7 @@ This documentation is broken down into the following sections:
 - `containers` - container options and design choices
 - `eval_worker` - task evaluation details
 - `profiling` - how to profile solutions with NVIDIA tools
+- `hpc` - notes for particular HPC clusters
 - `troubleshooting` - common issues
 - `misc` - any other notes that could be useful
 

@@ -17,13 +17,15 @@ root_dir = (curr_dir / "../..").resolve()
 deps_dir = root_dir / "local/deps"
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
+    def __init__(self, level: int, mode: str, solutions_name: str, run_dir: Path, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
         print(tx_dir, rx_dir)
 
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
+
+        self.run_dir = run_dir
 
         self.output_dir = output_dir
 
@@ -127,6 +129,9 @@ class EvalSolutions:
 
         return tasks
 
+    def agent_solutions(self):
+        # use self.run_dir
+        return []
 
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
@@ -206,6 +211,8 @@ class EvalSolutions:
     async def run(self):
         if self.solutions_name == "baseline":
             samples = self.ground_truth_solutions()
+        elif self.solutions_name == "agent":
+            samples = self.agent_solutions()
         elif self.solutions_name == "metr":
             samples = self.metr_solutions()
         elif self.solutions_name == "good_kernels":
@@ -235,6 +242,7 @@ async def main():
     parser.add_argument("--level", type=str)
     parser.add_argument("--solutions", type=str, default="baseline")
     parser.add_argument("--mode", type=str, default="eager")
+    parser.add_argument("--run_dir", type=str, required=False)
     parser.add_argument("--output_name", type=str, required=False)
     parser.add_argument("--output_dir", type=str, required=False)
     parser.add_argument("--worker_input_dir", type=str, required=False)
@@ -263,6 +271,13 @@ async def main():
     if solutions_name not in valid_solutions_names:
         raise Exception(f"Invalid solutions value: {solutions_name}. Valid solutions values are: {valid_solutions_names}")
 
+    run_dir = None
+    if args.run_dir is not None:
+        run_dir = Path(args.run_dir)
+
+    if solutions_name == "agent" and run_dir is None:
+        raise Exception("Evaluating agent solutions requires passing in a --run_dir argument to show where the agent run was")
+
     if solutions_name == "metr" or solutions_name == "good_kernels":
         subprocess.run(["bash", str(root_dir / "tools/fetch_eval_deps.sh")], check=True, cwd=root_dir)
 
@@ -286,7 +301,7 @@ async def main():
     if args.output_name is not None:
         output_name = args.output_name
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, run_dir, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run)
     await eval_sol.run()
 
     if args.close_worker:

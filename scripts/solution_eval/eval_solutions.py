@@ -2,6 +2,7 @@ import random
 import os, sys
 from pathlib import Path
 import asyncio
+import subprocess
 import uuid
 import json
 import argparse
@@ -12,6 +13,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from src.util.disk_channel import DiskChannel
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+root_dir = (curr_dir / "../..").resolve()
+deps_dir = root_dir / "local/deps"
 
 class EvalSolutions:
     def __init__(self, level: int, mode: str, solutions_name: str, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
@@ -33,7 +36,7 @@ class EvalSolutions:
         self.dry_run = dry_run
     
     def metr_solutions(self):
-        kernel_bench_dir = (curr_dir / "../../../KernelBenchFiltered").resolve()
+        kernel_bench_dir = (deps_dir / "KernelBenchFiltered").resolve()
 
         level = self.level
         if level == "3-metr":
@@ -96,7 +99,7 @@ class EvalSolutions:
         return tasks
 
     def good_kernels_blog_solutions(self):
-        sols_dir = (curr_dir / "../../../good-kernels/solutions").resolve()
+        sols_dir = (deps_dir / "good-kernels/solutions").resolve()
 
         tasks = []
 
@@ -175,7 +178,18 @@ class EvalSolutions:
             sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
 
-            print(f"Received eval result for sample: {sample_id}")
+            runtime = None
+            try:
+                runtime = res["results"]["eval_results"]["runtime"]
+            except Exception as e:
+                print(f"================================================================")
+                print(f"------------------- Task {problem_id} stdout -------------------")
+                print(res["results"]["stdout"])
+                print(f"------------------- Task {problem_id} stderr -------------------")
+                print(res["results"]["stderr"])
+                print(f"================================================================")
+
+            print(f"Eval result for task: {problem_id}, runtime: {runtime}")
 
             results_data = {
                 "sample_id": sample_id,
@@ -240,6 +254,7 @@ async def main():
 
     valid_solutions_names = [
         "baseline",
+        "agent",
         "metr",
         "good_kernels" # (Stanford blog post with preliminary good kernels)
     ]
@@ -247,6 +262,9 @@ async def main():
     solutions_name = args.solutions
     if solutions_name not in valid_solutions_names:
         raise Exception(f"Invalid solutions value: {solutions_name}. Valid solutions values are: {valid_solutions_names}")
+
+    if solutions_name == "metr" or solutions_name == "good_kernels":
+        subprocess.run(["bash", str(root_dir / "tools/fetch_eval_deps.sh")], check=True, cwd=root_dir)
 
     output_dir = (curr_dir / "../../results/eval_solutions" / solutions_name / mode).resolve()
     if args.output_dir is not None:

@@ -11,6 +11,7 @@ cache/*
 !results/timing/
 !results/cost_modeling/
 .env
+.envrc
 worker_io/
 
 test/lock_test/locks/
@@ -20,7 +21,6 @@ ncu/
 
 .DS_Store
 
-poster-examples/
 container-images/
-
 data/
+local/

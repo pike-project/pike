@@ -18,7 +18,12 @@ pip install -e .
 pip install matplotlib pandas scipy
 ```
 
-Set API keys to environment variables, e.g. `export OPENAI_API_KEY=<...>`, ` export GEMINI_API_KEY=<...>`, etc.
+Save the following API key environment variables to `~/.bashrc`:
+
+```bash
+export OPENAI_API_KEY=<...>
+export GEMINI_API_KEY=<...>
+```
 
 ## Start Agent Framework
 

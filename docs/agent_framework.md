@@ -9,6 +9,7 @@ python -u scripts/parallel_tree_search.py data_dir=./data server_type=google mod
 The following parameters are relevant:
 
 - `server` and `model_name` - which LLM model to use
+    - currently supported servers are `openai`, `google`, `cborg`
 - `num_workers` - this is the number of workers for running LLM API queries in parallel, NOT related to the eval worker
 - `level` - the KernelBench level to do (does not need to be a number, can also be a string like `3-metr`)
 - `task_start` and `task_end` - the range of tasks in the level to perform, inclusive on both ends

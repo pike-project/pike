@@ -58,6 +58,8 @@ If you only want to time a particular set of solutions, without running the agen
 python scripts/solution_eval/eval_solutions.py --level 3 --solutions baseline --mode <eager/compile>
 ```
 
+After you run this, start the eval worker in a separate window and the eval tasks will be sent there.
+
 ## Documentation
 
 To learn more about using our agent framework, see `docs/README.md`

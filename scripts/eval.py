@@ -240,8 +240,24 @@ class Eval:
         with torch.no_grad():
             for name in self.models.keys():
                 if name == "llm":
-                    comp_output = self.get_model_output(name, compile=compile)
+                    with torch.profiler.profile(
+                        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+                        # on_trace_ready=torch.profiler.tensorboard_trace_handler("./log/torch"),
+                        record_shapes=True,
+                        with_stack=True,
+                        experimental_config=torch._C._profiler._ExperimentalConfig(verbose=True)
+                    ) as prof:
+                        comp_output = self.get_model_output(name, compile=compile)
                     print(comp_output)
+
+                    prof.export_stacks("./log/torch/stacks_gpu.out", metric='self_cuda_time_total')
+
+                    # prof_table = str(prof.key_averages().table(
+                    #     sort_by="cpu_time_total",
+                    #     row_limit=20,
+                    # ))
+                    # with open("./log/torch/table.log", "w") as f:
+                    #     f.write(prof_table)
 
     def time_model(self, name, compile):
         start_time = time.time()

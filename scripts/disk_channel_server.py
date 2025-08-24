@@ -1,5 +1,7 @@
 import asyncio
 import uuid
+import json
+import argparse
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from src.util.disk_channel import DiskChannel
@@ -12,19 +14,19 @@ class DiskChannelManager:
 
         self.completed_tasks = {}
 
-    async def submit(self, code, problem_id, level):
+    async def submit(self, code, level, task):
         eval_id = uuid.uuid4()
 
         print(eval_id)
 
-        # await self.disk_channel.send({
-        #     "id": eval_id,
-        #     "type": "eval",
-        #     "level": level,
-        #     "task": problem_id,
-        #     "code": code,
-        #     "mode": "eager"
-        # })
+        await self.disk_channel.send({
+            "id": eval_id,
+            "type": "eval",
+            "level": level,
+            "task": task,
+            "code": code,
+            "mode": "eager"
+        })
 
         return eval_id
 
@@ -33,7 +35,7 @@ class DiskChannelManager:
             msg = await self.disk_channel.recv()
             self.completed_tasks[msg["id"]] = msg
 
-    def check_task(self, eval_id):
+    def poll(self, eval_id):
         return self.completed_tasks.get(eval_id)
 
 class CustomHandler(BaseHTTPRequestHandler):
@@ -54,38 +56,59 @@ class CustomHandler(BaseHTTPRequestHandler):
         if path == "/submit":
             try:
                 code = unquote(query_params.get("code")[0])
-                problem_id = int(query_params.get("problem_id")[0])
                 level = int(query_params.get("level")[0])
+                task = int(query_params.get("task")[0])
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b"Bad input")
                 return
 
-            eval_id = asyncio.run(manager.submit(code, problem_id, level))
+            eval_id = asyncio.run(manager.submit(code, level, task))
 
             self.send_response(200)
             self.end_headers()
             self.wfile.write(f"{eval_id}".encode())
 
-        elif path == "/hello":
+        elif path == "/poll":
+            try:
+                eval_id = query_params.get("id")[0]
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b"Bad input")
+                return
+
+            data = manager.poll(eval_id)
+
+            data_str = json.dumps(data)
+
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"Hello world!")
-
+            self.wfile.write(data_str.encode())
         else:
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b"Not Found")
 
-if __name__ == "__main__":
-    p1 = Path("p1")
-    p2 = Path("p2")
+async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_dir", type=str, default="worker_io/input")
+    parser.add_argument("--output_dir", type=str, default="worker_io/output")
+    args = parser.parse_args()
 
-    manager = DiskChannelManager(tx_dir=p1, rx_dir=p2)
+    tx_dir = Path(args.input_dir)
+    rx_dir = Path(args.output_dir)
+
+    manager = DiskChannelManager(tx_dir=tx_dir, rx_dir=rx_dir)
+
+    asyncio.create_task(manager.recv_loop())
 
     handler_with_args = partial(CustomHandler, manager=manager)
 
     server = HTTPServer(("localhost", 8000), handler_with_args)
     print("Serving on http://localhost:8000")
     server.serve_forever()
+
+if __name__ == "__main__":
+    asyncio.run(main())

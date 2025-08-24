@@ -3,7 +3,7 @@ import uuid
 import json
 import argparse
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from src.util.disk_channel import DiskChannel
 from functools import partial
 from urllib.parse import urlparse, parse_qs, quote, unquote
@@ -20,7 +20,7 @@ class DiskChannelManager:
         print(eval_id)
 
         await self.disk_channel.send({
-            "id": eval_id,
+            "id": str(eval_id),
             "type": "eval",
             "level": level,
             "task": task,
@@ -39,8 +39,9 @@ class DiskChannelManager:
         return self.completed_tasks.get(eval_id)
 
 class CustomHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, manager: DiskChannelManager, **kwargs):
+    def __init__(self, *args, manager: DiskChannelManager, loop, **kwargs):
         self.manager = manager
+        self.loop = loop
 
         super().__init__(*args, **kwargs)
 
@@ -64,7 +65,10 @@ class CustomHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b"Bad input")
                 return
 
-            eval_id = asyncio.run(manager.submit(code, level, task))
+            fut = asyncio.run_coroutine_threadsafe(
+                manager.submit(code, level, task), self.loop
+            )
+            eval_id = fut.result()
 
             self.send_response(200)
             self.end_headers()
@@ -84,6 +88,7 @@ class CustomHandler(BaseHTTPRequestHandler):
             data_str = json.dumps(data)
 
             self.send_response(200)
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(data_str.encode())
         else:
@@ -104,11 +109,13 @@ async def main():
 
     asyncio.create_task(manager.recv_loop())
 
-    handler_with_args = partial(CustomHandler, manager=manager)
+    loop = asyncio.get_running_loop()
 
-    server = HTTPServer(("localhost", 8000), handler_with_args)
+    handler_with_args = partial(CustomHandler, manager=manager, loop=loop)
+
+    server = ThreadingHTTPServer(("localhost", 8000), handler_with_args)
     print("Serving on http://localhost:8000")
-    server.serve_forever()
+    await asyncio.to_thread(server.serve_forever)
 
 if __name__ == "__main__":
     asyncio.run(main())

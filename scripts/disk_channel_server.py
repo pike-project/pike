@@ -17,8 +17,6 @@ class DiskChannelManager:
     async def submit(self, code, level, task):
         eval_id = uuid.uuid4()
 
-        print(eval_id)
-
         await self.disk_channel.send({
             "id": str(eval_id),
             "type": "eval",
@@ -51,8 +49,6 @@ class CustomHandler(BaseHTTPRequestHandler):
         parsed_url = urlparse(self.path)
         path = parsed_url.path
         query_params = parse_qs(parsed_url.query)
-
-        print(query_params)
 
         if path == "/submit":
             try:

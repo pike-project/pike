@@ -227,6 +227,8 @@ class ImprovementPlotter:
         plt.close(fig)
 
     def handle_all_speedups_final(self, tasks_to_plot, all_speedups_eager_final, all_speedups_compile_final):
+        print(f"All speedups eager: {all_speedups_eager_final}")
+
         try:
             with open(self.run_dir / "comp_runtimes.json") as f:
                 comp_runtimes = json.load(f)

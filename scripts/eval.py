@@ -60,9 +60,11 @@ def time_model(model, module_fn, inputs, device, compile, name):
 
     with torch.no_grad():
         if module_fn is None:
-            bench = lambda: moved_model(*moved_inputs)
+            def bench():
+                moved_model(*moved_inputs)
         else:
-            bench = lambda: moved_model(*moved_inputs, module_fn)
+            def bench():
+                moved_model(*moved_inputs, module_fn)
 
         # the result here is in ms already
         runtime = do_bench(bench, rep=TRITON_BENCH_TIME_GOAL, warmup=TRITON_BENCH_WARMUP, return_mode='mean')

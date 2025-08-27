@@ -18,10 +18,6 @@ import uuid
 import filelock
 from filelock import FileLock
 
-# it seems pytorch Timer timeit is much more noisy for small input sizes
-# so we should always be using Triton
-TIME_WITH_TRITON = True
-
 # Both of these values are in ms
 # note that if the benchmark ends up running longer than this for one repetition,
 # at least one repetition will always complete
@@ -66,25 +62,14 @@ def time_model(model, module_fn, inputs, device, compile, name):
         else:
             module_fn = torch.compile(module_fn, mode="max-autotune")
 
-    if TIME_WITH_TRITON:
-        with torch.no_grad():
-            if module_fn is None:
-                bench = lambda: moved_model(*moved_inputs)
-            else:
-                bench = lambda: moved_model(*moved_inputs, module_fn)
+    with torch.no_grad():
+        if module_fn is None:
+            bench = lambda: moved_model(*moved_inputs)
+        else:
+            bench = lambda: moved_model(*moved_inputs, module_fn)
 
-            # the result here is in ms already
-            runtime = do_bench(bench, rep=TRITON_BENCH_TIME_GOAL, warmup=TRITON_BENCH_WARMUP, return_mode='mean')
-    else:
-        timer = Timer(
-            stmt=f"with torch.no_grad(): {model_invocation}",
-            globals={
-                "model": moved_model,
-                "inputs": moved_inputs,
-                "module_fn": module_fn
-            },
-        )
-        runtime = timer.timeit(TORCH_TIMER_REPS).mean * 1000
+        # the result here is in ms already
+        runtime = do_bench(bench, rep=TRITON_BENCH_TIME_GOAL, warmup=TRITON_BENCH_WARMUP, return_mode='mean')
 
     print(f"Name: {name}, compile: {compile}, runtime: {runtime:.3f} ms")
 

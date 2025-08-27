@@ -218,14 +218,16 @@ class Eval:
 
         # Test for correctness
         with torch.no_grad():
-            baseline_output = self.get_model_output("baseline")
-
             for name in self.models.keys():
                 if name == "baseline":
                     self.results[name]["correct"] = True
                     continue
 
                 comp_output = self.get_model_output(name)
+
+                # get this model output after the LLM-generated model output to avoid any cheating from
+                # lingering values in memory
+                baseline_output = self.get_model_output("baseline")
 
                 correct, max_diff = self.compare_output(baseline_output, comp_output)
                 print(f"Tested {name} - Correct: {correct}, Max Diff: {max_diff}")

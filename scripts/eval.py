@@ -24,10 +24,6 @@ from filelock import FileLock
 TRITON_BENCH_TIME_GOAL = 5000 # 5 seconds
 TRITON_BENCH_WARMUP = 1000 # 1 second
 
-# this is the number of reps that pytorch Timer timeit does
-# Note that pytorch also does some warmup runs before starting these repetitions
-TORCH_TIMER_REPS = 10000 # 10000 reps
-
 curr_path = Path(os.path.realpath(os.path.dirname(__file__)))
 
 

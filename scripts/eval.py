@@ -62,9 +62,11 @@ def time_model(model, module_fn, inputs, device, compile, name):
         if module_fn is None:
             def bench():
                 moved_model(*moved_inputs)
+                torch.cuda.synchronize()
         else:
             def bench():
                 moved_model(*moved_inputs, module_fn)
+                torch.cuda.synchronize()
 
         # the result here is in ms already
         runtime = do_bench(bench, rep=TRITON_BENCH_TIME_GOAL, warmup=TRITON_BENCH_WARMUP, return_mode='mean')

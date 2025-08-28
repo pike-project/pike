@@ -266,7 +266,8 @@ async def main():
 
     valid_modes = [
         "eager",
-        "compile"
+        "compile",
+        "tensorrt"
     ]
 
     mode = args.mode

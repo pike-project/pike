@@ -170,11 +170,7 @@ class EvalWorker:
             "--output_path", str(eval_output_path),
             "--gpu_locks_dir", str(self.gpu_locks_dir)]
 
-        if mode == "compile":
-            cmd.append("--compile")
-        elif mode == "eager":
-            # nothing to do for this mode
-            pass
+        cmd += ["--mode", mode]
 
         try:
             proc = await asyncio.create_subprocess_exec(

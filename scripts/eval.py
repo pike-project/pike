@@ -40,7 +40,7 @@ def load_module_from_path(path):
     return module
 
 
-def time_model(model, module_fn, inputs, device, compile, name):
+def time_model(model, module_fn, inputs, device, mode, name):
     model_invocation = "model(*inputs)"
     if module_fn is not None:
         model_invocation = "model(*inputs, module_fn)"
@@ -52,11 +52,14 @@ def time_model(model, module_fn, inputs, device, compile, name):
     
     moved_inputs = easy_to_device(inputs, device)
 
-    if compile:
+    if mode == "compile":
         if module_fn is None:
             moved_model = torch.compile(moved_model, mode="max-autotune")
         else:
             module_fn = torch.compile(module_fn, mode="max-autotune")
+    elif mode == "tensorrt":
+        # NOTE: no support for module_fn here currently
+        moved_model = torch.compile(moved_model, backend="tensorrt")
 
     with torch.no_grad():
         if module_fn is None:
@@ -71,7 +74,7 @@ def time_model(model, module_fn, inputs, device, compile, name):
         # the result here is in ms already
         runtime = do_bench(bench, rep=TRITON_BENCH_TIME_GOAL, warmup=TRITON_BENCH_WARMUP, return_mode='mean')
 
-    print(f"Name: {name}, compile: {compile}, runtime: {runtime:.3f} ms")
+    print(f"Name: {name}, mode: {mode}, runtime: {runtime:.3f} ms")
 
     return runtime
 
@@ -157,20 +160,26 @@ class Eval:
         # make sure we are not disrupting some other performance run by ensuring we have a lock while in this region
         return model.to(self.locked_device)
 
-    def get_model_output(self, name, compile=False):
+    def get_model_output(self, name, mode):
         model_data = self.models[name]
         module_fn = model_data["module_fn"]
 
         model_device = self.get_model_device(name)
 
-        if compile:
+        inputs_device = easy_to_device(self.inputs, self.locked_device)
+
+        if mode == "compile":
             model_device = torch.compile(model_device, mode="max-autotune")
-        
+        elif mode == "tensorrt":
+            import torch_tensorrt
+
+            model_device = torch.compile(model_device, backend="tensorrt")
+
         # make sure we are not disrupting some other performance run by ensuring we have a lock while in this region
         if module_fn is None:
-            return model_device(*easy_to_device(self.inputs, self.locked_device))
+            return model_device(*inputs_device)
         else:
-            return model_device(*easy_to_device(self.inputs, self.locked_device), module_fn)
+            return model_device(*inputs_device, module_fn)
 
     # returns all_correct, max_diffs list
     def compare_output(self, baseline_output, comp_output):
@@ -198,7 +207,7 @@ class Eval:
         
         return all_correct, max_diffs
 
-    def check_correctness(self):
+    def check_correctness(self, mode):
         start_time = time.time()
 
         # Test for correctness
@@ -208,11 +217,11 @@ class Eval:
                     self.results[name]["correct"] = True
                     continue
 
-                comp_output = self.get_model_output(name)
+                comp_output = self.get_model_output(name, mode)
 
                 # get this model output after the LLM-generated model output to avoid any cheating from
                 # lingering values in memory
-                baseline_output = self.get_model_output("baseline")
+                baseline_output = self.get_model_output("baseline", "eager")
 
                 correct, max_diff = self.compare_output(baseline_output, comp_output)
                 print(f"Tested {name} - Correct: {correct}, Max Diff: {max_diff}")
@@ -223,7 +232,7 @@ class Eval:
         end_time = time.time()
         print(f"Time to check correctness: {end_time - start_time:.2f}s")
 
-    def profile(self, compile):
+    def profile(self, mode):
         with torch.no_grad():
             for name in self.models.keys():
                 if name == "llm":
@@ -234,7 +243,7 @@ class Eval:
                         with_stack=True,
                         experimental_config=torch._C._profiler._ExperimentalConfig(verbose=True)
                     ) as prof:
-                        comp_output = self.get_model_output(name, compile=compile)
+                        comp_output = self.get_model_output(name, mode)
                     print(comp_output)
 
                     prof.export_stacks("./log/torch/stacks_gpu.out", metric='self_cuda_time_total')
@@ -246,7 +255,7 @@ class Eval:
                     # with open("./log/torch/table.log", "w") as f:
                     #     f.write(prof_table)
 
-    def time_model(self, name, compile):
+    def time_model(self, name, mode):
         start_time = time.time()
 
         model_data = self.models[name]
@@ -258,13 +267,9 @@ class Eval:
         assert self.held_lock is not None, "Lock should be held"
         assert self.locked_device is not None, "Locked device should exist"
 
-        runtime = time_model(model, module_fn, self.inputs, self.locked_device, compile, name)
+        runtime = time_model(model, module_fn, self.inputs, self.locked_device, mode, name)
 
-        label = name + "-"
-        if compile:
-            label += "compile"
-        else:
-            label += "eager"
+        label = name + "-" + mode
 
         self.runtime_results.append({
             "task_id": self.task_id,
@@ -274,17 +279,17 @@ class Eval:
         })
 
         end_time = time.time()
-        print(f"Time to eval model {name}, compile={compile}: {end_time - start_time:.2f}s")
+        print(f"Time to eval model {name}, mode={mode}: {end_time - start_time:.2f}s")
 
         return runtime
 
-    def collect_model_results(self, name, compile):
+    def collect_model_results(self, name, mode):
         # no reason to collect runtime results if correctness does not pass
         res = self.results[name]
         if not res["loaded"] or not res["correct"]:
             return
 
-        res["runtime"] = self.time_model(name, compile)
+        res["runtime"] = self.time_model(name, mode)
 
     def run(self):
         for name in self.models.keys():
@@ -425,9 +430,13 @@ def main():
     parser.add_argument("--gpu_locks_dir", type=str, required=False)
     parser.add_argument("--op_atol", type=float, default=1e-2)
     parser.add_argument("--op_rtol", type=float, default=1e-2)
-    parser.add_argument("--compile", action='store_true')
+    parser.add_argument("--mode", type=str, required=False, default="eager")
     parser.add_argument("--profile", action='store_true')
     args = parser.parse_args()
+
+    valid_modes = ["eager", "compile", "tensorrt"]
+    if args.mode not in valid_modes:
+        raise Exception(f"Invalid mode argument: {args.mode}, valid modes: {valid_modes}")
 
     level = args.level
     task = args.task
@@ -452,14 +461,14 @@ def main():
     ev.acquire_gpu_lock()
 
     if args.profile:
-        ev.profile(args.compile)
+        ev.profile(args.mode)
     else:
         # sanity check print, make sure the GPU is completely free to work with
         ev.print_gpu_mem()
 
         # HACK: do not actually release gpu lock, just let it get released by process exiting
-        ev.check_correctness()
-        ev.collect_model_results("llm", compile=args.compile)
+        ev.check_correctness(args.mode)
+        ev.collect_model_results("llm", args.mode)
         ev.cleanup()
 
         # try:

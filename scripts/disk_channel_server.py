@@ -53,7 +53,7 @@ class CustomHandler(BaseHTTPRequestHandler):
         if path == "/submit":
             try:
                 code = unquote(query_params.get("code")[0])
-                level = int(query_params.get("level")[0])
+                level = str(query_params.get("level")[0])
                 task = int(query_params.get("task")[0])
             except Exception as e:
                 self.send_response(500)

@@ -124,35 +124,28 @@ labels_sorted = [task_labels_map[t] for t in tasks_sorted]
 def reorder(arr):
     return [arr[included_tasks.index(t)] for t in tasks_sorted]
 
-v_speedups_sorted = reorder(v_speedups)
-compile_speedups_sorted = reorder(compile_speedups)
-our_orig_speedups_sorted = reorder(our_orig_speedups)
-our_openevolve_speedups_sorted = reorder(our_openevolve_speedups)
+# Reorder all method arrays consistently
+methods_sorted = {name: reorder(arr) for name, arr in methods.items()}
 
 # --- Plotting (dots only, offset horizontally) ---
 x = np.arange(len(tasks_sorted))
-offset = 0.15
+offset = 0.2  # increased spacing since we now have 5 methods
 
 fig, ax = plt.subplots(figsize=(7, 3))
 
-marker_cycle = itertools.cycle(['o', 's', '^', 'D', '*'])
+marker_cycle = itertools.cycle(['o', 's', '^', 'D', '*', 'P', 'X'])
 
-ax.scatter(x - 1.5*offset, v_speedups_sorted, label="Stanford blog",
-           marker=next(marker_cycle), s=30)
-ax.scatter(x - 0.5*offset, compile_speedups_sorted, label="torch.compile",
-           marker=next(marker_cycle), s=30)
-ax.scatter(x + 0.5*offset, our_orig_speedups_sorted, label="ours (orig)",
-           marker=next(marker_cycle), s=30)
-ax.scatter(x + 1.5*offset, our_openevolve_speedups_sorted, label="ours (openevolve)",
-           marker=next(marker_cycle), s=30)
-
-# --- Formatting ---
-ax.set_xticks(x)
-ax.set_xticklabels(labels_sorted)
+# Enumerate through methods and plot with offsets
+for i, (name, values) in enumerate(methods_sorted.items()):
+    ax.scatter(x + (i - (len(methods_sorted)-1)/2) * offset,
+               values,
+               label=name,
+               marker=next(marker_cycle),
+               s=30)
 
 # --- Formatting ---
 ax.set_xticks(x)
-ax.set_xticklabels(labels_sorted, rotation=20, ha="right")  # rotate for readability
+ax.set_xticklabels(labels_sorted, rotation=20, ha="right")
 
 plt.title("Level 0 Runtimes Relative to PyTorch Eager (A100)")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
@@ -162,7 +155,6 @@ plt.yscale('log')
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
 
 plt.subplots_adjust(bottom=0.25)
-
 ax.legend(loc='upper right')
 
 # --- Save ---
@@ -171,4 +163,3 @@ figs_dir = (curr_dir / "../../figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
 save_path1 = figs_dir / filename
 fig.savefig(save_path1)
-

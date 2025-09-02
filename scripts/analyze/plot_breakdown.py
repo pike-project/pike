@@ -33,6 +33,9 @@ with open(run_dir / "baseline_compile.json") as f:
 with open(run_dir / "baseline_eager.json") as f:
     eager_runtimes = json.load(f)
 
+with open(run_dir / "baseline_tensorrt.json") as f:
+    tensorrt_runtimes = json.load(f)
+
 # assert len(all_speedups_eager_final) == len(tasks_to_plot), "All speedups eager final length should be same as tasks_to_plot length"
 # assert len(all_speedups_compile_final) == len(tasks_to_plot), "All speedups compile final length should be same as tasks_to_plot length"
 
@@ -46,7 +49,6 @@ with open(run_dir / "baseline_eager.json") as f:
 
 orig_speedups = [1.0, 1.1636128407775037, 15.474967591074936, 1.0006264385613004, 2.57470900944262]
 openevolve_runtimes = [1.3629225250481067, 1.4859734816293408, 0.6134, 7.2187, 2.3093777851021495]
-tensorrt_runtimes = []
 
 included_tasks = []
 # v_rels = []
@@ -55,6 +57,7 @@ included_tasks = []
 
 v_speedups = []
 compile_speedups = []
+tensorrt_speedups = []
 our_orig_speedups = []
 our_openevolve_speedups = []
 
@@ -64,35 +67,29 @@ for idx, task in enumerate(tasks_to_plot):
     compile_runtime = get_baseline_runtime(compile_runtimes, task)
     eager_runtime = get_baseline_runtime(eager_runtimes, task)
     v_runtime = get_baseline_runtime(comp_runtimes, task)
+    tensorrt_runtime = get_baseline_runtime(tensorrt_runtimes, task)
 
     if v_runtime is None:
         continue
-    
-    # our_orig_speedup = orig_speedups_eager[idx]
-    our_orig_speedup = orig_speedups[idx]
+
     our_openevolve_speedup = eager_runtime / openevolve_runtimes[idx]
     v_speedup = eager_runtime / v_runtime
-    compile_speedup = eager_runtime / compile_runtime
 
-    # v_rel = our_speedup / v_speedup
-    # compile_rel = our_speedup / compile_speedup
-
-    # v_rels.append(v_rel)
-    # compile_rels.append(compile_rel)
-    # eager_rels.append(our_speedup)
-    v_speedups.append(v_speedup)
-    compile_speedups.append(compile_speedup)
-    our_orig_speedups.append(our_orig_speedup)
-    our_openevolve_speedups.append(our_openevolve_speedup)
+    v_speedups.append(eager_runtime / v_runtime)
+    compile_speedups.append(eager_runtime / compile_runtime)
+    tensorrt_speedups.append(eager_runtime / tensorrt_runtime)
+    our_orig_speedups.append(orig_speedups[idx])
+    our_openevolve_speedups.append(eager_runtime / openevolve_runtimes[idx])
 
     included_tasks.append(task)
 
 # Pack all methods into a dict for convenience
 methods = {
-    "Stanford blog": v_speedups,
-    "torch.compile": compile_speedups,
     "ours (orig)": our_orig_speedups,
     "ours (openevolve)": our_openevolve_speedups,
+    "Stanford blog": v_speedups,
+    "torch.compile": compile_speedups,
+    "tensorrt": tensorrt_speedups,
 }
 
 # --- Determine the "winner" method for each task ---
@@ -138,7 +135,7 @@ offset = 0.15
 
 fig, ax = plt.subplots(figsize=(7, 3))
 
-marker_cycle = itertools.cycle(['o', 's', '^', 'D'])
+marker_cycle = itertools.cycle(['o', 's', '^', 'D', '*'])
 
 ax.scatter(x - 1.5*offset, v_speedups_sorted, label="Stanford blog",
            marker=next(marker_cycle), s=30)

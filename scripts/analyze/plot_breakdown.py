@@ -85,11 +85,11 @@ for idx, task in enumerate(tasks_to_plot):
 
 # Pack all methods into a dict for convenience
 methods = {
+    "ours (OpenEvolve)": our_openevolve_speedups,
     "ours (orig)": our_orig_speedups,
-    "ours (openevolve)": our_openevolve_speedups,
     "Stanford blog": v_speedups,
     "torch.compile": compile_speedups,
-    "tensorrt": tensorrt_speedups,
+    "TensorRT": tensorrt_speedups,
 }
 
 # --- Determine the "winner" method for each task ---
@@ -102,7 +102,7 @@ for i, task in enumerate(included_tasks):
 # --- Sort tasks so that "ours (openevolve)" winners come first ---
 winners_sorted = sorted(
     winners,
-    key=lambda x: 0 if x[1] == "ours (openevolve)" else 1
+    key=lambda x: 0 if "openevolve" in x[1].lower() else 1
 )
 
 # --- Task label map ---
@@ -129,11 +129,11 @@ methods_sorted = {name: reorder(arr) for name, arr in methods.items()}
 
 # --- Plotting (dots only, offset horizontally) ---
 x = np.arange(len(tasks_sorted))
-offset = 0.2  # increased spacing since we now have 5 methods
+offset = 0.15  # increased spacing since we now have 5 methods
 
-fig, ax = plt.subplots(figsize=(7, 3))
+fig, ax = plt.subplots(figsize=(7, 3.5))
 
-marker_cycle = itertools.cycle(['o', 's', '^', 'D', '*', 'P', 'X'])
+marker_cycle = itertools.cycle(['o', 's', 'D', '^', 'v', 'P', 'X'])
 
 # Enumerate through methods and plot with offsets
 for i, (name, values) in enumerate(methods_sorted.items()):
@@ -142,6 +142,10 @@ for i, (name, values) in enumerate(methods_sorted.items()):
                label=name,
                marker=next(marker_cycle),
                s=30)
+
+# Add vertical separators between task groups
+for i in range(len(tasks_sorted) - 1):
+    ax.axvline(x=i + 0.5, color='lightgray', linestyle='--', linewidth=0.8, alpha=0.6)
 
 # --- Formatting ---
 ax.set_xticks(x)

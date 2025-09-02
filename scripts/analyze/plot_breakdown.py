@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import json
+import itertools
 import subprocess
 import argparse
 import math
@@ -35,8 +36,17 @@ with open(run_dir / "baseline_eager.json") as f:
 # assert len(all_speedups_eager_final) == len(tasks_to_plot), "All speedups eager final length should be same as tasks_to_plot length"
 # assert len(all_speedups_compile_final) == len(tasks_to_plot), "All speedups compile final length should be same as tasks_to_plot length"
 
+# custom_speedups = [
+
+# ]
+
+# custom_labels = [
+
+# ]
+
 orig_speedups = [1.0, 1.1636128407775037, 15.474967591074936, 1.0006264385613004, 2.57470900944262]
 openevolve_runtimes = [1.3629225250481067, 1.4859734816293408, 0.6134, 7.2187, 2.3093777851021495]
+tensorrt_runtimes = []
 
 included_tasks = []
 # v_rels = []
@@ -77,31 +87,91 @@ for idx, task in enumerate(tasks_to_plot):
 
     included_tasks.append(task)
 
-fig, ax = plt.subplots(figsize=(6, 2.5))
+# Pack all methods into a dict for convenience
+methods = {
+    "Stanford blog": v_speedups,
+    "torch.compile": compile_speedups,
+    "ours (orig)": our_orig_speedups,
+    "ours (openevolve)": our_openevolve_speedups,
+}
 
-ax.plot(included_tasks, v_speedups, label="Stanford blog", marker='o', markersize=4)
-ax.plot(included_tasks, compile_speedups, label="torch.compile", marker='o', markersize=4)
-ax.plot(included_tasks, our_orig_speedups, label="ours (orig)", marker='o', markersize=4)
-ax.plot(included_tasks, our_openevolve_speedups, label="ours (openevolve)", marker='o', markersize=4)
+# --- Determine the "winner" method for each task ---
+winners = []
+for i, task in enumerate(included_tasks):
+    values = {name: arr[i] for name, arr in methods.items()}
+    winner = max(values, key=values.get)
+    winners.append((task, winner, values))
+
+# --- Sort tasks so that "ours (openevolve)" winners come first ---
+winners_sorted = sorted(
+    winners,
+    key=lambda x: 0 if x[1] == "ours (openevolve)" else 1
+)
+
+# --- Task label map ---
+task_labels_map = {
+    1: "1 (Conv)",
+    2: "2 (Conv-ReLU-Pool)",
+    3: "3 (LayerNorm)",
+    4: "4 (MatMul)",
+    5: "5 (Softmax)",
+}
+
+# After sorting tasks
+tasks_sorted = [t for t, _, _ in winners_sorted]
+
+# Use descriptive labels instead of numbers
+labels_sorted = [task_labels_map[t] for t in tasks_sorted]
+
+# Reorder all arrays consistently
+def reorder(arr):
+    return [arr[included_tasks.index(t)] for t in tasks_sorted]
+
+v_speedups_sorted = reorder(v_speedups)
+compile_speedups_sorted = reorder(compile_speedups)
+our_orig_speedups_sorted = reorder(our_orig_speedups)
+our_openevolve_speedups_sorted = reorder(our_openevolve_speedups)
+
+# --- Plotting (dots only, offset horizontally) ---
+x = np.arange(len(tasks_sorted))
+offset = 0.15
+
+fig, ax = plt.subplots(figsize=(7, 3))
+
+marker_cycle = itertools.cycle(['o', 's', '^', 'D'])
+
+ax.scatter(x - 1.5*offset, v_speedups_sorted, label="Stanford blog",
+           marker=next(marker_cycle), s=30)
+ax.scatter(x - 0.5*offset, compile_speedups_sorted, label="torch.compile",
+           marker=next(marker_cycle), s=30)
+ax.scatter(x + 0.5*offset, our_orig_speedups_sorted, label="ours (orig)",
+           marker=next(marker_cycle), s=30)
+ax.scatter(x + 1.5*offset, our_openevolve_speedups_sorted, label="ours (openevolve)",
+           marker=next(marker_cycle), s=30)
+
+# --- Formatting ---
+ax.set_xticks(x)
+ax.set_xticklabels(labels_sorted)
+
+# --- Formatting ---
+ax.set_xticks(x)
+ax.set_xticklabels(labels_sorted, rotation=20, ha="right")  # rotate for readability
 
 plt.title("Level 0 Runtimes Relative to PyTorch Eager (A100)")
+plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
 
-plt.xticks(range(1, 6))
-plt.grid(True, axis='x', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
-plt.grid(True, axis='y', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
-
-plt.ylabel("Task Number")
 plt.ylabel("Relative Runtime")
-
 plt.yscale('log')
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
 
+plt.subplots_adjust(bottom=0.25)
+
 ax.legend(loc='upper right')
 
-filename = "individual_breakdown.pdf"
-
+# --- Save ---
+filename = "individual_breakdown_dots_sorted.pdf"
 figs_dir = (curr_dir / "../../figs/breakdown").resolve()
-
 os.makedirs(figs_dir, exist_ok=True)
 save_path1 = figs_dir / filename
 fig.savefig(save_path1)
+

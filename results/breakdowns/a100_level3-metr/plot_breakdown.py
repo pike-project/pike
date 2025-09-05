@@ -12,7 +12,7 @@ from scipy.stats import gmean
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-data_dir = (curr_dir / "data").resolve()
+data_dir = (curr_dir / "data/runtimes").resolve()
 
 def get_baseline_runtime(data, task):
     for v in data:
@@ -51,9 +51,6 @@ with open(data_dir / "metr.json") as f:
 # ]
 
 included_tasks = []
-# v_rels = []
-# compile_rels = []
-# eager_rels = []
 
 v_speedups = []
 compile_speedups = []
@@ -152,7 +149,7 @@ methods_sorted = {name: reorder(arr) for name, arr in methods.items()}
 
 # --- Plotting (dots only, offset horizontally) ---
 x = np.arange(len(tasks_sorted))
-offset = 0.15  # increased spacing since we now have 5 methods
+offset = 0  # increased spacing since we now have 5 methods
 
 fig, ax = plt.subplots(figsize=(10, 3.5))
 
@@ -160,15 +157,18 @@ marker_cycle = itertools.cycle(['o', 'D', '^', 'v', 'P', 'X'])
 
 # Enumerate through methods and plot with offsets
 for i, (name, values) in enumerate(methods_sorted.items()):
-    ax.scatter(x + (i - (len(methods_sorted)-1)/2) * offset,
-               values,
-               label=name,
-               marker=next(marker_cycle),
-               s=30)
+    ax.scatter(
+        x + (i - (len(methods_sorted)-1)/2) * offset,
+        values,
+        label=name,
+        # marker=next(marker_cycle),
+        linestyle='-',
+        s=30
+    )
 
 # Add vertical separators between task groups
-for i in range(len(tasks_sorted) - 1):
-    ax.axvline(x=i + 0.5, color='lightgray', linestyle='--', linewidth=0.8, alpha=0.6)
+# for i in range(len(tasks_sorted) - 1):
+#     ax.axvline(x=i + 0.5, color='lightgray', linestyle='--', linewidth=0.8, alpha=0.6)
 
 # --- Formatting ---
 ax.set_xticks(x)
@@ -185,7 +185,7 @@ plt.subplots_adjust(bottom=0.35)
 ax.legend(loc='upper right')
 
 # --- Save ---
-filename = "individual_breakdown.pdf"
+filename = "individual_breakdown_new.pdf"
 figs_dir = (curr_dir / "figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
 save_path1 = figs_dir / filename

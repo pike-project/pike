@@ -17,7 +17,7 @@ root_dir = (curr_dir / "../..").resolve()
 deps_dir = root_dir / "local/deps"
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, run_dir: Path, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
+    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
@@ -33,6 +33,7 @@ class EvalSolutions:
 
         self.level = level
         self.mode = mode
+        self.title = title
         self.solutions_name = solutions_name
         self.output_name = output_name
         self.dry_run = dry_run
@@ -195,7 +196,7 @@ class EvalSolutions:
                             "runtime": random.random() * 10,
                             "max_diff": [0.0001],
                         }
-                    }
+                    },
                 }
             else:
                 res = await self.disk_channel.recv()
@@ -222,6 +223,7 @@ class EvalSolutions:
                 "sample_id": sample_id,
                 "problem_id": problem_id,
                 "results": results,
+                "runtime": runtime,
             }
 
             all_results.append(results_data)
@@ -237,8 +239,13 @@ class EvalSolutions:
 
         results_path = self.output_dir / f"{self.output_name}.json"
 
+        full_results = {
+            "title": self.title,
+            "results": results
+        }
+
         with open(results_path, "w") as f:
-            json.dump(results, f, indent=4)
+            json.dump(full_results, f, indent=4)
 
 
     async def close(self):
@@ -270,6 +277,12 @@ async def main():
         "tensorrt"
     ]
 
+    valid_modes_title_map = {
+        "eager": "Eager",
+        "compile": "torch.compile",
+        "tensorrt": "TensorRT"
+    }
+
     mode = args.mode
     if mode not in valid_modes:
         raise Exception(f"Invalid mode: {mode}. Valid modes are: {valid_modes}")
@@ -281,9 +294,21 @@ async def main():
         "good_kernels" # (Stanford blog post with preliminary good kernels)
     ]
 
+    solutions_name_title_map = {
+        "baseline": "",
+        "agent": "Ours",
+        "metr": "METR",
+        "good_kernels": "Stanford Blog",
+    }
+
     solutions_name = args.solutions
     if solutions_name not in valid_solutions_names:
         raise Exception(f"Invalid solutions value: {solutions_name}. Valid solutions values are: {valid_solutions_names}")
+
+    title = solutions_name_title_map[solutions_name]
+
+    if solutions_name == "baseline":
+        title = valid_modes_title_map[mode]
 
     run_dir = None
     if args.run_dir is not None:
@@ -315,7 +340,7 @@ async def main():
     if args.output_name is not None:
         output_name = args.output_name
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, run_dir, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run)
     await eval_sol.run()
 
     if args.close_worker:

@@ -15,7 +15,7 @@ for task_dirname in os.listdir(run_dir):
 
 tasks = sorted(tasks)
 
-out = []
+results = []
 
 for task in tasks:
     task_dirname = f"task{task}"
@@ -30,16 +30,22 @@ for task in tasks:
 
     print(task, runtime)
 
-    out.append({
+    results.append({
         "problem_id": task,
-        "results": {
-            "eval_results": {
-                "runtime": runtime,
-            }
-        }
+        "runtime": runtime,
+        # "results": {
+        #     "eval_results": {
+        #         "runtime": runtime,
+        #     }
+        # }
     })
 
-output_path = (curr_dir / "../../results/breakdowns/a100_level3-metr/data/ours_openevolve.json").resolve()
+out = {
+    "title": "Ours (OpenEvolve)",
+    "results": results,
+}
+
+output_path = (curr_dir / "../../results/breakdowns/a100_level3-metr/data/runtimes/ours_openevolve.json").resolve()
 
 with open(output_path, "w") as f:
     json.dump(out, f)

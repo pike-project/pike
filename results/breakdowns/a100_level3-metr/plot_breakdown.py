@@ -4,18 +4,15 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import json
-import itertools
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
 # --- Load all runtimes ---
 all_methods = {}
-
 for file in data_dir.glob("*.json"):
     with open(file) as f:
         data = json.load(f)
-
     title = data["title"]
     results = {entry["problem_id"]: entry["runtime"] for entry in data["results"]}
     all_methods[title] = results
@@ -26,22 +23,30 @@ if eager_key is None:
     raise ValueError("Missing baseline 'Eager.json' in data_dir")
 eager_runtimes = all_methods[eager_key]
 
-# --- Select tasks ---
-tasks_to_plot = [1, 2, 4, 6, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21]
-included_tasks = []
+# --- Determine tasks from "ours (OpenEvolve)" ---
+openevolve_key = next((k for k in all_methods if k.lower() == "ours (openevolve)"), None)
+if openevolve_key is None:
+    raise ValueError("Missing 'ours (OpenEvolve)' method in data_dir")
+included_tasks = list(all_methods[openevolve_key].keys())
+
+# --- Compute speedups ---
 methods_speedups = {title: [] for title in all_methods if title != eager_key}
 
-for task in tasks_to_plot:
+for task in included_tasks:
     eager_runtime = eager_runtimes.get(task)
     if eager_runtime is None:
-        continue  # skip if missing baseline
+        print(f"Warning: Task {task} missing baseline runtime, skipping.")
+        continue
 
-    included_tasks.append(task)
     for title, runtimes in all_methods.items():
         if title == eager_key:
             continue
-        method_runtime = runtimes.get(task, eager_runtime)  # fallback to eager if missing
-        speedup = eager_runtime / method_runtime if method_runtime else None
+        method_runtime = runtimes.get(task)
+        if method_runtime is None or eager_runtime is None:
+            speedup = 1.0
+            print(f"Warning: Task {task}, method '{title}' has runtime None. Setting speedup=1.")
+        else:
+            speedup = eager_runtime / method_runtime
         methods_speedups[title].append(speedup)
 
 # --- Task labels ---
@@ -56,11 +61,7 @@ for filename in os.listdir(level_dir):
 
 labels = [task_labels_map.get(t, str(t)) for t in included_tasks]
 
-# --- Sort tasks by ours (OpenEvolve) ascending ---
-openevolve_key = next((k for k in methods_speedups if k.lower() == "ours (openevolve)"), None)
-if openevolve_key is None:
-    raise ValueError("Missing 'ours (OpenEvolve)' method in data_dir")
-
+# --- Sort tasks by "ours (OpenEvolve)" ascending ---
 sort_indices = np.argsort(methods_speedups[openevolve_key])  # ascending
 included_tasks = [included_tasks[i] for i in sort_indices]
 labels_sorted = [labels[i] for i in sort_indices]
@@ -81,21 +82,19 @@ for name, values in methods_speedups.items():
     ax.plot(
         x,
         values,
-        label=f"{name} (gmean={geomeans[name]:.2f})",  # include geomean in legend text
+        label=f"{name} (gmean={geomeans[name]:.2f})",
     )
 
 ax.set_xticks(x)
 ax.set_xticklabels(labels_sorted, rotation=20, ha="right")
-
 plt.title("Level 3-metr Speedup Over PyTorch Eager (A100)")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
 plt.ylabel("Speedup")
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
-
 plt.subplots_adjust(bottom=0.35)
 ax.legend(loc='upper left', fontsize=8)
 
-# --- Save ---
+# --- Save plot ---
 figs_dir = (curr_dir / "figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
 fig.savefig(figs_dir / "individual_breakdown_new.pdf")

@@ -151,10 +151,10 @@ for i in range(len(tasks_sorted) - 1):
 ax.set_xticks(x)
 ax.set_xticklabels(labels_sorted, rotation=20, ha="right")
 
-plt.title("Level 0 Runtimes Relative to PyTorch Eager (A100)")
+plt.title("Level 0 Speedups Over PyTorch Eager (A100)")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
 
-plt.ylabel("Relative Runtime")
+plt.ylabel("Speedup")
 plt.yscale('log')
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
 

@@ -10,6 +10,7 @@ runs/*
 cache/*
 !results/timing/
 !results/cost_modeling/
+!results/breakdowns/
 .env
 .envrc
 worker_io/

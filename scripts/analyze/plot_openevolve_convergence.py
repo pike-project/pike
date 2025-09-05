@@ -9,18 +9,15 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_runs/level3-metr_trial0")
 
-eager_path = (curr_dir / "../../results/breakdowns/a100_level3-metr/data/eager.json").resolve()
+eager_path = (curr_dir / "../../results/breakdowns/a100_level3-metr/data/runtimes/eager.json").resolve()
 
 with open(eager_path) as f:
     eager_runtimes = json.load(f)
 
 def get_runtime(data, task):
-    for v in data:
+    for v in data["results"]:
         if v["problem_id"] == task:
-            try:
-                return v["results"]["eval_results"]["runtime"]
-            except Exception as e:
-                return None
+            return v["runtime"]
     
     return None
 

@@ -20,7 +20,7 @@ if [ ! -f "$IMAGE_PATH" ]; then
     APPTAINER_TMPDIR=$SCRATCH/.cache/apptainer/tmp APPTAINER_CACHEDIR=$SCRATCH/.cache/apptainer/cache apptainer pull $IMAGE_PATH docker://docker.io/loonride/kernel-bench-deps:v0.4
 fi
 
-TIME_STR=date +"%Y-%m-%d-%H-%M-%S"
+TIME_STR=$(date +"%Y-%m-%d-%H-%M-%S")
 
 WORKER_IO_DIR=worker_io/workers/worker_$TIME_STR
 

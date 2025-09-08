@@ -24,9 +24,16 @@ TIME_STR=date +"%Y-%m-%d-%H-%M-%S"
 
 WORKER_IO_DIR=worker_io/workers/worker_$TIME_STR
 
+mkdir -p $WORKER_IO_DIR
+
 python scripts/disk_channel_server.py --port $PORT --worker_io_dir $WORKER_IO_DIR > /dev/null 2>&1 &
 pid=$!
 echo $pid > $WORKER_IO_DIR/disk_channel_server.pid
-trap "kill $pid 2>/dev/null" EXIT
+
+cleanup() {
+    kill $pid 2>/dev/null
+    rm -rf "$WORKER_IO_DIR"
+}
+trap cleanup EXIT
 
 srun -A ac_binocular -t 24:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:4 --cpus-per-task=112 --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif_path $IMAGE_PATH --worker_io_dir $WORKER_IO_DIR --arch Hopper

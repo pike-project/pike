@@ -113,7 +113,7 @@ async def main():
 
     handler_with_args = partial(CustomHandler, manager=manager, loop=loop)
 
-    server = ThreadingHTTPServer(("localhost", 8000), handler_with_args)
+    server = ThreadingHTTPServer(("localhost", args.port), handler_with_args)
     await asyncio.to_thread(server.serve_forever)
 
 if __name__ == "__main__":

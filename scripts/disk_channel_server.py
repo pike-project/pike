@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import json
+import os
 import argparse
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -94,12 +95,15 @@ class CustomHandler(BaseHTTPRequestHandler):
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, default="worker_io/input")
-    parser.add_argument("--output_dir", type=str, default="worker_io/output")
+    parser.add_argument("--port", type=int, required=False, default=8000)
+    parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
     args = parser.parse_args()
 
-    tx_dir = Path(args.input_dir)
-    rx_dir = Path(args.output_dir)
+    tx_dir = Path(args.worker_io_dir) / "input"
+    rx_dir = Path(args.worker_io_dir) / "output"
+
+    os.makedirs(tx_dir, exist_ok=True)
+    os.makedirs(rx_dir, exist_ok=True)
 
     manager = DiskChannelManager(tx_dir=tx_dir, rx_dir=rx_dir)
 
@@ -110,7 +114,6 @@ async def main():
     handler_with_args = partial(CustomHandler, manager=manager, loop=loop)
 
     server = ThreadingHTTPServer(("localhost", 8000), handler_with_args)
-    print("Serving on http://localhost:8000")
     await asyncio.to_thread(server.serve_forever)
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
     parser.add_argument("--bash", action='store_true', help="Run bash inside of the container instead of the worker")
     parser.add_argument("--pull_image", action='store_true', help="Pull the image from Dockerhub if using docker or podman-hpc")
+    parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
 
     args = parser.parse_args()
 
@@ -68,7 +69,7 @@ def main():
     worker_id = str(0)
 
     # worker_dir = data_dir / "workers" / worker_id
-    worker_dir = root_dir / "worker_io"
+    worker_dir = args.worker_io_dir
 
     input_dir = worker_dir / "input"
     output_dir = worker_dir / "output"

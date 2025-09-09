@@ -5,7 +5,7 @@ from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_runs/level3-metr_trial0")
+run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_0")
 
 tasks = []
 
@@ -45,7 +45,7 @@ out = {
     "results": results,
 }
 
-output_path = (curr_dir / "../../results/breakdowns/a100_level3-metr/data/runtimes/ours_openevolve.json").resolve()
+output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/ours_openevolve.json").resolve()
 
 with open(output_path, "w") as f:
     json.dump(out, f)

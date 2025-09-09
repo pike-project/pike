@@ -47,6 +47,8 @@ for task in included_tasks:
             print(f"Warning: Task {task}, method '{title}' has runtime None. Setting speedup=1.")
         else:
             speedup = eager_runtime / method_runtime
+            if speedup < 1.0:
+                speedup = 1.0
         methods_speedups[title].append(speedup)
 
 # --- Task labels ---

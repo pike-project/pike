@@ -7,9 +7,10 @@ from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_runs/level3-metr_trial0")
+# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_runs/level3-metr_trial0")
+run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_0")
 
-eager_path = (curr_dir / "../../results/breakdowns/a100_level3-metr/data/runtimes/eager.json").resolve()
+eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
 
 with open(eager_path) as f:
     eager_runtimes = json.load(f)
@@ -95,7 +96,7 @@ plt.grid(True, axis='x', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
 plt.grid(True, axis='y', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
 
 filename = "convergence.pdf"
-figs_dir = (curr_dir / "../../figs/convergence").resolve()
+figs_dir = (curr_dir / "../../results/breakdowns/h100_level3-metr/figs").resolve()
 os.makedirs(figs_dir, exist_ok=True)
 save_path = figs_dir / filename
 plt.savefig(save_path)

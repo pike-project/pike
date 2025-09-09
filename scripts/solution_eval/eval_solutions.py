@@ -17,7 +17,7 @@ root_dir = (curr_dir / "../..").resolve()
 deps_dir = root_dir / "local/deps"
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool):
+    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool, sequential: bool):
         tx_dir = worker_input_dir
         rx_dir = worker_output_dir
 
@@ -37,6 +37,7 @@ class EvalSolutions:
         self.solutions_name = solutions_name
         self.output_name = output_name
         self.dry_run = dry_run
+        self.sequential = sequential
     
     def metr_solutions(self):
         kernel_bench_dir = (deps_dir / "KernelBenchFiltered").resolve()
@@ -232,10 +233,70 @@ class EvalSolutions:
 
         return all_results
 
+    async def eval_samples_seq(self, samples):
+        eval_id_to_sample = {}
+
+        all_results = []
+
+        for sample in samples:
+            eval_id = str(uuid.uuid4())
+            # sample_id = sample["sample_id"]
+            problem_id = sample["problem_id"]
+            code = sample["code"]
+
+            eval_id_to_sample[eval_id] = sample
+
+            await self.disk_channel.send({
+                "id": eval_id,
+                "type": "eval",
+                "level": self.level,
+                "task": problem_id,
+                "code": code,
+                "mode": self.mode
+            })
+
+            # TODO: add dry_run functionality here
+
+            res = await self.disk_channel.recv()
+            eval_id = res["id"]
+            results = res["results"]
+            sample = eval_id_to_sample[eval_id]
+            sample_id = sample["sample_id"]
+            problem_id = sample["problem_id"]
+
+            runtime = None
+            try:
+                runtime = res["results"]["eval_results"]["runtime"]
+            except Exception as e:
+                print(f"================================================================")
+                print(f"------------------- Task {problem_id} stdout -------------------")
+                print(res["results"]["stdout"])
+                print(f"------------------- Task {problem_id} stderr -------------------")
+                print(res["results"]["stderr"])
+                print(f"================================================================")
+
+            print(f"Eval result for task: {problem_id}, runtime: {runtime}")
+
+            results_data = {
+                "sample_id": sample_id,
+                "problem_id": problem_id,
+                "results": results,
+                "runtime": runtime,
+            }
+
+            all_results.append(results_data)
+        
+        all_results.sort(key=lambda x: x["sample_id"])
+
+        return all_results
+
     async def run(self):
         samples = self.get_samples()
 
-        results = await self.eval_samples(samples)
+        if self.sequential:
+            results = await self.eval_samples_seq(samples)
+        else:
+            results = await self.eval_samples(samples)
 
         results_path = self.output_dir / f"{self.output_name}.json"
 
@@ -269,6 +330,7 @@ async def main():
     parser.add_argument("--worker_output_dir", type=str, required=False)
     parser.add_argument("--dry_run", action='store_true')
     parser.add_argument("--close_worker", action='store_true')
+    parser.add_argument("--sequential", action='store_true')
     args = parser.parse_args()
 
     valid_modes = [
@@ -340,7 +402,7 @@ async def main():
     if args.output_name is not None:
         output_name = args.output_name
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run, args.sequential)
     await eval_sol.run()
 
     if args.close_worker:

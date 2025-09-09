@@ -1,11 +1,15 @@
 
 import os
 import json
+import shutil
 from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_0")
+
+sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_no_agents_300/best_solutions").resolve()
+os.makedirs(sol_dest_dir, exist_ok=True)
 
 tasks = []
 
@@ -39,6 +43,11 @@ for task in tasks:
         #     }
         # }
     })
+
+    sol_src = task_dir / "output/best/best_program.py"
+    sol_dest = sol_dest_dir / f"task_{task}.py"
+
+    shutil.copy(sol_src, sol_dest)
 
 out = {
     "title": "Ours (OpenEvolve)",

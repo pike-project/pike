@@ -8,9 +8,14 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
+included_files = {"ours_openevolve", "orig", "eager"}
+
 # --- Load all runtimes ---
 all_methods = {}
 for file in data_dir.glob("*.json"):
+    if file.name.split(".json")[0] not in included_files:
+        continue
+
     with open(file) as f:
         data = json.load(f)
     title = data["title"]

@@ -8,7 +8,9 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-included_files = {"ours_openevolve", "orig", "eager"}
+included_files = {"eager", "ours_openevolve", "orig"}
+# included_files = {"eager", "ours_openevolve", "metr"}
+# included_files = {"eager", "ours_openevolve", "compile", "tensorrt"}
 
 # --- Load all runtimes ---
 all_methods = {}
@@ -90,16 +92,17 @@ for name, values in methods_speedups.items():
         x,
         values,
         label=f"{name} (gmean={geomeans[name]:.2f})",
+        linewidth=2,
     )
 
 ax.set_xticks(x)
 ax.set_xticklabels(labels_sorted, rotation=45, ha="right")
-plt.title("Level 3-metr Speedup Over PyTorch Eager (A100)")
+plt.title("Level 3-metr Speedup Over PyTorch Eager (H100)")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
 plt.ylabel("Speedup")
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
 plt.subplots_adjust(bottom=0.5)
-ax.legend(loc='upper left', fontsize=8)
+ax.legend(loc='upper left', fontsize=10)
 
 plt.yscale("log")
 

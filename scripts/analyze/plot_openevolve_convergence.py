@@ -90,7 +90,7 @@ plt.plot(max_checkpoints, speedups_gmean, linestyle='-', color="#ff6583")
 # Add labels and title
 plt.xlabel("Attempt Number")
 plt.ylabel("Speedup Over PyTorch Eager")
-plt.title("OpenEvolve Speedup By Attempt")
+plt.title("OpenEvolve Speedup By Attempt (Level 3-metr, H100)")
 
 plt.grid(True, axis='x', which='both', linestyle='--', linewidth=0.5, alpha=0.3)
 plt.grid(True, axis='y', which='both', linestyle='--', linewidth=0.5, alpha=0.3)

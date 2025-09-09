@@ -21,6 +21,9 @@ tasks = sorted(tasks)
 
 results = []
 
+total_input_tokens = 0
+total_output_tokens = 0
+
 for task in tasks:
     task_dirname = f"task{task}"
     task_dir = run_dir / task_dirname
@@ -49,6 +52,49 @@ for task in tasks:
 
     shutil.copy(sol_src, sol_dest)
 
+    raw_responses_dir = task_dir / "output/raw_responses"
+
+    for filename in os.listdir(raw_responses_dir):
+        res_path = raw_responses_dir / filename
+        with open(res_path) as f:
+            raw_resp = json.load(f)
+
+        usage_data = raw_resp["usage"]
+        total_tokens = usage_data["total_tokens"]
+        prompt_tokens = usage_data["prompt_tokens"]
+        # completion_tokens = usage_data["completion_tokens"]
+
+        # it seems that Google's OpenAI-style completion API does not show
+        # reasoning tokens. It includes "completion_tokens", but prompt_tokens and
+        # completion_tokens added together DOES NOT sum to total_tokens:
+        # -----------> prompt_tokens + completion_tokens < total_tokens
+
+        # this leads to the conservative assumption that the missing tokens must be counted
+        # as output tokens, which are more expensive than input tokens, likely
+        # the reasoning tokens
+        resp_tokens = total_tokens - prompt_tokens
+
+        total_input_tokens += prompt_tokens
+        total_output_tokens += resp_tokens
+
+print(f"Total input tokens used: {total_input_tokens}, total output tokens used: {total_output_tokens}")
+
+# Gemini 2.5 Pro current prices per 1M tokens
+input_price = 1.25
+output_price = 10
+
+input_cost = total_input_tokens * 1e-6 * input_price
+output_cost = total_output_tokens * 1e-6 * output_price
+total_cost = input_cost + output_cost
+
+print(f"Input cost: ${input_cost:.2f}, Output cost: ${output_cost:.2f}")
+
+print(f"Total cost: ${total_cost:.2f}")
+
+avg_cost_per_task = total_cost / len(tasks)
+
+print(f"Avg cost per task: ${avg_cost_per_task:.2f}")
+
 out = {
     "title": "Ours (OpenEvolve)",
     "results": results,
@@ -57,4 +103,4 @@ out = {
 output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/ours_openevolve.json").resolve()
 
 with open(output_path, "w") as f:
-    json.dump(out, f)
+    json.dump(out, f, indent=4)

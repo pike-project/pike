@@ -69,7 +69,7 @@ def main():
     worker_id = str(0)
 
     # worker_dir = data_dir / "workers" / worker_id
-    worker_dir = Path(args.worker_io_dir)
+    worker_dir = Path(args.worker_io_dir).resolve()
 
     input_dir = worker_dir / "input"
     output_dir = worker_dir / "output"

@@ -100,7 +100,7 @@ class EvalWorker:
             print("Got close message, closing worker.")
             return False
         else:
-            while self.active_task_count.peek() >= 40:
+            while self.active_task_count.peek() >= 10:
                 await asyncio.sleep(1)
 
             active_task_count = await self.active_task_count.inc()

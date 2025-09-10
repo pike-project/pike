@@ -8,8 +8,8 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-included_files = {"eager", "ours_openevolve", "orig"}
-# included_files = {"eager", "ours_openevolve", "metr"}
+# included_files = {"eager", "ours_openevolve", "orig"}
+included_files = {"eager", "ours_openevolve", "metr"}
 # included_files = {"eager", "ours_openevolve", "compile", "tensorrt"}
 
 # --- Load all runtimes ---
@@ -84,16 +84,36 @@ for name, values in methods_speedups.items():
     geomeans[name] = np.exp(np.mean(np.log(arr)))
 
 # --- Plotting ---
+plot_mode = "bar"  # choose "line" or "bar"
+
 x = np.arange(len(included_tasks))
 fig, ax = plt.subplots(figsize=(12, 5.5))
 
-for name, values in methods_speedups.items():
-    ax.plot(
-        x,
-        values,
-        label=f"{name} (gmean={geomeans[name]:.2f})",
-        linewidth=2,
-    )
+if plot_mode == "line":
+    for name, values in methods_speedups.items():
+        ax.plot(
+            x,
+            values,
+            label=f"{name} (gmean={geomeans[name]:.2f})",
+            linewidth=2,
+        )
+elif plot_mode == "bar":
+    n_methods = len(methods_speedups)
+    width = 0.8 / n_methods  # total width of the group is 0.8
+    method_names = list(methods_speedups.keys())
+    
+    for i, name in enumerate(method_names):
+        values = methods_speedups[name]
+        offsets = x - 0.4 + i * width + width/2  # center the group around x
+        ax.bar(
+            offsets,
+            values,
+            width=width,
+            label=f"{name} (gmean={geomeans[name]:.2f})",
+            alpha=0.9
+        )
+else:
+    raise ValueError(f"Unknown plot_mode: {plot_mode}")
 
 ax.set_xticks(x)
 ax.set_xticklabels(labels_sorted, rotation=45, ha="right")
@@ -109,7 +129,7 @@ plt.yscale("log")
 # --- Save plot ---
 figs_dir = (curr_dir / "figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
-fig.savefig(figs_dir / "individual_breakdown_new.pdf")
+fig.savefig(figs_dir / f"individual_breakdown_{plot_mode}.pdf")
 
 # --- Save CSV ---
 df = pd.DataFrame(methods_speedups, index=labels_sorted)

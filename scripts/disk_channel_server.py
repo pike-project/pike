@@ -47,6 +47,7 @@ class DiskChannelManager:
         return self.completed_tasks.get(eval_id)
 
     async def close(self):
+        print("Sending disk_channel close message")
         await self.disk_channel.send({
             "type": "close"
         })
@@ -104,6 +105,10 @@ class CustomHandler(BaseHTTPRequestHandler):
                 manager.close(), self.loop
             )
             _ = fut.result()
+
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
         else:
             self.send_response(404)
             self.end_headers()

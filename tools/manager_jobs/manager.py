@@ -54,7 +54,7 @@ def main():
         "--eval_port",
         str(port),
         "--run_dir",
-        run_dir,
+        str(run_dir),
     ],
 
     run = subprocess.Popen(

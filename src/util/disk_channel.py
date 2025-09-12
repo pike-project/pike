@@ -63,6 +63,30 @@ class DiskChannel:
         # and its size is proportional to the backlog, preventing memory leaks.
         self._seen_files = set()
 
+    async def poll(self):
+        # If the internal queue is empty, scan the directory for new files.
+        if not self._pending_files:
+            self._scan_for_new_files()
+
+        # If the queue has files, process the first one.
+        if self._pending_files:
+            done_path = self._pending_files.popleft()
+            
+            try:
+                data = await self._process_file(done_path)
+                # On successful processing, remove from seen set and return
+                self._seen_files.remove(done_path)
+                return data
+            except Exception as e:
+                print(f"Error processing {done_path.name}: {e}. Discarding.")
+                # Ensure the file is removed from tracking even on error
+                if done_path in self._seen_files:
+                    self._seen_files.remove(done_path)
+                # Continue to the next file in the queue or re-poll
+                return None
+
+        return None
+
     # polling async recv method that waits until there is a new message
     async def recv(self) -> dict:
         """
@@ -76,26 +100,10 @@ class DiskChannel:
             A dictionary containing the message data.
         """
         while True:
-            # If the internal queue is empty, scan the directory for new files.
-            if not self._pending_files:
-                self._scan_for_new_files()
+            res = await self.poll()
 
-            # If the queue has files, process the first one.
-            if self._pending_files:
-                done_path = self._pending_files.popleft()
-                
-                try:
-                    data = await self._process_file(done_path)
-                    # On successful processing, remove from seen set and return
-                    self._seen_files.remove(done_path)
-                    return data
-                except Exception as e:
-                    print(f"Error processing {done_path.name}: {e}. Discarding.")
-                    # Ensure the file is removed from tracking even on error
-                    if done_path in self._seen_files:
-                        self._seen_files.remove(done_path)
-                    # Continue to the next file in the queue or re-poll
-                    continue
+            if res is not None:
+                return res
             
             # If queue is still empty after polling, wait before polling again.
             await asyncio.sleep(self.poll_interval)

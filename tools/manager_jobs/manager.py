@@ -25,7 +25,8 @@ def main():
         stderr=subprocess.DEVNULL,
     )
 
-    openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
+    # openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
+    openevolve_dir = Path("/global/scratch/users/knagaitsev/openevolve")
 
     example_dir = openevolve_dir / "examples/kernelbench"
 

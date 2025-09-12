@@ -55,7 +55,7 @@ def main():
         str(port),
         "--run_dir",
         str(run_dir),
-    ],
+    ]
 
     run = subprocess.Popen(
         run_cmd,

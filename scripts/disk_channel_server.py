@@ -46,6 +46,10 @@ class DiskChannelManager:
     def poll(self, eval_id):
         return self.completed_tasks.get(eval_id)
 
+    async def close(self):
+        await self.disk_channel.send({
+            "type": "close"
+        })
 
 class CustomHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, manager: DiskChannelManager, loop, **kwargs):
@@ -95,6 +99,11 @@ class CustomHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(data_str.encode())
+        elif path == "close":
+            fut = asyncio.run_coroutine_threadsafe(
+                manager.close(), self.loop
+            )
+            _ = fut.result()
         else:
             self.send_response(404)
             self.end_headers()

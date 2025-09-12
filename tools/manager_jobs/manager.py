@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 from time import sleep
 from datetime import datetime
+import requests
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -63,6 +64,8 @@ def main():
     )
 
     run.wait()
+
+    requests.get(f"http://localhost:{port}/close")
 
     disk_channel_server.terminate()
     disk_channel_server.wait()

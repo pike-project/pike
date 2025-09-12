@@ -21,8 +21,8 @@ def main():
 
     disk_channel_server = subprocess.Popen(
         ["python", "scripts/disk_channel_server.py", "--port", str(port)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # stdout=subprocess.DEVNULL,
+        # stderr=subprocess.DEVNULL,
     )
 
     # openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
@@ -59,8 +59,8 @@ def main():
 
     run = subprocess.Popen(
         run_cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # stdout=subprocess.DEVNULL,
+        # stderr=subprocess.DEVNULL,
         cwd=openevolve_dir,
     )
 

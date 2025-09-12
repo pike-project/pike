@@ -37,4 +37,4 @@ mkdir -p $WORKER_IO_DIR
 # }
 # trap cleanup EXIT
 
-srun -A ac_binocular -t 24:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:4 --cpus-per-task=112 --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif_path $IMAGE_PATH --worker_io_dir $WORKER_IO_DIR --arch Hopper
+srun -A ac_binocular -t 1:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:1 --cpus-per-task=64 --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif_path $IMAGE_PATH --worker_io_dir $WORKER_IO_DIR --arch Hopper

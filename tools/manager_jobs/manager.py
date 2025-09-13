@@ -16,29 +16,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # - kill disk_channel_server
 # - send close message to the eval worker to end the H100 job (should we kill the slurm job instead?)
 
-def main():
-    port = 8000
-
-    disk_channel_server = subprocess.Popen(
-        ["python", "scripts/disk_channel_server.py", "--port", str(port)],
-        # stdout=subprocess.DEVNULL,
-        # stderr=subprocess.DEVNULL,
-    )
-
-    # openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
-    openevolve_dir = Path("/global/scratch/users/knagaitsev/openevolve")
-
-    example_dir = openevolve_dir / "examples/kernelbench"
-
-    timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    run_dir = example_dir / "openevolve_output_runs" / timestamp_str
+def start_range(openevolve_dir, run_dir, root_dir, port, level, task_start, task_end):
     os.makedirs(run_dir, exist_ok=True)
-
-    root_dir = (curr_dir / "../..").resolve()
-
-    level = "3-metr"
-    task_start = 1
-    task_end = 1
 
     run_cmd = [
         "python",
@@ -64,7 +43,35 @@ def main():
         cwd=openevolve_dir,
     )
 
-    run.wait()
+def main():
+    port = 8000
+
+    disk_channel_server = subprocess.Popen(
+        ["python", "scripts/disk_channel_server.py", "--port", str(port)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    # openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
+    openevolve_dir = Path("/global/scratch/users/knagaitsev/openevolve")
+
+    example_dir = openevolve_dir / "examples/kernelbench"
+
+    timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    run_dir = example_dir / "openevolve_output_runs" / timestamp_str
+    os.makedirs(run_dir, exist_ok=True)
+
+    root_dir = (curr_dir / "../..").resolve()
+
+    level = "3-metr"
+
+    runs = [
+        start_range(openevolve_dir, run_dir / "run1", root_dir, port, level, 1, 25),
+        start_range(openevolve_dir, run_dir / "run2", root_dir, port, level, 26, 50)
+    ]
+
+    for run in runs:
+        run.wait()
 
     requests.get(f"http://localhost:{port}/close")
 

@@ -43,6 +43,8 @@ def start_range(openevolve_dir, run_dir, root_dir, port, level, task_start, task
         cwd=openevolve_dir,
     )
 
+    return run
+
 def main():
     port = 8000
 

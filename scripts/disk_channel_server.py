@@ -100,7 +100,7 @@ class CustomHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(data_str.encode())
-        elif path == "close":
+        elif path == "/close":
             fut = asyncio.run_coroutine_threadsafe(
                 manager.close(), self.loop
             )

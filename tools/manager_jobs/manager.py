@@ -68,8 +68,8 @@ def main():
     level = "3-metr"
 
     runs = [
-        start_range(openevolve_dir, run_dir / "run1", root_dir, port, level, 1, 25),
-        start_range(openevolve_dir, run_dir / "run2", root_dir, port, level, 26, 50)
+        start_range(openevolve_dir, run_dir, root_dir, port, level, 1, 25),
+        start_range(openevolve_dir, run_dir, root_dir, port, level, 26, 50)
     ]
 
     for run in runs:

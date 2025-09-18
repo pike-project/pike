@@ -8,8 +8,8 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-# included_files = {"eager", "ours_openevolve", "orig"}
-included_files = {"eager", "ours_openevolve", "metr"}
+included_files = {"eager", "ours_openevolve", "orig"}
+# included_files = {"eager", "ours_openevolve", "metr"}
 # included_files = {"eager", "ours_openevolve", "compile", "tensorrt"}
 
 # --- Load all runtimes ---
@@ -30,11 +30,13 @@ if eager_key is None:
     raise ValueError("Missing baseline 'Eager.json' in data_dir")
 eager_runtimes = all_methods[eager_key]
 
-# --- Determine tasks from "ours (OpenEvolve)" ---
-openevolve_key = next((k for k in all_methods if k.lower() == "ours (openevolve)"), None)
-if openevolve_key is None:
+# --- Determine tasks from our primary sorting key ---
+# primary_str_match = "ours (openevolve)"
+primary_str_match = "ours (prev. agent-based)"
+primary_key = next((k for k in all_methods if k.lower() == primary_str_match), None)
+if primary_key is None:
     raise ValueError("Missing 'ours (OpenEvolve)' method in data_dir")
-included_tasks = list(all_methods[openevolve_key].keys())
+included_tasks = list(all_methods[primary_key].keys())
 
 # --- Compute speedups ---
 methods_speedups = {title: [] for title in all_methods if title != eager_key}
@@ -71,7 +73,7 @@ for filename in os.listdir(level_dir):
 labels = [task_labels_map.get(t, str(t)) for t in included_tasks]
 
 # --- Sort tasks by "ours (OpenEvolve)" ascending ---
-sort_indices = np.argsort(methods_speedups[openevolve_key])  # ascending
+sort_indices = np.argsort(methods_speedups[primary_key])  # ascending
 included_tasks = [included_tasks[i] for i in sort_indices]
 labels_sorted = [labels[i] for i in sort_indices]
 methods_speedups = {k: [v[i] for i in sort_indices] for k, v in methods_speedups.items()}
@@ -84,7 +86,7 @@ for name, values in methods_speedups.items():
     geomeans[name] = np.exp(np.mean(np.log(arr)))
 
 # --- Plotting ---
-plot_mode = "bar"  # choose "line" or "bar"
+plot_mode = "line"  # choose "line" or "bar"
 
 x = np.arange(len(included_tasks))
 fig, ax = plt.subplots(figsize=(12, 5.5))

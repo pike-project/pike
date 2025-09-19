@@ -8,7 +8,7 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-included_files = ["eager", "oe_agents", "compile", "metr"]
+included_files = ["eager", "oe_agents", "compile", "metr", "tensorrt"]
 # included_files = ["eager", "ours_openevolve", "orig"]
 # included_files = ["eager", "ours_openevolve", "metr"]
 # included_files = ["eager", "ours_openevolve", "compile", "tensorrt"]
@@ -77,7 +77,8 @@ for filename in os.listdir(level_dir):
         continue
     task = int(filename.split("_")[0])
     label = filename.split("_")[1].split(".py")[0]
-    task_labels_map[task] = f"{task} ({label})"
+    # task_labels_map[task] = f"{task} ({label})"
+    task_labels_map[task] = label
 
 labels = [task_labels_map.get(t, str(t)) for t in included_tasks]
 
@@ -155,6 +156,13 @@ ordered_cols = [file_to_title_map[f] for f in included_files if f != "eager" and
 df = pd.DataFrame({name: methods_speedups[name] for name in ordered_cols}, index=labels_sorted)
 df.reset_index(inplace=True)
 df.rename(columns={"index": "Task"}, inplace=True)
+
+# Append geomean row
+# geo_row = {"Task": "Geomean"}
+# for k in ordered_cols:
+#     geo_row[k] = geomeans[k]
+# df = pd.concat([df, pd.DataFrame([geo_row])], ignore_index=True)
+
 csv_path = curr_dir / "data/speedups_table.csv"
 df.to_csv(csv_path, index=False)
 

@@ -8,14 +8,21 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-included_files = {"eager", "ours_openevolve", "orig"}
-# included_files = {"eager", "ours_openevolve", "metr"}
-# included_files = {"eager", "ours_openevolve", "compile", "tensorrt"}
+included_files = ["eager", "oe_agents", "compile", "metr"]
+# included_files = ["eager", "ours_openevolve", "orig"]
+# included_files = ["eager", "ours_openevolve", "metr"]
+# included_files = ["eager", "ours_openevolve", "compile", "tensorrt"]
+
+primary_str_match = "ours (oe, agents)"
+# primary_str_match = "ours (openevolve)"
+# primary_str_match = "ours (prev. agent-based)"
 
 # --- Load all runtimes ---
 all_methods = {}
+file_to_title_map = {}
+
 for file in data_dir.glob("*.json"):
-    if file.name.split(".json")[0] not in included_files:
+    if file.stem not in included_files:
         continue
 
     with open(file) as f:
@@ -24,18 +31,20 @@ for file in data_dir.glob("*.json"):
     results = {entry["problem_id"]: entry["runtime"] for entry in data["results"]}
     all_methods[title] = results
 
-# Find eager baseline (case-insensitive)
-eager_key = next((k for k in all_methods if k.lower() == "eager"), None)
-if eager_key is None:
+    # Build map dynamically
+    file_to_title_map[file.stem] = title
+
+# Find eager baseline
+eager_title = file_to_title_map.get("eager", None)
+if eager_title is None:
     raise ValueError("Missing baseline 'Eager.json' in data_dir")
+eager_key = next((k for k in all_methods if k.lower() == eager_title.lower()), None)
 eager_runtimes = all_methods[eager_key]
 
 # --- Determine tasks from our primary sorting key ---
-# primary_str_match = "ours (openevolve)"
-primary_str_match = "ours (prev. agent-based)"
 primary_key = next((k for k in all_methods if k.lower() == primary_str_match), None)
 if primary_key is None:
-    raise ValueError("Missing 'ours (OpenEvolve)' method in data_dir")
+    raise ValueError("Missing primary key method in data_dir")
 included_tasks = list(all_methods[primary_key].keys())
 
 # --- Compute speedups ---
@@ -72,7 +81,7 @@ for filename in os.listdir(level_dir):
 
 labels = [task_labels_map.get(t, str(t)) for t in included_tasks]
 
-# --- Sort tasks by "ours (OpenEvolve)" ascending ---
+# --- Sort tasks by primary key ascending ---
 sort_indices = np.argsort(methods_speedups[primary_key])  # ascending
 included_tasks = [included_tasks[i] for i in sort_indices]
 labels_sorted = [labels[i] for i in sort_indices]
@@ -86,13 +95,22 @@ for name, values in methods_speedups.items():
     geomeans[name] = np.exp(np.mean(np.log(arr)))
 
 # --- Plotting ---
-plot_mode = "line"  # choose "line" or "bar"
-
+plot_mode = "bar"  # choose "line" or "bar"
 x = np.arange(len(included_tasks))
 fig, ax = plt.subplots(figsize=(12, 5.5))
 
+# Enforce plotting order using included_files → titles
+plot_order = []
+for f in included_files:
+    if f == "eager":  # skip baseline
+        continue
+    title = file_to_title_map.get(f, None)
+    if title and title in methods_speedups:
+        plot_order.append(title)
+
 if plot_mode == "line":
-    for name, values in methods_speedups.items():
+    for name in plot_order:
+        values = methods_speedups[name]
         ax.plot(
             x,
             values,
@@ -100,13 +118,12 @@ if plot_mode == "line":
             linewidth=2,
         )
 elif plot_mode == "bar":
-    n_methods = len(methods_speedups)
+    n_methods = len(plot_order)
     width = 0.8 / n_methods  # total width of the group is 0.8
-    method_names = list(methods_speedups.keys())
-    
-    for i, name in enumerate(method_names):
+
+    for i, name in enumerate(plot_order):
         values = methods_speedups[name]
-        offsets = x - 0.4 + i * width + width/2  # center the group around x
+        offsets = x - 0.4 + i * width + width / 2  # center the group around x
         ax.bar(
             offsets,
             values,
@@ -123,9 +140,8 @@ plt.title("Level 3-metr Speedup Over PyTorch Eager (H100)")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
 plt.ylabel("Speedup")
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
-plt.subplots_adjust(bottom=0.5)
+plt.subplots_adjust(bottom=0.38)
 ax.legend(loc='upper left', fontsize=10)
-
 plt.yscale("log")
 
 # --- Save plot ---
@@ -134,13 +150,15 @@ os.makedirs(figs_dir, exist_ok=True)
 fig.savefig(figs_dir / f"individual_breakdown_{plot_mode}.pdf")
 
 # --- Save CSV ---
-df = pd.DataFrame(methods_speedups, index=labels_sorted)
+# Enforce CSV columns order the same as included_files
+ordered_cols = [file_to_title_map[f] for f in included_files if f != "eager" and f in file_to_title_map]
+df = pd.DataFrame({name: methods_speedups[name] for name in ordered_cols}, index=labels_sorted)
 df.reset_index(inplace=True)
 df.rename(columns={"index": "Task"}, inplace=True)
 csv_path = curr_dir / "data/speedups_table.csv"
 df.to_csv(csv_path, index=False)
 
 print("Geomean speedups:")
-for k, v in geomeans.items():
-    print(f"{k}: {v:.3f}")
+for k in ordered_cols:
+    print(f"{k}: {geomeans[k]:.3f}")
 print(f"CSV saved to: {csv_path}")

@@ -1,18 +1,21 @@
 import os
 import json
+import shutil
 from pathlib import Path
 from scipy.stats import gmean
 
 # Root directory
 root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
-
 target_attempt = 300  # change as needed
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
+sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_pop_25_agents_300/best_solutions").resolve()
+
 
 with open(eager_path) as f:
     eager_runtimes = json.load(f)
+
 
 def get_runtime(data, task_number: int):
     """Return eager runtime for given integer task id."""
@@ -21,6 +24,7 @@ def get_runtime(data, task_number: int):
             return v["runtime"]
     return None
 
+
 def numeric_suffix(name: str, prefix: str) -> int:
     """Extract integer suffix from names like 'task12', 'iter_34', 'attempt_5'."""
     try:
@@ -28,17 +32,19 @@ def numeric_suffix(name: str, prefix: str) -> int:
     except ValueError:
         return -1
 
+
 def best_runtime_until_attempt(task_path, target_attempt):
     """
     Walk attempts in sorted numeric order, track the best runtime seen so far.
-    Stop at target_attempt and return the best runtime.
+    Stop at target_attempt and return the best runtime and corresponding code.py path.
     """
     iter_output_dir = os.path.join(task_path, "output", "iter_output")
     if not os.path.exists(iter_output_dir):
-        return None
+        return None, None
 
     cumulative = 0
     best_runtime = float("inf")
+    best_code_path = None
 
     # collect and sort iterations
     iter_names = [
@@ -64,6 +70,7 @@ def best_runtime_until_attempt(task_path, target_attempt):
             cumulative += 1
             attempt_path = os.path.join(attempts_dir, attempt_name)
             metrics_file = os.path.join(attempt_path, "metrics_artifacts.json")
+            code_file = os.path.join(attempt_path, "code.py")
 
             if os.path.exists(metrics_file):
                 try:
@@ -72,17 +79,24 @@ def best_runtime_until_attempt(task_path, target_attempt):
                     runtime = metrics_data.get("metrics", {}).get("runtime")
                     if runtime is not None and runtime < best_runtime:
                         best_runtime = runtime
+                        if os.path.exists(code_file):
+                            best_code_path = code_file
                 except Exception:
                     # ignore malformed json
                     pass
 
             if cumulative == target_attempt:
-                return best_runtime if best_runtime != float("inf") else None
+                return (best_runtime if best_runtime != float("inf") else None,
+                        best_code_path)
 
-    return None
+    return (None if best_runtime == float("inf") else best_runtime,
+            best_code_path)
 
 
 if __name__ == "__main__":
+    # ensure destination exists
+    sol_dest_dir.mkdir(parents=True, exist_ok=True)
+
     # collect tasks sorted numerically
     task_names = [
         d for d in os.listdir(root_dir)
@@ -95,13 +109,19 @@ if __name__ == "__main__":
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")  # int
         task_path = os.path.join(root_dir, task_name)
-        best = best_runtime_until_attempt(task_path, target_attempt)
+        best, best_code_path = best_runtime_until_attempt(task_path, target_attempt)
         eager = get_runtime(eager_runtimes, task_number)
 
         if best is not None and eager is not None and best > 0:
             speedup = eager / best
             speedups.append(speedup)
             print(f"{task_name} (id={task_number}): eager={eager}, best={best}, speedup={speedup:.3f}")
+
+            # save best code
+            if best_code_path:
+                dest_file = sol_dest_dir / f"task_{task_number}.py"
+                shutil.copy(best_code_path, dest_file)
+
         else:
             print(f"{task_name} (id={task_number}): missing data")
 

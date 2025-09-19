@@ -1,17 +1,32 @@
 import os
 import json
+from pathlib import Path
+from scipy.stats import gmean
 
 # Root directory
 root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
 
 target_attempt = 300  # change as needed
 
+curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
+
+with open(eager_path) as f:
+    eager_runtimes = json.load(f)
+
+def get_runtime(data, task_number: int):
+    """Return eager runtime for given integer task id."""
+    for v in data["results"]:
+        if v["problem_id"] == task_number:
+            return v["runtime"]
+    return None
+
 def numeric_suffix(name: str, prefix: str) -> int:
     """Extract integer suffix from names like 'task12', 'iter_34', 'attempt_5'."""
     try:
         return int(name.replace(prefix, ""))
     except ValueError:
-        return -1  # for safety
+        return -1
 
 def best_runtime_until_attempt(task_path, target_attempt):
     """
@@ -25,13 +40,11 @@ def best_runtime_until_attempt(task_path, target_attempt):
     cumulative = 0
     best_runtime = float("inf")
 
-    # collect iterations
-    iter_names = []
-    for d in os.listdir(iter_output_dir):
-        if os.path.isdir(os.path.join(iter_output_dir, d)) and d.startswith("iter_"):
-            iter_names.append(d)
-
-    # sort numerically by iter number
+    # collect and sort iterations
+    iter_names = [
+        d for d in os.listdir(iter_output_dir)
+        if os.path.isdir(os.path.join(iter_output_dir, d)) and d.startswith("iter_")
+    ]
     iter_names.sort(key=lambda x: numeric_suffix(x, "iter_"))
 
     for iter_name in iter_names:
@@ -40,13 +53,11 @@ def best_runtime_until_attempt(task_path, target_attempt):
         if not os.path.exists(attempts_dir):
             continue
 
-        # collect attempts
-        attempt_names = []
-        for d in os.listdir(attempts_dir):
-            if os.path.isdir(os.path.join(attempts_dir, d)) and d.startswith("attempt_"):
-                attempt_names.append(d)
-
-        # sort numerically by attempt number
+        # collect and sort attempts
+        attempt_names = [
+            d for d in os.listdir(attempts_dir)
+            if os.path.isdir(os.path.join(attempts_dir, d)) and d.startswith("attempt_")
+        ]
         attempt_names.sort(key=lambda x: numeric_suffix(x, "attempt_"))
 
         for attempt_name in attempt_names:
@@ -62,7 +73,7 @@ def best_runtime_until_attempt(task_path, target_attempt):
                     if runtime is not None and runtime < best_runtime:
                         best_runtime = runtime
                 except Exception:
-                    # ignore malformed json, keep current best_runtime
+                    # ignore malformed json
                     pass
 
             if cumulative == target_attempt:
@@ -72,25 +83,30 @@ def best_runtime_until_attempt(task_path, target_attempt):
 
 
 if __name__ == "__main__":
-    # collect tasks
-    task_names = []
-    for d in os.listdir(root_dir):
-        task_path = os.path.join(root_dir, d)
-        if os.path.isdir(task_path) and d.startswith("task"):
-            task_names.append(d)
-
-    # sort numerically by task number
+    # collect tasks sorted numerically
+    task_names = [
+        d for d in os.listdir(root_dir)
+        if os.path.isdir(os.path.join(root_dir, d)) and d.startswith("task")
+    ]
     task_names.sort(key=lambda x: numeric_suffix(x, "task"))
 
-    results = {}
-    for task_name in task_names:
-        task_path = os.path.join(root_dir, task_name)
-        results[task_name] = best_runtime_until_attempt(task_path, target_attempt)
+    speedups = []
 
-    # print in numeric task order
     for task_name in task_names:
-        best = results[task_name]
-        if best is not None:
-            print(f"{task_name}: best runtime until attempt {target_attempt} = {best}")
+        task_number = numeric_suffix(task_name, "task")  # int
+        task_path = os.path.join(root_dir, task_name)
+        best = best_runtime_until_attempt(task_path, target_attempt)
+        eager = get_runtime(eager_runtimes, task_number)
+
+        if best is not None and eager is not None and best > 0:
+            speedup = eager / best
+            speedups.append(speedup)
+            print(f"{task_name} (id={task_number}): eager={eager}, best={best}, speedup={speedup:.3f}")
         else:
-            print(f"{task_name}: target attempt {target_attempt} not found")
+            print(f"{task_name} (id={task_number}): missing data")
+
+    if speedups:
+        geo_mean = gmean(speedups)
+        print(f"\nGeometric mean speedup across {len(speedups)} tasks = {geo_mean:.3f}")
+    else:
+        print("No valid speedups computed.")

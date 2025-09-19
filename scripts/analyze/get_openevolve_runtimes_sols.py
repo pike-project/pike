@@ -6,9 +6,16 @@ from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_0")
+# trial 0 -> prev prompts
+# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_0")
+# trial 1 -> new prompts, everything past this point has new prompts with OpenEvolve
+# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_1")
+run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_2/tasks")
+# trial 3 -> with error fixing agents, but fewer than 300 attempts for some tasks
+# trial 4 -> all 300 attempts (need to fetch solutions differently)
+# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks")
 
-sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_no_agents_300/best_solutions").resolve()
+sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_pop_10_no_agents_300/best_solutions").resolve()
 os.makedirs(sol_dest_dir, exist_ok=True)
 
 tasks = []
@@ -100,7 +107,7 @@ out = {
     "results": results,
 }
 
-output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/ours_openevolve.json").resolve()
+# output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/ours_openevolve.json").resolve()
 
-with open(output_path, "w") as f:
-    json.dump(out, f, indent=4)
+# with open(output_path, "w") as f:
+#     json.dump(out, f, indent=4)

@@ -1,8 +1,8 @@
 import os
 from collections import defaultdict
 
-# Updated root directory
-root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_3/tasks"
+# Root directory
+root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
 
 iter_attempt_counts = defaultdict(list)
 
@@ -13,9 +13,7 @@ iters_with_gt1_attempt = 0
 
 for task_name in os.listdir(root_dir):
     task_path = os.path.join(root_dir, task_name)
-    if not os.path.isdir(task_path):
-        continue
-    if not task_name.startswith("task"):
+    if not os.path.isdir(task_path) or not task_name.startswith("task"):
         continue
 
     iter_output_dir = os.path.join(task_path, "output", "iter_output")
@@ -24,9 +22,7 @@ for task_name in os.listdir(root_dir):
 
     for iter_name in os.listdir(iter_output_dir):
         iter_path = os.path.join(iter_output_dir, iter_name)
-        if not os.path.isdir(iter_path):
-            continue
-        if not iter_name.startswith("iter_"):
+        if not os.path.isdir(iter_path) or not iter_name.startswith("iter_"):
             continue
 
         attempts_dir = os.path.join(iter_path, "attempts")
@@ -51,16 +47,23 @@ global_avg = total_attempts / total_iters if total_iters > 0 else 0
 global_pct_6 = (iters_with_6_attempts / total_iters * 100) if total_iters > 0 else 0
 global_pct_gt1 = (iters_with_gt1_attempt / total_iters * 100) if total_iters > 0 else 0
 
-# Per-task averages + percentages
+# Per-task totals and averages
 per_task_stats = {}
+task_total_attempts_list = []  # store total attempts per task for mean across tasks
 for task, counts in iter_attempt_counts.items():
+    task_total_attempts = sum(counts)
+    task_total_attempts_list.append(task_total_attempts)
+
     if counts:
         avg = sum(counts) / len(counts)
         pct_6 = sum(c == 6 for c in counts) / len(counts) * 100
         pct_gt1 = sum(c > 1 for c in counts) / len(counts) * 100
     else:
         avg, pct_6, pct_gt1 = 0, 0, 0
-    per_task_stats[task] = (avg, pct_6, pct_gt1)
+    per_task_stats[task] = (avg, pct_6, pct_gt1, task_total_attempts)
+
+# Mean total attempts across all tasks
+mean_attempts_across_tasks = sum(task_total_attempts_list) / len(task_total_attempts_list) if task_total_attempts_list else 0
 
 # Sort by task number
 sorted_tasks = sorted(per_task_stats.items(), key=lambda x: int(x[0].split("task")[1]))
@@ -68,6 +71,7 @@ sorted_tasks = sorted(per_task_stats.items(), key=lambda x: int(x[0].split("task
 print("Global average attempts per iter:", global_avg)
 print(f"Global % of iters with 6 attempts: {global_pct_6:.2f}%")
 print(f"Global % of iters requiring >1 attempt: {global_pct_gt1:.2f}%")
+print(f"Mean total attempts across all tasks: {mean_attempts_across_tasks:.2f}")
 print("\nPer-task stats (sorted):")
-for task, (avg, pct_6, pct_gt1) in sorted_tasks:
-    print(f"  {task}: avg={avg:.2f}, % with 6 attempts={pct_6:.2f}%, % requiring >1 attempt={pct_gt1:.2f}%")
+for task, (avg, pct_6, pct_gt1, total_attempts_task) in sorted_tasks:
+    print(f"  {task}: avg={avg:.2f}, % with 6 attempts={pct_6:.2f}%, % requiring >1 attempt={pct_gt1:.2f}%, total_attempts={total_attempts_task}")

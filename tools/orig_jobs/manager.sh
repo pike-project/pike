@@ -6,4 +6,4 @@ srun --account=ac_binocular \
     --qos=lr8_normal \
     --time=72:0:0 \
     --pty \
-    python -u tools/manager_jobs/manager.py
+    ./tools/orig_jobs/run.sh

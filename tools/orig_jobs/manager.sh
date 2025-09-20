@@ -6,4 +6,4 @@ srun --account=ac_binocular \
     --qos=lr8_normal \
     --time=72:0:0 \
     --pty \
-    ./tools/orig_jobs/run.sh
+    /bin/bash tools/orig_jobs/run.sh

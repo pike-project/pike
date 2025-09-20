@@ -22,7 +22,10 @@ def simple_branching_strategy(sorted_solutions, num_samples, problem_code, num_b
             "runtime": None,
         }]
     
-    # should we create a next round based on just 1-2 solutions, if there are only that many
+    # we will create a next round based on just 1-2 solutions, if there are only that many
+    # this just means all the solutions get split evenly across the number of desired samples
+    # so if num_branches > 2 and num_samples=10, but there are only 2 solutions, then we will end up with
+    # those 2 solutions being split as 5 and 5
     if len(sorted_solutions) < num_branches:
         num_branches = len(sorted_solutions)
 

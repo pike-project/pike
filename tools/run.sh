@@ -2,15 +2,15 @@ set -ex
 
 LEVEL=3-metr
 # inclusive range
-TASK_START=26
-TASK_END=50
+TASK_START=1
+TASK_END=2
 
 NUM_SAMPLES=10
 NUM_PHASES=10
 MAX_FIX_ATTEMPTS=5
 
 # True or False
-DRY_RUN=False
+DRY_RUN=True
 
 SERVER_TYPE=google
 MODEL_NAME=gemini-2.5-pro
@@ -42,4 +42,4 @@ python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode eager --
 # IMPORTANT: the last eval_solutions call has the --close_worker flag to ensure the worker is closed on completion
 python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode compile --output_name baseline_compile --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG --close_worker | tee -a $LOG_PATH
 
-python -u scripts/analyze/plot_phase_perf_improvement.py --run_dir $RUN_DIR | tee -a $LOG_PATH
+# python -u scripts/analyze/plot_phase_perf_improvement.py --run_dir $RUN_DIR | tee -a $LOG_PATH

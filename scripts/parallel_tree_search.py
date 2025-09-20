@@ -387,10 +387,10 @@ class ParallelTreeSearch:
                         "stderr": "this is dry_run stderr",
                         "timed_out": False,
                         "eval_results": {
-                            "loaded": True,
-                            "correct": True,
-                            "runtime": random.random() * 10,
-                            "max_diff": [0.0001],
+                            "loaded": False,
+                            # "correct": True,
+                            # "runtime": random.random() * 10,
+                            # "max_diff": [0.0001],
                         }
                     }
                 })
@@ -491,9 +491,9 @@ class ParallelTreeSearch:
         print(f"CORRECT: {correct_count}, INCORRECT: {incorrect_count}, ERROR: {error_count}")
         print("------------------------------------------------\n")
 
-        if self.curr_phase == 0 and self.curr_step == 1 and correct_count == 0:
-            print("\n\nSOMETHING IS LIKELY WRONG: exiting early as a safeguard\n\n")
-            exit()
+        # if self.curr_phase == 0 and self.curr_step == 1 and correct_count == 0:
+        #     print("\n\nSOMETHING IS LIKELY WRONG: exiting early as a safeguard\n\n")
+        #     exit()
 
         self.curr_step += 1
 
@@ -557,6 +557,22 @@ class ParallelTreeSearch:
 
             all_sols = sorted(best_problem_solutions, key=lambda x: x["runtime"])
             all_sols += sorted(remaining_solutions, key=lambda x: x["runtime"])
+
+            if len(all_sols) == 0:
+                print(f"WARNING: all_sols length is 0 for task {problem_id}, ground truth solution will be used")
+
+            problem_code = self.get_problem_code(problem_id)
+            ground_truth_solution = {
+                "state": EvalState.CORRECT,
+                "code": problem_code,
+                "sample_id": 0,
+                "problem_id": problem_id,
+                "branch": 0,
+                "phase": self.curr_phase,
+                "runtime": float("inf"),
+                "max_diff": 0.0,
+            }
+            all_sols.append(ground_truth_solution)
 
             best_solutions[problem_id] = all_sols
         

@@ -8,12 +8,12 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-included_files = ["eager", "oe_agents", "compile", "metr", "tensorrt"]
+included_files = ["eager", "oe_agents", "compile"]
 # included_files = ["eager", "ours_openevolve", "orig"]
 # included_files = ["eager", "ours_openevolve", "metr"]
 # included_files = ["eager", "ours_openevolve", "compile", "tensorrt"]
 
-primary_str_match = "ours (oe, agents)"
+primary_str_match = "ours (openevolve, agents)"
 # primary_str_match = "ours (openevolve)"
 # primary_str_match = "ours (prev. agent-based)"
 
@@ -140,8 +140,9 @@ ax.set_xticklabels(labels_sorted, rotation=45, ha="right")
 plt.title("Level 3-metr Speedup Over PyTorch Eager (H100)")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.3)
 plt.ylabel("Speedup")
+
 plt.axhline(y=1, color='gray', linestyle='--', linewidth=1)
-plt.subplots_adjust(bottom=0.38)
+plt.subplots_adjust(left=0.05, right=0.95, bottom=0.3, top=0.95)
 ax.legend(loc='upper left', fontsize=10)
 plt.yscale("log")
 
@@ -163,7 +164,7 @@ df.rename(columns={"index": "Task"}, inplace=True)
 #     geo_row[k] = geomeans[k]
 # df = pd.concat([df, pd.DataFrame([geo_row])], ignore_index=True)
 
-csv_path = curr_dir / "data/speedups_table.csv"
+csv_path = curr_dir / "data/speedups_table_2.csv"
 df.to_csv(csv_path, index=False)
 
 print("Geomean speedups:")

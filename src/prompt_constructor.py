@@ -14,8 +14,9 @@ Your objective is to generate a list of diverse tasks which the performance engi
 You have complete freedom to choose the set of operators that may be replaced in the given architecture. You may make the decision to replace some operators with custom CUDA kernels and leave others unchanged. You may tell performance engineers to replace multiple operators with custom implementations, consider operator fusion opportunities (combining multiple operators into a single kernel, for example, combining matmul+relu), or algorithmic changes (such as online softmax).\n
 """
 
-PROBLEM_STATEMENT = """You write custom CUDA kernels to replace the pytorch operators in the given architecture to get speedups.\n
-You have complete freedom to choose the set of operators you want to replace. You may make the decision to replace some operators with custom CUDA kernels and leave others unchanged. You may replace multiple operators with custom implementations, consider operator fusion opportunities (combining multiple operators into a single kernel, for example, combining matmul+relu), or algorithmic changes (such as online softmax).\n
+PROBLEM_STATEMENT = """You write custom kernels to replace the pytorch operators in the given architecture to get speedups.\n
+You have complete freedom to choose the set of operators you want to replace. You may make the decision to replace some operators with custom CUDA or Triton kernels and leave others unchanged.
+You may replace multiple operators with custom implementations, consider operator fusion opportunities (combining multiple operators into a single kernel, for example, combining matmul+relu), replace operators with other built-in pytorch functions, or make algorithmic changes (such as online softmax).\n
 """
 
 INIT_INSTRUCTION = """

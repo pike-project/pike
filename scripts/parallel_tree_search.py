@@ -181,6 +181,9 @@ class ParallelTreeSearch:
         self.phase_solutions_by_branch = {}
         self.phase_solutions = {}
 
+        self.query_budget = 300
+        self.budget_used = {}
+
         self.curr_phase = 0
         self.curr_step = 0
 
@@ -230,6 +233,17 @@ class ParallelTreeSearch:
             await self.disk_channel.send({
                 "type": "close"
             })
+
+    def inc_budget(self, problem_id, count):
+        if problem_id in self.budget_used:
+            if self.budget_used[problem_id] >= self.query_budget:
+                return False
+
+            self.budget_used[problem_id] += count
+        else:
+            self.budget_used[problem_id] = count
+        
+        return True
 
     def get_problem_code(self, problem_id):
         ref_arch_src = read_file(self.problem_id_to_path[problem_id])
@@ -380,20 +394,35 @@ class ParallelTreeSearch:
         if self.config.dry_run:
             all_results = []
             for s in samples:
-                all_results.append({
-                    "sample_id": s["sample_id"],
-                    "results": {
-                        "stdout": "this is dry_run stdout",
-                        "stderr": "this is dry_run stderr",
-                        "timed_out": False,
-                        "eval_results": {
-                            "loaded": False,
-                            # "correct": True,
-                            # "runtime": random.random() * 10,
-                            # "max_diff": [0.0001],
+                if random.random() < 0.5:
+                    all_results.append({
+                        "sample_id": s["sample_id"],
+                        "results": {
+                            "stdout": "this is dry_run stdout",
+                            "stderr": "this is dry_run stderr",
+                            "timed_out": False,
+                            "eval_results": {
+                                "correct": True,
+                                "runtime": random.random() * 10,
+                                "max_diff": [0.0001],
+                            }
                         }
-                    }
-                })
+                    })
+                else:
+                    all_results.append({
+                        "sample_id": s["sample_id"],
+                        "results": {
+                            "stdout": "this is dry_run stdout",
+                            "stderr": "this is dry_run stderr",
+                            "timed_out": False,
+                            "eval_results": {
+                                "loaded": False,
+                                # "correct": True,
+                                # "runtime": random.random() * 10,
+                                # "max_diff": [0.0001],
+                            }
+                        }
+                    })
         else:
             all_results = asyncio.run(self.eval_samples(samples))
 
@@ -614,11 +643,17 @@ class ParallelTreeSearch:
             problem_code = self.get_problem_code(problem_id)
 
             if state == EvalState.INCORRECT:
+                if not self.inc_budget(problem_id, 1):
+                    continue
+
                 code = sample_data["code"]
                 max_diff = sample_data["max_diff"]
                 query = prompt.prompt_fix_correctness(problem_code, code, max_diff)
                 queries.append(Query(problem_id=problem_id, sample_id=sample_id, branch=branch, query=query))
             elif state == EvalState.ERROR:
+                if not self.inc_budget(problem_id, 1):
+                    continue
+
                 code = sample_data["code"]
                 results = sample_data["results"]
                 query = prompt.prompt_fix_compile_stdout_stderr(problem_code, code, results)
@@ -697,6 +732,9 @@ class ParallelTreeSearch:
         sols_by_problem = self.gather_best_solutions_by_branch()
 
         for problem_id, solutions in sols_by_problem.items():
+            if not self.inc_budget(problem_id, num_samples):
+                continue
+
             sorted_sols = sorted(solutions, key=lambda x: x["runtime"])
 
             problem_code = self.get_problem_code(problem_id)
@@ -753,6 +791,10 @@ class ParallelTreeSearch:
             else:
                 # use the saved solutions to build queries for the next phase (branching in the parallel tree search)
                 queries = self.get_next_queries()
+
+            if len(queries) == 0:
+                print(f"All tasks have reached max budget, exiting")
+                break
 
             # IMPORTANT: clear this right after the call to get_next_queries, since these phase solutions
             # may be used to seed the following set of queries

@@ -1,12 +1,12 @@
 set -ex
 
-LEVEL=0
+LEVEL=3-metr
 # inclusive range
 TASK_START=1
-TASK_END=5
+TASK_END=50
 
 NUM_SAMPLES=10
-NUM_PHASES=10
+NUM_PHASES=30
 MAX_FIX_ATTEMPTS=5
 
 # True or False

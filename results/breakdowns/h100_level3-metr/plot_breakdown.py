@@ -8,12 +8,19 @@ import json
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 data_dir = (curr_dir / "data/runtimes").resolve()
 
-included_files = ["eager", "oe_agents", "compile"]
+output_label = "prev"
+plot_mode = "line"  # choose "line" or "bar"
+
+included_files = ["eager", "prev_agents", "compile"]
+# included_files = ["eager", "oe_agents", "compile"]
+
 # included_files = ["eager", "ours_openevolve", "orig"]
 # included_files = ["eager", "ours_openevolve", "metr"]
 # included_files = ["eager", "ours_openevolve", "compile", "tensorrt"]
 
-primary_str_match = "ours (oe, agents)"
+primary_str_match = "ours (prev, agents)"
+# primary_str_match = "ours (oe, agents)"
+
 # primary_str_match = "ours (openevolve)"
 # primary_str_match = "ours (prev. agent-based)"
 
@@ -96,7 +103,6 @@ for name, values in methods_speedups.items():
     geomeans[name] = np.exp(np.mean(np.log(arr)))
 
 # --- Plotting ---
-plot_mode = "line"  # choose "line" or "bar"
 x = np.arange(len(included_tasks))
 fig, ax = plt.subplots(figsize=(12, 5.5))
 
@@ -149,7 +155,7 @@ plt.yscale("log")
 # --- Save plot ---
 figs_dir = (curr_dir / "figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
-fig.savefig(figs_dir / f"individual_breakdown_{plot_mode}.pdf")
+fig.savefig(figs_dir / f"{output_label}_{plot_mode}.pdf")
 
 # --- Save CSV ---
 # Enforce CSV columns order the same as included_files
@@ -164,7 +170,16 @@ df.rename(columns={"index": "Task"}, inplace=True)
 #     geo_row[k] = geomeans[k]
 # df = pd.concat([df, pd.DataFrame([geo_row])], ignore_index=True)
 
-csv_path = curr_dir / "data/speedups_table_2.csv"
+tables_dir = curr_dir / "data/tables"
+os.makedirs(tables_dir)
+
+csv_dir = tables_dir / "csv"
+tex_dir = tables_dir / "tex"
+
+os.makedirs(csv_dir)
+os.makedirs(tex_dir)
+
+csv_path = csv_dir / f"{output_label}.csv"
 df.to_csv(csv_path, index=False)
 
 print("Geomean speedups:")

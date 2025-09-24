@@ -221,7 +221,7 @@ if __name__ == "__main__":
 
     # 1. Write JSON in requested format
     output_data = {
-        "title": "Ours (OE, agents)",
+        "title": "Ours (prev, agents)",
         "results": sorted(results, key=lambda x: x["problem_id"])
     }
     with open(output_path, "w") as f:

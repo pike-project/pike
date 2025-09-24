@@ -77,6 +77,23 @@ def start_openevolve(port):
 
     return runs
 
+def start_prev(port):
+    prev_run_dir = (curr_dir / "../orig_jobs/run.sh").resolve()
+
+    run_cmd = [
+        "/bin/bash",
+        str(prev_run_dir),
+        str(port),
+    ]
+
+    run = subprocess.Popen(
+        run_cmd,
+        # stdout=subprocess.DEVNULL,
+        # stderr=subprocess.DEVNULL,
+    )
+
+    return [run]
+
 def main():
     port = 8000
 
@@ -88,7 +105,8 @@ def main():
 
     runs = []
 
-    runs += start_openevolve(port)
+    # runs += start_openevolve(port)
+    runs += start_prev(port)
 
     for run in runs:
         run.wait()

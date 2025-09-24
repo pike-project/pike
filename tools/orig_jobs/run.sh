@@ -1,4 +1,14 @@
+#!/bin/bash
+
 set -ex
+
+if [ -z "$1" ]; then
+    echo "Error: missing argument"
+    echo "Usage: $0 <EVAL_PORT>"
+    exit 1
+fi
+
+EVAL_PORT=$1
 
 LEVEL=3-metr
 # inclusive range
@@ -30,7 +40,7 @@ WORKER_INPUT_DIR=worker_io/input
 WORKER_OUTPUT_DIR=worker_io/output
 
 # "python -u" makes output unbuffered, so we can see it immediately
-python -u scripts/parallel_tree_search.py run_dir=$RUN_DIR server_type=$SERVER_TYPE model_name=$MODEL_NAME num_workers=30 worker_input_dir=$WORKER_INPUT_DIR worker_output_dir=$WORKER_OUTPUT_DIR level=$LEVEL task_start=$TASK_START task_end=$TASK_END num_samples=$NUM_SAMPLES num_phases=$NUM_PHASES max_fix_attempts=$MAX_FIX_ATTEMPTS dry_run=$DRY_RUN | tee -a $LOG_PATH
+python -u scripts/parallel_tree_search.py run_dir=$RUN_DIR server_type=$SERVER_TYPE model_name=$MODEL_NAME num_workers=30 worker_input_dir=$WORKER_INPUT_DIR worker_output_dir=$WORKER_OUTPUT_DIR level=$LEVEL task_start=$TASK_START task_end=$TASK_END num_samples=$NUM_SAMPLES num_phases=$NUM_PHASES max_fix_attempts=$MAX_FIX_ATTEMPTS dry_run=$DRY_RUN eval_port=$EVAL_PORT | tee -a $LOG_PATH
 
 if [ "$DRY_RUN" = "True" ]; then
     DRY_RUN_FLAG="--dry_run"
@@ -38,8 +48,8 @@ else
     DRY_RUN_FLAG=""
 fi
 
-python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode eager --output_name baseline_eager --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG | tee -a $LOG_PATH
+# python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode eager --output_name baseline_eager --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG | tee -a $LOG_PATH
 # IMPORTANT: the last eval_solutions call has the --close_worker flag to ensure the worker is closed on completion
-python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode compile --output_name baseline_compile --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG --close_worker | tee -a $LOG_PATH
+# python -u scripts/solution_eval/eval_solutions.py --level $LEVEL --mode compile --output_name baseline_compile --output_dir $RUN_DIR --worker_input_dir $WORKER_INPUT_DIR --worker_output_dir $WORKER_OUTPUT_DIR $DRY_RUN_FLAG --close_worker | tee -a $LOG_PATH
 
 # python -u scripts/analyze/plot_phase_perf_improvement.py --run_dir $RUN_DIR | tee -a $LOG_PATH

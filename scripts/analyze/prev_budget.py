@@ -3,6 +3,7 @@ import json
 import shutil
 from pathlib import Path
 from scipy.stats import gmean
+import matplotlib.pyplot as plt
 
 target_attempt = 300
 
@@ -14,6 +15,7 @@ root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").res
 eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/prev_agents_300/best_solutions").resolve()
 output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/prev_agents.json").resolve()
+plot_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/figs/convergence/prev_convergence.pdf").resolve()
 
 
 # Blacklist: tuples of (task_number, phase_num, agent_num, step_num)
@@ -58,21 +60,27 @@ def numeric_suffix(name: str, prefix: str) -> int:
         raise Exception(f"Numeric suffix failed: name -> {name}, prefix -> {prefix}")
 
 
-def best_runtime_until_step(task_path, task_number, target_attempt):
+def get_runtime_progress_and_best(task_path, task_number, target_attempt):
     """
     Walk steps in sorted numeric order across all phases/agents,
     track the best runtime seen so far (ignoring blacklisted combos).
-    Stop at target_attempt and return the best runtime, corresponding kernel.py path,
-    and the (phase_num, agent_num, step_num) triple that produced it.
+    Stop at target_attempt.
+
+    Returns:
+        - A list of best-so-far runtimes for each step up to the target.
+        - The final best runtime found within the target attempts.
+        - The path to the kernel.py of the final best runtime.
+        - The (phase_num, agent_num, step_num) triple that produced it.
     """
     cumulative = 0
     best_runtime = float("inf")
     best_code_path = None
     best_combo = None  # (phase_num, agent_num, step_num)
+    progress_list = []
 
     phases_root = os.path.join(task_path, "phases")
     if not os.path.exists(phases_root):
-        return None, None, None
+        return [None] * target_attempt, None, None, None
 
     phase_names = [
         d for d in os.listdir(phases_root)
@@ -80,6 +88,7 @@ def best_runtime_until_step(task_path, task_number, target_attempt):
     ]
     phase_names.sort(key=lambda x: numeric_suffix(x, "phase_"))
 
+    stop_processing = False
     for phase_name in phase_names:
         phase_num = numeric_suffix(phase_name, "phase_")
         phase_path = os.path.join(phases_root, phase_name)
@@ -107,38 +116,48 @@ def best_runtime_until_step(task_path, task_number, target_attempt):
                 cumulative += 1
 
                 # Skip if in blacklist
-                if (task_number, phase_num, agent_num, step_num) in BLACKLIST[run_name]:
-                    continue
+                if (task_number, phase_num, agent_num, step_num) in BLACKLIST.get(run_name, set()):
+                    pass
+                else:
+                    step_path = os.path.join(agent_path, step_name)
+                    eval_file = os.path.join(step_path, "eval_results.json")
+                    code_file = os.path.join(step_path, "kernel.py")
 
-                step_path = os.path.join(agent_path, step_name)
-                eval_file = os.path.join(step_path, "eval_results.json")
-                code_file = os.path.join(step_path, "kernel.py")
+                    if os.path.exists(eval_file):
+                        try:
+                            with open(eval_file, "r") as f:
+                                eval_data = json.load(f)
+                            runtime = eval_data.get("eval_results", {}).get("runtime")
+                            if runtime is not None and runtime < best_runtime:
+                                best_runtime = runtime
+                                best_code_path = code_file if os.path.exists(code_file) else None
+                                best_combo = (phase_num, agent_num, step_num)
+                        except Exception:
+                            # ignore malformed eval files
+                            pass
 
-                if os.path.exists(eval_file):
-                    try:
-                        with open(eval_file, "r") as f:
-                            eval_data = json.load(f)
-                        runtime = eval_data.get("eval_results", {}).get("runtime")
-                        if runtime is not None and runtime < best_runtime:
-                            best_runtime = runtime
-                            best_code_path = code_file if os.path.exists(code_file) else None
-                            best_combo = (phase_num, agent_num, step_num)
-                    except Exception:
-                        # ignore malformed eval files
-                        pass
+                progress_list.append(None if best_runtime == float("inf") else best_runtime)
 
-                if cumulative == target_attempt:
-                    return (best_runtime if best_runtime != float("inf") else None,
-                            best_code_path,
-                            best_combo)
+                if cumulative >= target_attempt:
+                    stop_processing = True
+                    break
+            if stop_processing:
+                break
+        if stop_processing:
+            break
 
-    return (None if best_runtime == float("inf") else best_runtime,
-            best_code_path,
-            best_combo)
+    # Pad the progress list if the total number of steps was less than the target
+    final_best_for_padding = None if best_runtime == float("inf") else best_runtime
+    while len(progress_list) < target_attempt:
+        progress_list.append(final_best_for_padding)
+
+    final_best_runtime = None if best_runtime == float("inf") else best_runtime
+    return progress_list, final_best_runtime, best_code_path, best_combo
 
 
 if __name__ == "__main__":
     sol_dest_dir.mkdir(parents=True, exist_ok=True)
+    plot_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Collect tasks
     task_names = [
@@ -149,20 +168,24 @@ if __name__ == "__main__":
 
     results = []
     speedup_list = []
+    all_speedups_progress = [] # For convergence plot
 
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
         task_path = os.path.join(root_dir, task_name)
-        best, best_code_path, best_combo = best_runtime_until_step(task_path, task_number, target_attempt)
+        
+        progress, best, best_code_path, best_combo = get_runtime_progress_and_best(
+            task_path, task_number, target_attempt
+        )
         eager = get_runtime(eager_runtimes, task_number)
 
+        # --- Process Final Result ---
         if best is not None:
             results.append({
                 "problem_id": task_number,
                 "runtime": best
             })
 
-            # Build combo string from numbers
             combo_str = (f"phase_{best_combo[0]}/agent_{best_combo[1]}/step_{best_combo[2]}"
                          if best_combo else "N/A")
 
@@ -181,18 +204,51 @@ if __name__ == "__main__":
         else:
             print(f"{task_name} (id={task_number}): missing runtime")
 
-    # Write JSON in requested format
+        # --- Process Progress Data (for convergence plot) ---
+        if eager is not None:
+            speedup_progress = []
+            for r in progress:
+                # If no valid runtime, assume neutral speedup of 1.0
+                # Clamp slowdowns to 1.0 as well for a cleaner plot
+                if r is None or r <= 0:
+                    speedup_progress.append(1.0)
+                else:
+                    s = eager / r
+                    speedup_progress.append(max(1.0, s))
+            all_speedups_progress.append(speedup_progress)
+
+    # --- Finalize and Save Results ---
+
+    # 1. Write JSON in requested format
     output_data = {
         "title": "Ours (OE, agents)",
         "results": sorted(results, key=lambda x: x["problem_id"])
     }
-
     with open(output_path, "w") as f:
         json.dump(output_data, f, indent=4)
-
     print(f"\nRuntimes written to {output_path}")
 
-    # Print geometric mean of speedups
+    # 2. Print geometric mean of speedups
     if speedup_list:
         geo_mean = gmean(speedup_list)
         print(f"\nGeometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
+
+    # 3. Generate and save convergence plot
+    if all_speedups_progress:
+        # Transpose list to calculate gmean for each step index
+        geomean_curve = []
+        for step_idx in range(target_attempt):
+            vals_at_step = [
+                task_s[step_idx] for task_s in all_speedups_progress
+            ]
+            geomean_curve.append(gmean(vals_at_step))
+
+        plt.figure(figsize=(6, 4))
+        plt.plot(range(1, target_attempt + 1), geomean_curve)
+        plt.xlabel("Cumulative Step Number")
+        plt.ylabel("Speedup over PyTorch Eager (Geomean)")
+        plt.title("Previous Agents Speedup by Step (Level 3-metr, H100)")
+        plt.grid(True, linestyle="--", alpha=0.6)
+        plt.tight_layout()
+        plt.savefig(plot_path)
+        print(f"Convergence plot saved to {plot_path}\n")

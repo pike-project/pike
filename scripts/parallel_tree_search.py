@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 import asyncio
 import uuid
 import random
@@ -135,12 +136,16 @@ class WorkArgs:
     sample_id: int
 
 def query_llm(query: str, inference_server: callable):
-    try:
-        raw_llm_output = inference_server(query)
-        return raw_llm_output
-    except Exception as e:
-        print(f"Error generating sample: {e}")
-        return None
+    retry_attempts = 5
+    for _ in range(retry_attempts):
+        try:
+            raw_llm_output = inference_server(query)
+            return raw_llm_output
+        except Exception as e:
+            print(f"Error generating sample: {e}")
+            sleep(10)
+    
+    return None
 
 class ParallelTreeSearch:
     def __init__(self, config):

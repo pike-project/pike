@@ -16,7 +16,7 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # - kill disk_channel_server
 # - send close message to the eval worker to end the H100 job (should we kill the slurm job instead?)
 
-def start_range(openevolve_dir, run_dir, root_dir, port, level, task_start, task_end):
+def start_openevolve_range(openevolve_dir, run_dir, root_dir, port, level, task_start, task_end):
     os.makedirs(run_dir, exist_ok=True)
 
     run_cmd = [
@@ -45,15 +45,7 @@ def start_range(openevolve_dir, run_dir, root_dir, port, level, task_start, task
 
     return run
 
-def main():
-    port = 8000
-
-    disk_channel_server = subprocess.Popen(
-        ["python", "scripts/disk_channel_server.py", "--port", str(port)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
+def start_openevolve(port):
     # openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
     openevolve_dir = Path("/global/scratch/users/knagaitsev/openevolve")
 
@@ -77,8 +69,26 @@ def main():
     runs = []
 
     for (r_lo, r_hi) in run_ranges:
-        run = start_range(openevolve_dir, run_dir, root_dir, port, level, r_lo, r_hi)
+        run = start_openevolve_range(openevolve_dir, run_dir, root_dir, port, level, r_lo, r_hi)
         runs.append(run)
+
+    # Add short sleep to ensure the next timestamp_str is distinct from this one, if we are doing multiple runs
+    sleep(2)
+
+    return runs
+
+def main():
+    port = 8000
+
+    disk_channel_server = subprocess.Popen(
+        ["python", "scripts/disk_channel_server.py", "--port", str(port)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    runs = []
+
+    runs += start_openevolve(port)
 
     for run in runs:
         run.wait()

@@ -9,7 +9,7 @@ import json
 # --- Main Script Configuration ---
 # ==============================================================================
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
-data_dir = (curr_dir / "data/runtimes").resolve()
+data_dir = (curr_dir / "results/data/runtimes").resolve()
 
 output_label = "prev"
 plot_mode = "line"  # choose "line" or "bar"
@@ -267,7 +267,7 @@ ax.legend(loc='upper left', fontsize=10)
 plt.yscale("log")
 
 # --- Save plot ---
-figs_dir = (curr_dir / "figs/breakdown").resolve()
+figs_dir = (curr_dir / "results/figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
 fig.savefig(figs_dir / f"{output_label}_{plot_mode}.pdf")
 print(f"Plot saved to: {figs_dir / f'{output_label}_{plot_mode}.pdf'}")
@@ -280,7 +280,7 @@ df.reset_index(inplace=True)
 df.rename(columns={"index": "Task"}, inplace=True)
 
 # --- Create output directories ---
-tables_dir = curr_dir / "data/tables"
+tables_dir = curr_dir / "results/data/tables"
 csv_dir = tables_dir / "csv"
 tex_dir = tables_dir / "tex"
 os.makedirs(csv_dir, exist_ok=True)

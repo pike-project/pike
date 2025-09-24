@@ -74,7 +74,7 @@ def main():
     # --- Give more vertical space for text ---
     plt.ylim(0, y_max * 1.2)
 
-    figs_dir = Path.resolve(curr_dir / "figs/overall_speedup_3_metr")
+    figs_dir = Path.resolve(curr_dir / "results/figs/overall_speedup_3_metr")
     os.makedirs(figs_dir, exist_ok=True)
     plt.savefig(figs_dir / "speedup1.pdf")
 

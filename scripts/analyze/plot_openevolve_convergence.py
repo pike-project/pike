@@ -11,7 +11,7 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_1")
 run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks")
 
-eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
+eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/results/data/runtimes/eager.json").resolve()
 
 with open(eager_path) as f:
     eager_runtimes = json.load(f)

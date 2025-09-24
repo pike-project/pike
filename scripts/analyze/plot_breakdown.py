@@ -163,7 +163,7 @@ ax.legend(loc='upper right')
 
 # --- Save ---
 filename = "individual_breakdown_dots_sorted.pdf"
-figs_dir = (curr_dir / "../../figs/breakdown").resolve()
+figs_dir = (curr_dir / "../../results/figs/breakdown").resolve()
 os.makedirs(figs_dir, exist_ok=True)
 save_path1 = figs_dir / filename
 fig.savefig(save_path1)

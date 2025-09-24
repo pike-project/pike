@@ -15,7 +15,13 @@ class DiskChannelManager:
     def __init__(self, tx_dir: Path, rx_dir: Path):
         self.disk_channel = DiskChannel(tx_dir, rx_dir)
         self.completed_tasks = {}
+        self.handshake_complete = False
         self._stopping = False
+
+    async def start_handshake(self):
+        await self.disk_channel.send({
+            "type": "handshake",
+        })
 
     async def submit(self, code, level, task):
         eval_id = uuid.uuid4()
@@ -30,11 +36,17 @@ class DiskChannelManager:
         return eval_id
 
     async def recv_loop(self):
+        await self.start_handshake()
+
         while not self._stopping:
             try:
                 msg = await self.disk_channel.poll()
                 if msg is not None:
-                    self.completed_tasks[msg["id"]] = msg
+                    msg_type = msg["type"]
+                    if msg_type == "handshake":
+                        self.handshake_complete = True
+                    elif msg_type == "result":
+                        self.completed_tasks[msg["id"]] = msg
             except asyncio.CancelledError:
                 break
 
@@ -44,7 +56,7 @@ class DiskChannelManager:
         self._stopping = True
 
     def poll(self, eval_id):
-        return self.completed_tasks.get(eval_id)
+        return self.completed_tasks.pop(eval_id, None)
 
     async def close(self):
         print("Sending disk_channel close message")
@@ -83,7 +95,13 @@ class CustomHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(f"{eval_id}".encode())
+        elif path == "/ready":
+            data_str = json.dumps(manager.handshake_complete)
 
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(data_str.encode())
         elif path == "/poll":
             try:
                 eval_id = query_params.get("id")[0]

@@ -10,6 +10,7 @@ import asyncio
 import uuid
 import random
 from enum import Enum
+import requests
 
 
 from datasets import load_dataset
@@ -22,7 +23,6 @@ import src.prompt_constructor as prompt
 import src.query_strategies as query_strategies
 from src.utils import extract_first_code, extract_idea_list, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
-from src.util.disk_channel import DiskChannel
 import src.util.query_util as query_util
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
@@ -101,6 +101,7 @@ class GenerationConfig(Config):
         # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
 
         # these are for the eval worker
+        # TODO: these can be removed
         self.worker_input_dir = REQUIRED
         self.worker_output_dir = REQUIRED
 
@@ -117,6 +118,8 @@ class GenerationConfig(Config):
         self.num_phases = REQUIRED
         # note: this does not include the initial attempt
         self.max_fix_attempts = REQUIRED
+
+        self.eval_port = REQUIRED
 
     def greedy(self):
         # For greedy decoding, epsecially baseline eval
@@ -194,11 +197,6 @@ class ParallelTreeSearch:
             self.all_solutions[problem_id] = []
             self.phase_solutions_by_branch[problem_id] = {}
 
-        tx_dir = Path(config.worker_input_dir)
-        rx_dir = Path(config.worker_output_dir)
-
-        self.disk_channel = DiskChannel(tx_dir, rx_dir)
-
         server_type = self.config.server_type
         model_name = self.config.model_name
         if self.config.dry_run:
@@ -217,22 +215,10 @@ class ParallelTreeSearch:
         print("Starting handshake with worker...")
 
         if not self.config.dry_run:
-            await self.disk_channel.send({
-                "type": "handshake"
-            })
-
-            # wait for the disk channel to send back handshake response
-            await self.disk_channel.recv()
+            # TODO
+            pass
 
         print("Worker handshake complete.")
-
-    async def close(self):
-        print("Sending close message to worker...")
-
-        if not self.config.dry_run:
-            await self.disk_channel.send({
-                "type": "close"
-            })
 
     def inc_budget(self, problem_id, count):
         if problem_id in self.budget_used:
@@ -345,32 +331,49 @@ class ParallelTreeSearch:
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
 
+        base_url = f"http://localhost:{self.config.eval_port}"
+
         for sample in samples:
             eval_id = str(uuid.uuid4())
-            # sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
             code = sample["code"]
 
-            eval_id_to_sample[eval_id] = sample
-
-            await self.disk_channel.send({
-                "id": eval_id,
-                "type": "eval",
-                "level": self.config.level,
-                "task": problem_id,
+            submit_path = "/submit"
+            submit_params = {
                 "code": code,
-                "mode": "eager"
-            })
+                "level": self.config.level,
+                "task": problem_id
+            }
+
+            try:
+                res = requests.get(f"{base_url}{submit_path}", params=submit_params)
+                eval_id = res.text
+
+                eval_id_to_sample[eval_id] = sample
+            except Exception as e:
+                continue
 
         all_results = []
 
         num_samples = len(samples)
-        for _ in range(num_samples):
-            # recv, then get the sample based on the eval_id
-            res = await self.disk_channel.recv()
-            eval_id = res["id"]
-            results = res["results"]
-            sample = eval_id_to_sample[eval_id]
+        for (eval_id, sample) in eval_id_to_sample.items():
+
+            poll_path = "/poll"
+            poll_params = {"id": eval_id}
+
+            while True:
+                try:
+                    res = requests.get(f"{base_url}{poll_path}", params=poll_params)
+                except Exception as e:
+                    asyncio.sleep(1.0)
+                    continue
+                data = res.json()
+                if data is not None:
+                    break
+
+                asyncio.sleep(1.0)
+
+            results = data["results"]
             sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
 

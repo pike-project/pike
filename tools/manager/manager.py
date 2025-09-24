@@ -92,6 +92,9 @@ def start_prev(port):
         # stderr=subprocess.DEVNULL,
     )
 
+    # Add short sleep to ensure the next timestamp is distinct from this one, if we are doing multiple runs
+    sleep(2)
+
     return [run]
 
 def main():

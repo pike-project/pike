@@ -8,23 +8,45 @@ target_attempt = 300
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-root_dir = (curr_dir / "../../data/runs/h100_level_3-metr_trial_0/levels/level_3-metr").resolve()
+run_name = "h100_level_3-metr_trial_0"
+root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
 
 eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/prev_agents_300/best_solutions").resolve()
 output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/prev_agents.json").resolve()
 
 
-# Load eager runtimes
-with open(eager_path) as f:
-    eager_runtimes = json.load(f)
+# Blacklist: tuples of (task_number, phase_num, agent_num, step_num)
+BLACKLIST = {
+    "h100_level_3-metr_trial_0": {
+        # (40, 4, 297, 1)
+    }
+}
+
+
+# Load eager runtimes (with safe fallback)
+try:
+    with open(eager_path) as f:
+        eager_runtimes = json.load(f)
+except FileNotFoundError:
+    print(f"Warning: eager runtimes file not found at {eager_path}. Continuing with empty eager runtimes (speedups will be skipped).")
+    eager_runtimes = {"results": []}
+except Exception as e:
+    print(f"Warning: failed to load eager runtimes ({e}). Continuing with empty eager runtimes (speedups will be skipped).")
+    eager_runtimes = {"results": []}
+
+# Ensure eager_runtimes has expected structure
+if not isinstance(eager_runtimes, dict) or "results" not in eager_runtimes or not isinstance(eager_runtimes["results"], list):
+    print("Warning: eager runtimes file has unexpected format. Expected JSON object with a 'results' list. Continuing with empty results.")
+    eager_runtimes = {"results": []}
 
 
 def get_runtime(data, task_number: int):
-    """Return eager runtime for given integer task id."""
-    for v in data["results"]:
-        if v["problem_id"] == task_number:
-            return v["runtime"]
+    """Return eager runtime for given integer task id (or None if missing)."""
+    for v in data.get("results", []):
+        # tolerate either "problem_id" or "problem" keys if formats vary
+        if v.get("problem_id") == task_number or v.get("problem") == task_number:
+            return v.get("runtime")
     return None
 
 
@@ -36,19 +58,21 @@ def numeric_suffix(name: str, prefix: str) -> int:
         raise Exception(f"Numeric suffix failed: name -> {name}, prefix -> {prefix}")
 
 
-def best_runtime_until_step(task_path, target_attempt):
+def best_runtime_until_step(task_path, task_number, target_attempt):
     """
     Walk steps in sorted numeric order across all phases/agents,
-    track the best runtime seen so far.
-    Stop at target_attempt and return the best runtime and corresponding kernel.py path.
+    track the best runtime seen so far (ignoring blacklisted combos).
+    Stop at target_attempt and return the best runtime, corresponding kernel.py path,
+    and the (phase_num, agent_num, step_num) triple that produced it.
     """
     cumulative = 0
     best_runtime = float("inf")
     best_code_path = None
+    best_combo = None  # (phase_num, agent_num, step_num)
 
     phases_root = os.path.join(task_path, "phases")
     if not os.path.exists(phases_root):
-        return None, None
+        return None, None, None
 
     phase_names = [
         d for d in os.listdir(phases_root)
@@ -57,6 +81,7 @@ def best_runtime_until_step(task_path, target_attempt):
     phase_names.sort(key=lambda x: numeric_suffix(x, "phase_"))
 
     for phase_name in phase_names:
+        phase_num = numeric_suffix(phase_name, "phase_")
         phase_path = os.path.join(phases_root, phase_name)
         agents_root = os.path.join(phase_path, "agents")
         if not os.path.exists(agents_root):
@@ -69,6 +94,7 @@ def best_runtime_until_step(task_path, target_attempt):
         agent_names.sort(key=lambda x: numeric_suffix(x, "agent_"))
 
         for agent_name in agent_names:
+            agent_num = numeric_suffix(agent_name, "agent_")
             agent_path = os.path.join(agents_root, agent_name)
             step_names = [
                 d for d in os.listdir(agent_path)
@@ -77,7 +103,13 @@ def best_runtime_until_step(task_path, target_attempt):
             step_names.sort(key=lambda x: numeric_suffix(x, "step_"))
 
             for step_name in step_names:
+                step_num = numeric_suffix(step_name, "step_")
                 cumulative += 1
+
+                # Skip if in blacklist
+                if (task_number, phase_num, agent_num, step_num) in BLACKLIST[run_name]:
+                    continue
+
                 step_path = os.path.join(agent_path, step_name)
                 eval_file = os.path.join(step_path, "eval_results.json")
                 code_file = os.path.join(step_path, "kernel.py")
@@ -89,17 +121,20 @@ def best_runtime_until_step(task_path, target_attempt):
                         runtime = eval_data.get("eval_results", {}).get("runtime")
                         if runtime is not None and runtime < best_runtime:
                             best_runtime = runtime
-                            if os.path.exists(code_file):
-                                best_code_path = code_file
+                            best_code_path = code_file if os.path.exists(code_file) else None
+                            best_combo = (phase_num, agent_num, step_num)
                     except Exception:
+                        # ignore malformed eval files
                         pass
 
                 if cumulative == target_attempt:
                     return (best_runtime if best_runtime != float("inf") else None,
-                            best_code_path)
+                            best_code_path,
+                            best_combo)
 
     return (None if best_runtime == float("inf") else best_runtime,
-            best_code_path)
+            best_code_path,
+            best_combo)
 
 
 if __name__ == "__main__":
@@ -118,30 +153,28 @@ if __name__ == "__main__":
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
         task_path = os.path.join(root_dir, task_name)
-        best, best_code_path = best_runtime_until_step(task_path, target_attempt)
+        best, best_code_path, best_combo = best_runtime_until_step(task_path, task_number, target_attempt)
         eager = get_runtime(eager_runtimes, task_number)
 
         if best is not None:
-            # Save runtime to results
             results.append({
                 "problem_id": task_number,
                 "runtime": best
             })
-            print(f"{task_name} (id={task_number}): best runtime = {best:.6f}")
 
-            # Compute speedup if eager exists
+            # Build combo string from numbers
+            combo_str = (f"phase_{best_combo[0]}/agent_{best_combo[1]}/step_{best_combo[2]}"
+                         if best_combo else "N/A")
+
             if eager is not None and best > 0:
                 speedup = eager / best
-
-                if task_number == 40:
-                    speedup = 1.0
-
                 speedup_list.append(speedup)
-                print(f"  eager={eager:.6f}, speedup={speedup:.3f}")
+                print(f"{task_name} (id={task_number}): best={best:.6f}, "
+                      f"eager={eager:.6f}, speedup={speedup:.3f}, at {combo_str}")
             else:
-                print("  missing eager runtime, skipping speedup")
+                print(f"{task_name} (id={task_number}): best={best:.6f}, "
+                      f"eager=N/A, speedup=N/A, at {combo_str}")
 
-            # Save best code
             if best_code_path:
                 dest_file = sol_dest_dir / f"task_{task_number}.py"
                 shutil.copy(best_code_path, dest_file)

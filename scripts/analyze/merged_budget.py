@@ -32,11 +32,15 @@ if not USE_OPENEVOLVE_STRUCTURE:
     plot_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/figs/convergence/{output_label}_convergence.pdf").resolve()
     all_trajectories_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/tables/speedup_trajectories/{output_label}.csv").resolve()
 
-    # Blacklist is specific to this structure: tuples of (task_number, phase_num, agent_num, step_num)
+    # PATCH 1: Updated comment to clarify behavior.
+    # Blacklist format:
+    # - Tuples (task_num, phase_num, agent_num, step_num) to blacklist a specific attempt.
+    # - Integers (task_num) to set the speedup to 1.0 for an entire task.
     BLACKLIST = {
         "h100_level_3-metr_trial_0": {
-            (40, 4, 297, 1)
-        }
+            (40, 4, 297, 1), # Blacklists a specific attempt
+            # 42, # Sets speedup to 1.0 for a task
+        },
     }
 else:
     # CONFIGURATION FOR NEW "iter_output/iter/attempts" STRUCTURE
@@ -52,7 +56,16 @@ else:
     plot_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/figs/convergence/{output_label}_convergence.pdf").resolve()
     all_trajectories_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/tables/speedup_trajectories/{output_label}.csv").resolve()
     
-    BLACKLIST = {} # No blacklist for this structure
+    # PATCH 1: Updated comment to clarify behavior.
+    # Blacklist format:
+    # - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
+    # - Integers (task_number) to set the speedup to 1.0 for an entire task.
+    BLACKLIST = {
+        "h100_level_3-metr_trial_4": {
+            # (13, 229, 0), # Blacklists a specific attempt
+            13, # Sets speedup to 1.0 for a task
+        },
+    }
 
 
 # --- Load Eager Runtimes (with robust error handling) ---
@@ -103,6 +116,8 @@ def get_progress_phases_agents_steps(task_path, task_number, target_attempt):
     best_code_path = None
     best_combo = None  # (phase_num, agent_num, step_num)
     progress_list = []
+    
+    current_blacklist = BLACKLIST.get(run_name, set())
 
     phases_root = os.path.join(task_path, "phases")
     if not os.path.exists(phases_root):
@@ -127,7 +142,7 @@ def get_progress_phases_agents_steps(task_path, task_number, target_attempt):
                 step_num = numeric_suffix(step_name, "step_")
                 cumulative += 1
 
-                if (task_number, phase_num, agent_num, step_num) not in BLACKLIST.get(run_name, set()):
+                if (task_number, phase_num, agent_num, step_num) not in current_blacklist:
                     eval_file = os.path.join(agent_path, step_name, "eval_results.json")
                     code_file = os.path.join(agent_path, step_name, "kernel.py")
                     if os.path.exists(eval_file):
@@ -165,6 +180,8 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     best_code_path = None
     best_combo = None # (iter_num, attempt_num)
     progress_list = []
+    
+    current_blacklist = BLACKLIST.get(run_name, set())
 
     iter_output_dir = os.path.join(task_path, "output", "iter_output")
     if not os.path.exists(iter_output_dir):
@@ -184,18 +201,19 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
             attempt_num = numeric_suffix(attempt_name, "attempt_")
             cumulative += 1
             
-            metrics_file = os.path.join(attempts_dir, attempt_name, "metrics_artifacts.json")
-            code_file = os.path.join(attempts_dir, attempt_name, "code.py")
-            
-            if os.path.exists(metrics_file):
-                try:
-                    with open(metrics_file, "r") as f: metrics_data = json.load(f)
-                    runtime = metrics_data.get("metrics", {}).get("runtime")
-                    if runtime is not None and runtime < best_runtime:
-                        best_runtime = runtime
-                        best_code_path = code_file if os.path.exists(code_file) else None
-                        best_combo = (iter_num, attempt_num)
-                except Exception: pass # Ignore corrupted files or files with missing keys
+            if (task_number, iter_num, attempt_num) not in current_blacklist:
+                metrics_file = os.path.join(attempts_dir, attempt_name, "metrics_artifacts.json")
+                code_file = os.path.join(attempts_dir, attempt_name, "code.py")
+                
+                if os.path.exists(metrics_file):
+                    try:
+                        with open(metrics_file, "r") as f: metrics_data = json.load(f)
+                        runtime = metrics_data.get("metrics", {}).get("runtime")
+                        if runtime is not None and runtime < best_runtime:
+                            best_runtime = runtime
+                            best_code_path = code_file if os.path.exists(code_file) else None
+                            best_combo = (iter_num, attempt_num)
+                    except Exception: pass # Ignore corrupted files or files with missing keys
             
             progress_list.append(None if best_runtime == float("inf") else best_runtime)
             if cumulative >= target_attempt: stop_processing = True; break
@@ -221,6 +239,9 @@ if __name__ == "__main__":
     results = []
     speedup_list = []
     all_speedups_progress = []
+    included_task_names_for_csv = []
+    
+    current_blacklist = BLACKLIST.get(run_name, set())
 
     print(f"Processing run: {run_name} (Structure: {'OpenEvolve' if USE_OPENEVOLVE_STRUCTURE else 'Original'})")
 
@@ -228,6 +249,8 @@ if __name__ == "__main__":
         task_number = numeric_suffix(task_name, "task")
         task_path = os.path.join(root_dir, task_name)
         
+        is_task_speedup_blacklisted = task_number in current_blacklist
+
         if not USE_OPENEVOLVE_STRUCTURE:
             progress, best, best_code_path, best_combo = get_progress_phases_agents_steps(
                 task_path, task_number, target_attempt
@@ -251,14 +274,22 @@ if __name__ == "__main__":
             else:
                 combo_str = "N/A"
 
-            if eager is not None and best > 0:
-                speedup = eager / best
+            # PATCH 2: Calculate speedup, setting to 1.0 if blacklisted
+            speedup = None
+            if eager is not None:
+                if is_task_speedup_blacklisted:
+                    speedup = 1.0
+                elif best > 0:
+                    speedup = eager / best
+
+            if speedup is not None:
                 speedup_list.append(speedup)
-                print(f"{task_name} (id={task_number}): best={best:.6f}, "
-                      f"eager={eager:.6f}, speedup={speedup:.3f}, at {combo_str}")
+                if is_task_speedup_blacklisted:
+                    print(f"{task_name} (id={task_number}): best={best:.6f}, eager=N/A, speedup={speedup:.3f} (task blacklisted), at {combo_str}")
+                else:
+                    print(f"{task_name} (id={task_number}): best={best:.6f}, eager={eager:.6f}, speedup={speedup:.3f}, at {combo_str}")
             else:
-                print(f"{task_name} (id={task_number}): best={best:.6f}, "
-                      f"eager=N/A, speedup=N/A, at {combo_str}")
+                print(f"{task_name} (id={task_number}): best={best:.6f}, eager=N/A, speedup=N/A, at {combo_str}")
 
             if OUTPUT_SOLUTIONS and best_code_path:
                 dest_file = sol_dest_dir / f"task_{task_number}.py"
@@ -267,9 +298,15 @@ if __name__ == "__main__":
             print(f"{task_name} (id={task_number}): missing runtime")
 
         # --- Process Progress Data (for convergence plot and CSV) ---
+        # PATCH 3: Create speedup trajectory, setting to 1.0 if blacklisted
         if eager is not None:
-            speedup_progress = [max(1.0, eager / r) if r is not None and r > 0 else 1.0 for r in progress]
+            if is_task_speedup_blacklisted:
+                speedup_progress = [1.0] * target_attempt
+            else:
+                speedup_progress = [max(1.0, eager / r) if r is not None and r > 0 else 1.0 for r in progress]
             all_speedups_progress.append(speedup_progress)
+            included_task_names_for_csv.append(task_name)
+
 
     # --- Finalize and Save Results ---
 
@@ -285,8 +322,9 @@ if __name__ == "__main__":
         print(f"\nGeometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
 
     # 3. Generate and save the all_trajectories CSV
-    if all_speedups_progress and task_names:
-        df = pd.DataFrame(dict(zip(task_names, all_speedups_progress)))
+    if all_speedups_progress and included_task_names_for_csv:
+        # PATCH 4: Use the curated list of task names to ensure columns match data
+        df = pd.DataFrame(dict(zip(included_task_names_for_csv, all_speedups_progress)))
         df.index = pd.RangeIndex(start=1, stop=target_attempt + 1, name="attempt")
         all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(all_trajectories_path)

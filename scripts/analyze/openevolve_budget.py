@@ -4,11 +4,13 @@ import shutil
 from pathlib import Path
 from scipy.stats import gmean
 
-# Root directory
-root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
-target_attempt = 300  # change as needed
+target_attempt = 300
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+
+run_name = "h100_level_3-metr_trial_4"
+root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
+
 eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_pop_25_agents_300/best_solutions").resolve()
 output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/oe_agents.json").resolve()

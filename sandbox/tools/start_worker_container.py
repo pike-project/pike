@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--bash", action='store_true', help="Run bash inside of the container instead of the worker")
     parser.add_argument("--pull_image", action='store_true', help="Pull the image from Dockerhub if using docker or podman-hpc")
     parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
+    parser.add_argument("--max_active_tasks", type=int, required=False, default=20, help="Max active worker tasks")
 
     args = parser.parse_args()
 
@@ -63,7 +64,7 @@ def main():
         run_cmd = ["bash"]
     else:
         eval_worker_path = app_bind_dir / "scripts/start_eval_worker.py"
-        run_cmd = ["python", str(eval_worker_path), "--arch", args.arch]
+        run_cmd = ["python", str(eval_worker_path), "--arch", args.arch, "--max_active_tasks", args.max_active_tasks]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)

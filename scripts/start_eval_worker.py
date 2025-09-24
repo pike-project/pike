@@ -51,11 +51,12 @@ def assert_type_and_unpack(untrusted_dict: dict, src_key: str, expected_type: ty
     return val
 
 class EvalWorker:
-    def __init__(self, tx_dir: Path, rx_dir: Path, scratch_dir: Path, arch: str):
+    def __init__(self, tx_dir: Path, rx_dir: Path, scratch_dir: Path, arch: str, max_active_tasks: int):
         self.tx_dir = tx_dir
         self.rx_dir = rx_dir
         self.scratch_dir = scratch_dir
         self.arch = arch
+        self.max_active_tasks = max_active_tasks
 
         self.code_dir = self.scratch_dir / "code"
         os.makedirs(self.code_dir, exist_ok=True)
@@ -100,7 +101,7 @@ class EvalWorker:
             print("Got close message, closing worker.")
             return False
         else:
-            while self.active_task_count.peek() >= 20:
+            while self.active_task_count.peek() >= self.max_active_tasks:
                 await asyncio.sleep(1)
 
             active_task_count = await self.active_task_count.inc()
@@ -275,13 +276,14 @@ async def main():
     parser.add_argument("--output_dir", type=str, default="/output")
     parser.add_argument("--scratch_dir", type=str, default="/scratch")
     parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
+    parser.add_argument("--max_active_tasks", type=int, required=True, help="Max active worker tasks")
     args = parser.parse_args()
 
     tx_dir = Path(args.output_dir)
     rx_dir = Path(args.input_dir)
     scratch_dir = Path(args.scratch_dir)
 
-    eval_worker = EvalWorker(tx_dir, rx_dir, scratch_dir, args.arch)
+    eval_worker = EvalWorker(tx_dir, rx_dir, scratch_dir, args.arch, args.max_active_tasks)
     await eval_worker.run()
 
 asyncio.run(main())

@@ -17,11 +17,12 @@ sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/prev_age
 output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/prev_agents.json").resolve()
 plot_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/figs/convergence/prev_convergence.pdf").resolve()
 
+OUTPUT_SOLUTIONS = False
 
 # Blacklist: tuples of (task_number, phase_num, agent_num, step_num)
 BLACKLIST = {
     "h100_level_3-metr_trial_0": {
-        # (40, 4, 297, 1)
+        (40, 4, 297, 1)
     }
 }
 
@@ -200,7 +201,8 @@ if __name__ == "__main__":
 
             if best_code_path:
                 dest_file = sol_dest_dir / f"task_{task_number}.py"
-                shutil.copy(best_code_path, dest_file)
+                if OUTPUT_SOLUTIONS:
+                    shutil.copy(best_code_path, dest_file)
         else:
             print(f"{task_name} (id={task_number}): missing runtime")
 

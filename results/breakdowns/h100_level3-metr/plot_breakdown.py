@@ -13,7 +13,7 @@ included_files = ["eager", "oe_agents", "compile"]
 # included_files = ["eager", "ours_openevolve", "metr"]
 # included_files = ["eager", "ours_openevolve", "compile", "tensorrt"]
 
-primary_str_match = "ours (openevolve, agents)"
+primary_str_match = "ours (oe, agents)"
 # primary_str_match = "ours (openevolve)"
 # primary_str_match = "ours (prev. agent-based)"
 
@@ -96,7 +96,7 @@ for name, values in methods_speedups.items():
     geomeans[name] = np.exp(np.mean(np.log(arr)))
 
 # --- Plotting ---
-plot_mode = "bar"  # choose "line" or "bar"
+plot_mode = "line"  # choose "line" or "bar"
 x = np.arange(len(included_tasks))
 fig, ax = plt.subplots(figsize=(12, 5.5))
 

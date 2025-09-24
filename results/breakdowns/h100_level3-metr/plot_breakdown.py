@@ -37,9 +37,9 @@ title_remapping = {
     "Ours (prev, agents)": "Ours",
     "Ours (oe, agents)": "Ours",
     "Ours (openevolve)": "Ours",
-    "torch.compile": "Compile",
+    "torch.compile": "comp",
     "METR": "METR",
-    "TensorRT": "TensorRT",
+    "TensorRT": "TRT",
     # add more mappings as needed
 }
 

@@ -4,18 +4,23 @@ import shutil
 from pathlib import Path
 from scipy.stats import gmean
 import matplotlib.pyplot as plt
+import pandas as pd
 
 target_attempt = 300
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 run_name = "h100_level_3-metr_trial_0"
-root_dir = (curr_dir / "../../results/data/runs" / run_name / "levels/level_3-metr").resolve()
+root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
+
+output_label = "prev_agents"
 
 eager_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/eager.json").resolve()
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/prev_agents_300/best_solutions").resolve()
-output_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/prev_agents.json").resolve()
-plot_path = (curr_dir / "../../results/ours/h100_level3-metr/results/figs/convergence/prev_convergence.pdf").resolve()
+output_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/runtimes/{output_label}.json").resolve()
+plot_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/figs/convergence/{output_label}_convergence.pdf").resolve()
+
+all_trajectories_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/tables/speedup_trajectories/{output_label}.csv").resolve()
 
 OUTPUT_SOLUTIONS = False
 
@@ -169,7 +174,7 @@ if __name__ == "__main__":
 
     results = []
     speedup_list = []
-    all_speedups_progress = [] # For convergence plot
+    all_speedups_progress = [] # For convergence plot and new CSV
 
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
@@ -206,7 +211,7 @@ if __name__ == "__main__":
         else:
             print(f"{task_name} (id={task_number}): missing runtime")
 
-        # --- Process Progress Data (for convergence plot) ---
+        # --- Process Progress Data (for convergence plot and CSV) ---
         if eager is not None:
             speedup_progress = []
             for r in progress:
@@ -235,7 +240,26 @@ if __name__ == "__main__":
         geo_mean = gmean(speedup_list)
         print(f"\nGeometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
 
-    # 3. Generate and save convergence plot
+    # 3. Generate and save the all_trajectories CSV using pandas
+    if all_speedups_progress and task_names:
+        # Create a dictionary where keys are task names and values are their speedup trajectories
+        trajectories_data = dict(zip(task_names, all_speedups_progress))
+
+        # Create the DataFrame
+        df = pd.DataFrame(trajectories_data)
+
+        # Set the index to be the attempt number (1-based), which becomes the Y-axis
+        df.index = pd.RangeIndex(start=1, stop=target_attempt + 1, name="attempt")
+        
+        # Ensure the output directory exists
+        all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Export to CSV, with task names as the X-axis (columns)
+        df.to_csv(all_trajectories_path)
+        print(f"Speedup trajectories saved to {all_trajectories_path}")
+
+
+    # 4. Generate and save convergence plot
     if all_speedups_progress:
         # Transpose list to calculate gmean for each step index
         geomean_curve = []

@@ -12,10 +12,10 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 run_name = "h100_level_3-metr_trial_0"
 root_dir = (curr_dir / "../../results/data/runs" / run_name / "levels/level_3-metr").resolve()
 
-eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/results/data/runtimes/eager.json").resolve()
+eager_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/eager.json").resolve()
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/prev_agents_300/best_solutions").resolve()
-output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/results/data/runtimes/prev_agents.json").resolve()
-plot_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/results/figs/convergence/prev_convergence.pdf").resolve()
+output_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/prev_agents.json").resolve()
+plot_path = (curr_dir / "../../results/ours/h100_level3-metr/results/figs/convergence/prev_convergence.pdf").resolve()
 
 OUTPUT_SOLUTIONS = False
 

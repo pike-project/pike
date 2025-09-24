@@ -14,12 +14,12 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 # Input paths
 root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
-eager_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/eager.json").resolve()
+eager_path = (curr_dir / "../../results/ours/h100_level3-metr/data/runtimes/eager.json").resolve()
 
 # Output paths
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_pop_25_agents_300/best_solutions").resolve()
-output_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/data/runtimes/oe_agents.json").resolve()
-plot_path = (curr_dir / "../../results/breakdowns/h100_level3-metr/results/figs/convergence/oe_convergence.pdf").resolve()
+output_path = (curr_dir / "../../results/ours/h100_level3-metr/data/runtimes/oe_agents.json").resolve()
+plot_path = (curr_dir / "../../results/ours/h100_level3-metr/results/figs/convergence/oe_convergence.pdf").resolve()
 
 
 # --- Helper Functions ---

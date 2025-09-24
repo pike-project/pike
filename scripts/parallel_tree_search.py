@@ -215,8 +215,17 @@ class ParallelTreeSearch:
         print("Starting handshake with worker...")
 
         if not self.config.dry_run:
-            # TODO
-            pass
+            base_url = f"http://localhost:{self.config.eval_port}"
+
+            while True:
+                try:
+                    res = requests.get(f"{base_url}/ready")
+                    ready_str = res.text
+
+                    if ready_str == "true":
+                        break
+                except Exception as e:
+                    continue
 
         print("Worker handshake complete.")
 

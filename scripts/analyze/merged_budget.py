@@ -305,7 +305,8 @@ if __name__ == "__main__":
             else:
                 speedup_progress = [max(1.0, eager / r) if r is not None and r > 0 else 1.0 for r in progress]
             all_speedups_progress.append(speedup_progress)
-            included_task_names_for_csv.append(task_name)
+            task_id = numeric_suffix(task_name, "task")
+            included_task_names_for_csv.append(f"task_{task_id}")
 
 
     # --- Finalize and Save Results ---

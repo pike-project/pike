@@ -12,9 +12,14 @@ def get_jobs_on_nodes():
     jobs = defaultdict(list)  # node -> list of jobids
     squeue_out = run_cmd("squeue -h -o '%i %N'")
     for line in squeue_out.strip().splitlines():
-        jobid, nodelist = line.split()
-        # nodelist can be multiple nodes, expand
+        parts = line.split()
+        if len(parts) < 2:
+            continue  # skip malformed lines
+        jobid, nodelist = parts[0], parts[1]
+        # nodelist can contain multiple nodes, expand
         for node in nodelist.split(","):
+            # Strip possible range suffixes, e.g. n0069[1-2] -> n0069
+            node = re.sub(r"\[.*\]", "", node)
             if node in target_nodes:
                 jobs[node].append(jobid)
     return jobs

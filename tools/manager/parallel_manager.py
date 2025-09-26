@@ -68,7 +68,34 @@ class ParallelManager:
         return worker
 
     def start_search(self):
-        pass
+        search_manager_path = (curr_dir / "search_manager.py").resolve()
+
+        cmd = [
+            "srun",
+            "--account=ac_binocular",
+            "--partition=lr8",
+            "--mincpus=64",
+            "--mem=64G",
+            "--nodes=1",
+            "--qos=lr8_normal",
+            "--time=72:0:0",
+            "--pty",
+            "python",
+            "-u",
+            str(search_manager_path),
+            "--worker_io_dir",
+            str(self.worker_io_dir),
+            "--mode",
+            "default",   # or whatever mode string you want to pass in
+        ]
+
+        search_proc = subprocess.Popen(
+            cmd,
+            # stdout=subprocess.DEVNULL,
+            # stderr=subprocess.DEVNULL,
+        )
+
+        return search_proc
 
     def run(self):
         worker = self.start_eval_worker()

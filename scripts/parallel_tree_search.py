@@ -101,11 +101,6 @@ class GenerationConfig(Config):
         # Top Directory to Store Runs
         # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
 
-        # these are for the eval worker
-        # TODO: these can be removed
-        self.worker_input_dir = REQUIRED
-        self.worker_output_dir = REQUIRED
-
         # TODO: maybe add dry_run_eval and dry_run_queries
         self.dry_run = False
     

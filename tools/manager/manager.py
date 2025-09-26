@@ -80,8 +80,6 @@ def start_prev(port):
     run_dir.mkdir(parents=True, exist_ok=True)
 
     log_path = run_dir / "out.log"
-    worker_input_dir = "worker_io/input"
-    worker_output_dir = "worker_io/output"
 
     run_cmd = [
         "python", "-u", "scripts/parallel_tree_search.py",
@@ -89,8 +87,6 @@ def start_prev(port):
         f"server_type={server_type}",
         f"model_name={model_name}",
         "num_workers=30",
-        f"worker_input_dir={worker_input_dir}",
-        f"worker_output_dir={worker_output_dir}",
         f"level={level}",
         f"task_start={task_start}",
         f"task_end={task_end}",

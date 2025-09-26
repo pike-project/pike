@@ -6,4 +6,4 @@ srun --account=ac_binocular \
     --qos=lr8_normal \
     --time=72:0:0 \
     --pty \
-    python -u tools/manager/manager.py
+    python -u tools/manager/search_manager.py

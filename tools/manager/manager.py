@@ -7,15 +7,6 @@ import requests
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# Need to run: python scripts/disk_channel_server.py --port 8000
-
-# Then need to run n of these in parallel, splitting up the task range:
-# python examples/kernelbench/run.py --kernel_bench_dir /global/scratch/users/knagaitsev/KernelBench --level 3-metr --task_start 10 --task_end 20 --eval_port 8000
-
-# Once all n of those are finished, need to:
-# - kill disk_channel_server
-# - send close message to the eval worker to end the H100 job (should we kill the slurm job instead?)
-
 def start_openevolve_range(openevolve_dir, run_dir, root_dir, port, level, task_start, task_end):
     os.makedirs(run_dir, exist_ok=True)
 
@@ -38,17 +29,13 @@ def start_openevolve_range(openevolve_dir, run_dir, root_dir, port, level, task_
 
     run = subprocess.Popen(
         run_cmd,
-        # stdout=subprocess.DEVNULL,
-        # stderr=subprocess.DEVNULL,
         cwd=openevolve_dir,
     )
 
     return run
 
 def start_openevolve(port):
-    # openevolve_dir = Path("/pscratch/sd/k/kir/llm/openevolve")
     openevolve_dir = Path("/global/scratch/users/knagaitsev/openevolve")
-
     example_dir = openevolve_dir / "examples/kernelbench"
 
     timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -56,7 +43,6 @@ def start_openevolve(port):
     os.makedirs(run_dir, exist_ok=True)
 
     root_dir = (curr_dir / "../..").resolve()
-
     level = "3-metr"
 
     run_ranges = [
@@ -67,34 +53,63 @@ def start_openevolve(port):
     ]
 
     runs = []
-
     for (r_lo, r_hi) in run_ranges:
         run = start_openevolve_range(openevolve_dir, run_dir, root_dir, port, level, r_lo, r_hi)
         runs.append(run)
 
-    # Add short sleep to ensure the next timestamp_str is distinct from this one, if we are doing multiple runs
     sleep(2)
-
     return runs
 
 def start_prev(port):
-    prev_run_dir = (curr_dir / "../orig_jobs/run.sh").resolve()
+    # configs (lowercase)
+    level = "3-metr"
+    task_start = 1
+    task_end = 50
+    num_samples = 10
+    num_phases = 30
+    max_fix_attempts = 0
+    dry_run = False
+    server_type = "google"
+    model_name = "gemini-2.5-pro"
+
+    root_dir = (curr_dir / "../..").resolve()
+
+    data_dir = (root_dir / "data").resolve()
+    run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    run_dir = data_dir / "runs" / run_name
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    log_path = run_dir / "out.log"
+    worker_input_dir = "worker_io/input"
+    worker_output_dir = "worker_io/output"
 
     run_cmd = [
-        "/bin/bash",
-        str(prev_run_dir),
-        str(port),
+        "python", "-u", "scripts/parallel_tree_search.py",
+        f"run_dir={run_dir}",
+        f"server_type={server_type}",
+        f"model_name={model_name}",
+        "num_workers=30",
+        f"worker_input_dir={worker_input_dir}",
+        f"worker_output_dir={worker_output_dir}",
+        f"level={level}",
+        f"task_start={task_start}",
+        f"task_end={task_end}",
+        f"num_samples={num_samples}",
+        f"num_phases={num_phases}",
+        f"max_fix_attempts={max_fix_attempts}",
+        f"dry_run={str(dry_run)}",
+        f"eval_port={port}",
     ]
 
+    log_file = open(log_path, "a")
     run = subprocess.Popen(
         run_cmd,
-        # stdout=subprocess.DEVNULL,
-        # stderr=subprocess.DEVNULL,
+        cwd=root_dir,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
     )
 
-    # Add short sleep to ensure the next timestamp is distinct from this one, if we are doing multiple runs
     sleep(2)
-
     return [run]
 
 def main():
@@ -104,10 +119,10 @@ def main():
         ["python", "scripts/disk_channel_server.py", "--port", str(port)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        # cwd=curr_dir,
     )
 
     runs = []
-
     # runs += start_openevolve(port)
     runs += start_prev(port)
 

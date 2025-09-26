@@ -1,0 +1,11 @@
+Task exception was never retrieved
+future: <Task finished name='Task-30167' coro=<EvalWorker.handle_task_msg() done, defined at /app/scripts/start_eval_worker.py:117> exception=OSError(39, 'Directory not empty')>
+Traceback (most recent call last):
+  File "/app/scripts/start_eval_worker.py", line 201, in handle_task_msg
+    shutil.rmtree(eval_triton_cache_dir)
+  File "/usr/lib/python3.12/shutil.py", line 796, in rmtree
+    onexc(os.rmdir, path, err)
+  File "/usr/lib/python3.12/shutil.py", line 794, in rmtree
+    os.rmdir(path, dir_fd=dir_fd)
+OSError: [Errno 39] Directory not empty: '/scratch/triton_cache/6033'
+'runtime'

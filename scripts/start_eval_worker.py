@@ -121,92 +121,103 @@ class EvalWorker:
         eval_id = msg["id"]
         mode = msg["mode"]
 
-        # 1. write the LLM-generated code to scratch dir with a unique name
-        code_path = self.code_dir / f"task_{level}_{task}_{task_number}.py"
-        async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
-            await f.write(code_str)
-        
-        # print(f"Wrote: {code_path}")
-        print(f"Received task: {eval_id}, number: {task_number}")
-
-        eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{task_number}.json"
-
-        # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
-        #    (do not wait for this to finish, keep listening for tasks to start)
-
-        eval_torch_ext_dir = self.torch_extensions_dir / str(task_number)
-        os.makedirs(eval_torch_ext_dir, exist_ok=True)
-
-        eval_triton_cache_dir = self.triton_cache_dir / str(task_number)
-        os.makedirs(eval_triton_cache_dir, exist_ok=True)
-
-        # this keeps ninja builds separated, since ninja uses TMPDIR environment variable
-        # this may result in other things being placed in this dir, and it is still possible
-        # that /tmp will get used for other things without our consent, so just need to be aware
-        # of this when setting up our container
-        eval_tmp_dir = self.tmp_dir / str(task_number)
-        os.makedirs(eval_tmp_dir, exist_ok=True)
-
-        env = os.environ.copy()
-        # set this based on current GPU: Ampere or Hopper currently supported for certain
-        env["TORCH_CUDA_ARCH_LIST"] = self.arch
-        env["TORCH_EXTENSIONS_DIR"] = str(eval_torch_ext_dir)
-        env["TRITON_CACHE_DIR"] = str(eval_triton_cache_dir)
-        env["TMPDIR"] = str(eval_tmp_dir)
-
-        task_start_time = time.time()
-
-        # 15 minutes
-        timeout_sec = 15 * 60
-
         stdout = None
         stderr = None
         timed_out = False
 
-        cmd = [
-            "python", str(self.eval_script_path),
-            "--level", str(level),
-            "--task", str(task),
-            "--code_path", str(code_path),
-            "--output_path", str(eval_output_path),
-            "--gpu_locks_dir", str(self.gpu_locks_dir)]
+        eval_results = {
+            "correct": False,
+        }
 
-        cmd += ["--mode", mode]
+        output_data = {
+            "id": eval_id,
+            "type": "result",
+            "results": {
+                "stdout": stdout,
+                "stderr": stderr,
+                "eval_results": eval_results,
+                "timed_out": timed_out,
+            }
+        }
 
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env
-            )
-
-            stdout_raw, stderr_raw = await asyncio.wait_for(proc.communicate(), timeout=timeout_sec)
-
-            stdout = stdout_raw.decode()
-
-            # print(f"[stdout]\n{stdout}")
-            if stderr_raw:
-                stderr = stderr_raw.decode()
-                # print(f"[stderr]\n{stderr}")
-
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
+            # 1. write the LLM-generated code to scratch dir with a unique name
+            code_path = self.code_dir / f"task_{level}_{task}_{task_number}.py"
+            async with aiofiles.open(code_path, 'w', encoding='utf-8') as f:
+                await f.write(code_str)
             
-            timed_out = True
+            # print(f"Wrote: {code_path}")
+            print(f"Received task: {eval_id}, number: {task_number}")
 
-        # remove cache dirs, no longer needed
-        shutil.rmtree(eval_torch_ext_dir)
-        shutil.rmtree(eval_triton_cache_dir)
+            eval_output_path = self.eval_output_dir / f"task_{level}_{task}_{task_number}.json"
 
-        # 3. read results back
+            # 2. invoke scripts/eval.py with the level, task, and path to the LLM-generated code
+            #    (do not wait for this to finish, keep listening for tasks to start)
 
-        eval_results = {}
+            eval_torch_ext_dir = self.torch_extensions_dir / str(task_number)
+            os.makedirs(eval_torch_ext_dir, exist_ok=True)
 
-        # TODO: the file may not exist if the eval.py script failed, so maybe we should check if the file exists
-        # first to handle things more gracefully
-        try:
+            eval_triton_cache_dir = self.triton_cache_dir / str(task_number)
+            os.makedirs(eval_triton_cache_dir, exist_ok=True)
+
+            # this keeps ninja builds separated, since ninja uses TMPDIR environment variable
+            # this may result in other things being placed in this dir, and it is still possible
+            # that /tmp will get used for other things without our consent, so just need to be aware
+            # of this when setting up our container
+            eval_tmp_dir = self.tmp_dir / str(task_number)
+            os.makedirs(eval_tmp_dir, exist_ok=True)
+
+            env = os.environ.copy()
+            # set this based on current GPU: Ampere or Hopper currently supported for certain
+            env["TORCH_CUDA_ARCH_LIST"] = self.arch
+            env["TORCH_EXTENSIONS_DIR"] = str(eval_torch_ext_dir)
+            env["TRITON_CACHE_DIR"] = str(eval_triton_cache_dir)
+            env["TMPDIR"] = str(eval_tmp_dir)
+
+            task_start_time = time.time()
+
+            # 15 minutes
+            timeout_sec = 15 * 60
+
+            cmd = [
+                "python", str(self.eval_script_path),
+                "--level", str(level),
+                "--task", str(task),
+                "--code_path", str(code_path),
+                "--output_path", str(eval_output_path),
+                "--gpu_locks_dir", str(self.gpu_locks_dir)]
+
+            cmd += ["--mode", mode]
+
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env
+                )
+
+                stdout_raw, stderr_raw = await asyncio.wait_for(proc.communicate(), timeout=timeout_sec)
+
+                stdout = stdout_raw.decode()
+
+                # print(f"[stdout]\n{stdout}")
+                if stderr_raw:
+                    stderr = stderr_raw.decode()
+                    # print(f"[stderr]\n{stderr}")
+
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                
+                timed_out = True
+
+            # remove cache dirs, no longer needed
+            shutil.rmtree(eval_torch_ext_dir)
+            shutil.rmtree(eval_triton_cache_dir)
+
+            # TODO: the file may not exist if the eval.py script failed, so maybe we should check if the file exists
+            # first to handle things more gracefully
             async with aiofiles.open(eval_output_path, encoding='utf-8') as f:
                 content = await f.read()
             data = json.loads(content)
@@ -232,17 +243,6 @@ class EvalWorker:
             print(e)
 
         # 4. send results out to the disk_channel
-
-        output_data = {
-            "id": eval_id,
-            "type": "result",
-            "results": {
-                "stdout": stdout,
-                "stderr": stderr,
-                "eval_results": eval_results,
-                "timed_out": timed_out,
-            }
-        }
 
         await self.disk_channel.send(output_data)
 

@@ -10,6 +10,8 @@ import argparse
 class SearchManager:
     def __init__(self, mode, worker_io_dir, port, level):
         self.mode = mode
+        self.use_agents = mode.split("_")[1] == "agents"
+
         self.worker_io_dir = worker_io_dir
         self.port = port
         self.level = level
@@ -68,7 +70,11 @@ class SearchManager:
         task_end = 50
         num_samples = 10
         num_phases = 30
+        
         max_fix_attempts = 0
+        if self.use_agents:
+            max_fix_attempts = 5
+
         dry_run = False
         server_type = "google"
         model_name = "gemini-2.5-pro"
@@ -109,7 +115,7 @@ class SearchManager:
         sleep(2)
         return [run]
 
-    def run(self, use_openevolve=False):
+    def run(self):
         server_cmd = [
             "python", "scripts/disk_channel_server.py",
             "--port", str(self.port),
@@ -123,7 +129,7 @@ class SearchManager:
         )
 
         runs = []
-        if use_openevolve:
+        if self.mode == "openevolve_agents" or self.mode == "openevolve_noagents":
             runs += self._start_openevolve()
         else:
             runs += self._start_prev()
@@ -147,4 +153,4 @@ if __name__ == "__main__":
     worker_io_dir = args.worker_io_dir
 
     manager = SearchManager(mode, worker_io_dir, 8000, "3-metr")
-    manager.run(use_openevolve=False)
+    manager.run()

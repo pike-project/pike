@@ -85,8 +85,7 @@ class ParallelManager:
             str(search_manager_path),
             "--worker_io_dir",
             str(self.worker_io_dir),
-            "--mode",
-            "default",   # or whatever mode string you want to pass in
+            "--mode", "openevolve_agents",
         ]
 
         search_proc = subprocess.Popen(
@@ -100,9 +99,8 @@ class ParallelManager:
     def run(self):
         worker = self.start_eval_worker()
 
-        self.start_search()
-
-        sleep(10)
+        search = self.start_search()
+        search.wait()
 
         worker.terminate()
         worker.wait()

@@ -1,0 +1,85 @@
+import os
+from pathlib import Path
+import subprocess
+import argparse
+import shutil
+from datetime import datetime
+from time import sleep
+
+"""
+The parallel manager does the following:
+- Create a fresh data/parallel_runs dir
+    - Create runs dir within it
+    - Create a pending_gpu_allocations dir and poll on it. The moment that the worker starts, a file will be written to this directory
+        telling the parallel manager that the allocation has been obtained
+- Get a large GPU allocation for the evaluator (8 H100s, 112 CPUs, 72 hours, 56 parallel jobs running)
+    - worker_io for the worker needs to all be placed within the parallel run dir, to ensure full jobs can be separated out (if we have multiple GPU allocations)
+- Get a CPU allocation the moment the GPU allocation is ready
+"""
+
+curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+
+class ParallelManager:
+    def __init__(self):
+        timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+
+        parent_run_dir = (curr_dir / "../../data/parallel_runs" / timestamp_str).resolve()
+
+        run_dir = parent_run_dir / "runs" 
+        worker_io_dir = parent_run_dir / "worker_io"
+
+        os.makedirs(run_dir, exist_ok=True)
+        os.makedirs(worker_io_dir, exist_ok=True)
+
+        self.worker_io_dir = worker_io_dir
+
+    # blocks until the worker is ready
+    def start_eval_worker(self):
+        worker_script_path = (curr_dir / "../worker_jobs/lrc.py").resolve()
+
+        cmd = [
+            "python",
+            worker_script_path,
+            "--worker_io_dir",
+            self.worker_io_dir,
+            "--gpu_count", 1,
+            "--cpu_count", 1,
+            "--max_active_tasks", 1,
+            "--allocation_time", "1:00:00",
+        ]
+        cmd = [str(x) for x in cmd]
+
+        worker = subprocess.Popen(
+            cmd,
+            # stdout=subprocess.DEVNULL,
+            # stderr=subprocess.DEVNULL,
+        )
+
+        worker_ready_path = self.worker_io_dir / "ready.txt"
+
+        while True:
+            try:
+                if os.path.isfile(worker_ready_path):
+                    break
+            except Exception as e:
+                print(e)
+                continue
+
+        return worker
+
+    def start_search(self):
+        pass
+
+    def run(self):
+        worker = self.start_eval_worker()
+
+        self.start_search()
+
+        sleep(10)
+
+        worker.terminate()
+        worker.wait()
+
+if __name__ == "__main__":
+    pm = ParallelManager()
+    pm.run()

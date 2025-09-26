@@ -20,7 +20,8 @@ WORKER_IO_DIR=worker_io
 
 mkdir -p $WORKER_IO_DIR
 
-CPU_COUNT=64
-MAX_ACTIVE_TASKS=20
+GPU_COUNT=8
+CPU_COUNT=112
+MAX_ACTIVE_TASKS=56
 
-srun -A ac_binocular -t 48:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:4 --cpus-per-task=$CPU_COUNT --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif_path $IMAGE_PATH --worker_io_dir $WORKER_IO_DIR --arch Hopper --max_active_tasks $MAX_ACTIVE_TASKS
+srun -A ac_binocular -t 72:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:$GPU_COUNT --cpus-per-task=$CPU_COUNT --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif_path $IMAGE_PATH --worker_io_dir $WORKER_IO_DIR --arch Hopper --max_active_tasks $MAX_ACTIVE_TASKS

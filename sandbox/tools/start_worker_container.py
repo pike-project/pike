@@ -78,6 +78,9 @@ def main():
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
+    with open(worker_dir / "ready.txt", "w") as f:
+        f.write("1")
+
     tmp_dir = worker_dir / "tmp"
     cache_dir = worker_dir / "cache"
     scratch_dir = worker_dir / "scratch"

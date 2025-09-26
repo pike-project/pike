@@ -4,10 +4,13 @@ from pathlib import Path
 from time import sleep
 from datetime import datetime
 import requests
+import argparse
 
 
 class SearchManager:
-    def __init__(self, port=8000, level="3-metr"):
+    def __init__(self, mode, worker_io_dir, port, level):
+        self.mode = mode
+        self.worker_io_dir = worker_io_dir
         self.port = port
         self.level = level
         self.curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
@@ -107,8 +110,14 @@ class SearchManager:
         return [run]
 
     def run(self, use_openevolve=False):
+        server_cmd = [
+            "python", "scripts/disk_channel_server.py",
+            "--port", str(self.port),
+            "--worker_io_dir", str(self.worker_io_dir),
+        ]
+
         disk_channel_server = subprocess.Popen(
-            ["python", "scripts/disk_channel_server.py", "--port", str(self.port)],
+            server_cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -129,5 +138,13 @@ class SearchManager:
 
 
 if __name__ == "__main__":
-    manager = SearchManager(port=8000, level="3-metr")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", type=str, required=True)
+    parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
+    args = parser.parse_args()
+
+    mode = args.mode
+    worker_io_dir = args.worker_io_dir
+
+    manager = SearchManager(mode, worker_io_dir, 8000, "3-metr")
     manager.run(use_openevolve=False)

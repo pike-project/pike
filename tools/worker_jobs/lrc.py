@@ -8,6 +8,7 @@ from pathlib import Path
 def main():
     # Base directory = location of this script
     curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+    root_dir = (curr_dir / "../..").resolve()
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Launch worker container job")
@@ -44,7 +45,7 @@ def main():
     args = parser.parse_args()
 
     # Paths
-    image_dir = curr_dir / "container-images"
+    image_dir = root_dir / "container-images"
     image_path = image_dir / "kernel-bench-deps.sif"
 
     # Ensure container images directory exists
@@ -81,8 +82,8 @@ def main():
     if args.worker_io_dir:
         worker_io_dir = Path(args.worker_io_dir)
     else:
-        worker_io_dir = curr_dir / "worker_io"  # Or timestamped if desired
-        # worker_io_dir = curr_dir / f"worker_io/workers/worker_{time_str}"
+        worker_io_dir = root_dir / "worker_io"  # Or timestamped if desired
+        # worker_io_dir = root_dir / f"worker_io/workers/worker_{time_str}"
 
     worker_io_dir.mkdir(parents=True, exist_ok=True)
 
@@ -97,7 +98,7 @@ def main():
         f"--cpus-per-task={args.cpu_count}",
         "--pty",
         "python", "-u",
-        str(curr_dir / "sandbox/tools/start_worker_container.py"),
+        str(root_dir / "sandbox/tools/start_worker_container.py"),
         "--engine", "apptainer",
         "--sif_path", str(image_path),
         "--worker_io_dir", str(worker_io_dir),

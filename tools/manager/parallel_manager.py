@@ -53,7 +53,6 @@ class ParallelManager:
         with open(self.worker_io_dir / "worker.log", "w") as f:
             worker = subprocess.Popen(
                 cmd,
-                preexec_fn=os.setsid,
                 stdout=f,
                 stderr=f,
             )

@@ -45,10 +45,10 @@ class ParallelManager:
             worker_script_path,
             "--worker_io_dir",
             self.worker_io_dir,
-            "--gpu_count", 1,
-            "--cpu_count", 10,
-            "--max_active_tasks", 1,
-            "--allocation_time", "1:00:00",
+            "--gpu_count", 2,
+            "--cpu_count", 40,
+            "--max_active_tasks", 20,
+            "--allocation_time", "24:00:00",
         ]
         cmd = [str(x) for x in cmd]
 
@@ -88,8 +88,9 @@ class ParallelManager:
             str(search_manager_path),
             "--worker_io_dir",
             str(self.worker_io_dir),
-            "--mode", "openevolve_agents",
+            "--mode", "prev_noagents",
             "--run_dir", str(self.run_dir),
+            "--level", "0",
         ]
 
         with open(self.run_dir / "search.log", "w") as f:

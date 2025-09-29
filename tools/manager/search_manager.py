@@ -233,7 +233,11 @@ def test_split_into_ranges():
 
     manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 4)
     print(manager.ranges)
-    assert manager.ranges == [(1, 15), (16, 26), (27, 40), (41, 50)], "ranges incorrect for level 3-metr"
+    assert manager.ranges == [(1, 15), (16, 26), (27, 40), (41, 50)], "ranges incorrect for level 3-metr, 4 ranges"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 5)
+    print(manager.ranges)
+    assert manager.ranges == [(1, 13), (14, 22), (23, 32), (33, 42), (43, 50)], "ranges incorrect for level 3-metr, 5 ranges"
 
     manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 5)
     print(manager.ranges)
@@ -246,7 +250,7 @@ if __name__ == "__main__":
     parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
     parser.add_argument("--run_dir", type=str, required=False, default=None)
     parser.add_argument("--run_count", type=int, required=False, default=1)
-    parser.add_argument("--ranges", type=int, required=False, default=4)
+    parser.add_argument("--ranges", type=int, required=False, default=5)
     parser.add_argument("--test", action='store_true')
     args = parser.parse_args()
 

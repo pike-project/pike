@@ -98,7 +98,7 @@ def main():
         "--qos=es_normal",
         f"--gres=gpu:H100:{args.gpu_count}",
         f"--cpus-per-task={args.cpu_count}",
-        "--pty",
+        # "--pty",
         "python", "-u",
         str(root_dir / "sandbox/tools/start_worker_container.py"),
         "--engine", "apptainer",

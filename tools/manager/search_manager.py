@@ -219,6 +219,9 @@ class SearchManager:
 
         level_dir = self.root_dir / f"KernelBench/level{self.level}"
         for filename in os.listdir(level_dir):
+            if not filename.endswith(".py"):
+                continue
+
             task = int(filename.split("_")[0])
             tasks.append(task)
 

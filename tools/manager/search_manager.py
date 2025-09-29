@@ -8,7 +8,7 @@ import argparse
 
 
 class SearchManager:
-    def __init__(self, mode, worker_io_dir, port, level):
+    def __init__(self, mode, worker_io_dir, run_dir, port, level):
         self.mode = mode
         self.use_agents = mode.split("_")[1] == "agents"
 
@@ -17,7 +17,36 @@ class SearchManager:
         self.level = level
         self.curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-    def _start_openevolve_range(self, openevolve_dir, run_dir, root_dir, task_start, task_end):
+        self.curr_run_count = 0
+        self.curr_partition_id = 0
+
+        if run_dir is None:
+            root_dir = (self.curr_dir / "../..").resolve()
+
+            data_dir = (root_dir / "data").resolve()
+            run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            run_dir = data_dir / "runs" / run_name
+            run_dir.mkdir(exist_ok=True)
+
+            self.parent_run_dir = run_dir
+        else:
+            self.parent_run_dir = Path(run_dir)
+
+    def create_run_dir_log_dir(self):
+        root_run_dir = self.parent_run_dir / "runs" / f"run_{self.curr_run_count}"
+
+        self.curr_run_count += 1
+        self.curr_partition_id = 0
+
+        log_dir = root_run_dir / "logs"
+        run_dir = root_run_dir / "run"
+
+        os.makedirs(log_dir, exist_ok=True)
+        os.makedirs(run_dir, exist_ok=True)
+
+        return run_dir, log_dir
+
+    def _start_openevolve_range(self, openevolve_dir, run_dir, log_dir, root_dir, task_start, task_end):
         os.makedirs(run_dir, exist_ok=True)
 
         run_cmd = [
@@ -37,15 +66,23 @@ class SearchManager:
             str(run_dir),
         ]
 
-        return subprocess.Popen(run_cmd, cwd=openevolve_dir)
+        log_path = log_dir / f"logs_{self.curr_partition_id}.log"
+        self.curr_partition_id += 1
+        with open(log_path, "w") as f:
+            proc = subprocess.Popen(
+                run_cmd,
+                cwd=openevolve_dir,
+                stdout=f,
+                stderr=f,
+            )
+
+        return proc
 
     def _start_openevolve(self):
         openevolve_dir = Path("/global/scratch/users/knagaitsev/openevolve")
         example_dir = openevolve_dir / "examples/kernelbench"
 
-        timestamp_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        run_dir = example_dir / "openevolve_output_runs" / timestamp_str
-        os.makedirs(run_dir, exist_ok=True)
+        run_dir, log_dir = self.create_run_dir_log_dir()
 
         root_dir = (self.curr_dir / "../..").resolve()
 
@@ -58,10 +95,9 @@ class SearchManager:
 
         runs = []
         for r_lo, r_hi in run_ranges:
-            run = self._start_openevolve_range(openevolve_dir, run_dir, root_dir, r_lo, r_hi)
+            run = self._start_openevolve_range(openevolve_dir, run_dir, log_dir, root_dir, r_lo, r_hi)
             runs.append(run)
 
-        sleep(2)
         return runs
 
     def _start_prev(self):
@@ -81,12 +117,7 @@ class SearchManager:
 
         root_dir = (self.curr_dir / "../..").resolve()
 
-        data_dir = (root_dir / "data").resolve()
-        run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        run_dir = data_dir / "runs" / run_name
-        run_dir.mkdir(parents=True, exist_ok=True)
-
-        log_path = run_dir / "out.log"
+        run_dir, log_dir = self.create_run_dir_log_dir()
 
         run_cmd = [
             "python", "-u", "scripts/parallel_tree_search.py",
@@ -104,15 +135,14 @@ class SearchManager:
             f"eval_port={self.port}",
         ]
 
-        log_file = open(log_path, "a")
-        run = subprocess.Popen(
-            run_cmd,
-            cwd=root_dir,
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-        )
+        with open(run_dir / "out.log", "w") as f:
+            run = subprocess.Popen(
+                run_cmd,
+                cwd=root_dir,
+                stdout=f,
+                stderr=f,
+            )
 
-        sleep(2)
         return [run]
 
     def run(self):
@@ -145,12 +175,14 @@ class SearchManager:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--level", type=str, required=False, default="3-metr")
     parser.add_argument("--mode", type=str, required=True)
     parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
+    parser.add_argument("--run_dir", type=str, required=False, default=None)
     args = parser.parse_args()
 
     mode = args.mode
-    worker_io_dir = args.worker_io_dir
+    worker_io_dir = Path(args.worker_io_dir)
 
-    manager = SearchManager(mode, worker_io_dir, 8000, "3-metr")
+    manager = SearchManager(mode, worker_io_dir, args.run_dir, 8000, args.level)
     manager.run()

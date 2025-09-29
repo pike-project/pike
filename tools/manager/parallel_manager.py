@@ -83,13 +83,13 @@ class ParallelManager:
             "--nodes=1",
             "--qos=lr8_normal",
             "--time=72:0:0",
-            "--pty",
             "python",
             "-u",
             str(search_manager_path),
             "--worker_io_dir",
             str(self.worker_io_dir),
             "--mode", "openevolve_agents",
+            "--run_dir", str(self.run_dir),
         ]
 
         with open(self.run_dir / "search.log", "w") as f:
@@ -109,10 +109,9 @@ class ParallelManager:
         sleep(10)
 
         print("Worker ready! Starting search.")
-        sleep(10)
 
-        # search = self.start_search()
-        # search.wait()
+        search = self.start_search()
+        search.wait()
 
         worker.terminate()
         worker.wait()

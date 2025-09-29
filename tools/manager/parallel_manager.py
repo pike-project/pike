@@ -50,12 +50,13 @@ class ParallelManager:
         ]
         cmd = [str(x) for x in cmd]
 
-        worker = subprocess.Popen(
-            cmd,
-            preexec_fn=os.setsid,
-            # stdout=subprocess.DEVNULL,
-            # stderr=subprocess.DEVNULL,
-        )
+        with open(self.worker_io_dir / "worker.log", "w") as f:
+            worker = subprocess.Popen(
+                cmd,
+                preexec_fn=os.setsid,
+                stdout=f,
+                stderr=f,
+            )
 
         worker_ready_path = self.worker_io_dir / "ready.txt"
 

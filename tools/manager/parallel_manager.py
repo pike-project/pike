@@ -99,11 +99,13 @@ class ParallelManager:
         return search_proc
 
     def run(self):
+        print("Starting worker, waiting for it to be ready...")
+
         worker = self.start_eval_worker()
 
         sleep(10)
 
-        print("\nWorker ready! Starting search.")
+        print("Worker ready! Starting search.")
         sleep(10)
 
         # search = self.start_search()

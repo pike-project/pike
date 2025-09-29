@@ -32,6 +32,8 @@ class ParallelManager:
         os.makedirs(run_dir, exist_ok=True)
         os.makedirs(worker_io_dir, exist_ok=True)
 
+        self.run_dir = run_dir
+
         self.worker_io_dir = worker_io_dir
 
     # blocks until the worker is ready
@@ -50,7 +52,7 @@ class ParallelManager:
         ]
         cmd = [str(x) for x in cmd]
 
-        with open(self.worker_io_dir / "worker.log", "w") as f:
+        with open(self.run_dir / "worker.log", "w") as f:
             worker = subprocess.Popen(
                 cmd,
                 stdout=f,
@@ -90,11 +92,12 @@ class ParallelManager:
             "--mode", "openevolve_agents",
         ]
 
-        search_proc = subprocess.Popen(
-            cmd,
-            # stdout=subprocess.DEVNULL,
-            # stderr=subprocess.DEVNULL,
-        )
+        with open(self.run_dir / "search.log", "w") as f:
+            search_proc = subprocess.Popen(
+                cmd,
+                stdout=f,
+                stderr=f,
+            )
 
         return search_proc
 

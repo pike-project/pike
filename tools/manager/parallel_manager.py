@@ -5,6 +5,7 @@ import argparse
 import shutil
 from datetime import datetime
 from time import sleep
+import signal
 
 """
 The parallel manager does the following:
@@ -99,15 +100,19 @@ class ParallelManager:
     def run(self):
         worker = self.start_eval_worker()
 
+        sleep(30)
+
+        print("\nWorker ready! Starting search.")
+        sleep(10)
+
         # search = self.start_search()
         # search.wait()
 
-        sleep(30)
-
-        print("Worker ready! Starting search.")
-
-        worker.terminate()
+        # worker.terminate()
+        os.killpg(os.getpgid(worker.pid), signal.SIGINT)
         worker.wait()
+
+        print("Search complete, worker terminated.")
 
 if __name__ == "__main__":
     pm = ParallelManager()

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import sys
+import signal
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -106,7 +108,14 @@ def main():
         "--max_active_tasks", str(args.max_active_tasks),
     ]
 
-    subprocess.run(cmd, check=True)
+    proc = subprocess.Popen(cmd)
+
+    def handle_term(signum, frame):
+        proc.terminate()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, handle_term)
+    proc.wait()
 
 if __name__ == "__main__":
     main()

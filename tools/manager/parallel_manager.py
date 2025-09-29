@@ -52,6 +52,7 @@ class ParallelManager:
 
         worker = subprocess.Popen(
             cmd,
+            preexec_fn=os.setsid,
             # stdout=subprocess.DEVNULL,
             # stderr=subprocess.DEVNULL,
         )
@@ -100,7 +101,7 @@ class ParallelManager:
     def run(self):
         worker = self.start_eval_worker()
 
-        sleep(30)
+        sleep(10)
 
         print("\nWorker ready! Starting search.")
         sleep(10)
@@ -108,8 +109,7 @@ class ParallelManager:
         # search = self.start_search()
         # search.wait()
 
-        # worker.terminate()
-        os.killpg(os.getpgid(worker.pid), signal.SIGINT)
+        worker.terminate()
         worker.wait()
 
         print("Search complete, worker terminated.")

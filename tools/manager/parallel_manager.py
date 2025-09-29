@@ -43,7 +43,7 @@ class ParallelManager:
             "--worker_io_dir",
             self.worker_io_dir,
             "--gpu_count", 1,
-            "--cpu_count", 1,
+            "--cpu_count", 10,
             "--max_active_tasks", 1,
             "--allocation_time", "1:00:00",
         ]
@@ -99,8 +99,12 @@ class ParallelManager:
     def run(self):
         worker = self.start_eval_worker()
 
-        search = self.start_search()
-        search.wait()
+        # search = self.start_search()
+        # search.wait()
+
+        sleep(30)
+
+        print("Worker ready! Starting search.")
 
         worker.terminate()
         worker.wait()

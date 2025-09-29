@@ -125,19 +125,12 @@ class EvalWorker:
         stderr = None
         timed_out = False
 
+        # IMPORTANT: do not set "correct": False, just "loaded": False.
+        # Our parallel_tree_search currently assumes that if we have reached
+        # a point where we set correct to False, then the model loaded and
+        # eval_results has been populated with other data as well.
         eval_results = {
-            "correct": False,
-        }
-
-        output_data = {
-            "id": eval_id,
-            "type": "result",
-            "results": {
-                "stdout": stdout,
-                "stderr": stderr,
-                "eval_results": eval_results,
-                "timed_out": timed_out,
-            }
+            "loaded": False,
         }
 
         try:
@@ -243,6 +236,17 @@ class EvalWorker:
             print(e)
 
         # 4. send results out to the disk_channel
+
+        output_data = {
+            "id": eval_id,
+            "type": "result",
+            "results": {
+                "stdout": stdout,
+                "stderr": stderr,
+                "eval_results": eval_results,
+                "timed_out": timed_out,
+            }
+        }
 
         await self.disk_channel.send(output_data)
 

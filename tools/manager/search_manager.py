@@ -100,24 +100,16 @@ class SearchManager:
 
         return runs
 
-    def _start_prev(self):
-        # configs (lowercase)
-        task_start = 1
-        task_end = 50
+    def _start_prev_range(self, root_dir, run_dir, log_dir, task_start, task_end):
+        os.makedirs(run_dir, exist_ok=True)
+
+        # configs
         num_samples = 10
         num_phases = 30
-        
-        max_fix_attempts = 0
-        if self.use_agents:
-            max_fix_attempts = 5
-
+        max_fix_attempts = 5 if self.use_agents else 0
         dry_run = False
         server_type = "google"
         model_name = "gemini-2.5-pro"
-
-        root_dir = (self.curr_dir / "../..").resolve()
-
-        run_dir, log_dir = self.create_run_dir_log_dir()
 
         run_cmd = [
             "python", "-u", "scripts/parallel_tree_search.py",
@@ -135,15 +127,35 @@ class SearchManager:
             f"eval_port={self.port}",
         ]
 
-        with open(run_dir / "out.log", "w") as f:
-            run = subprocess.Popen(
+        log_path = log_dir / f"logs_{self.curr_partition_id}.log"
+        self.curr_partition_id += 1
+        with open(log_path, "w") as f:
+            proc = subprocess.Popen(
                 run_cmd,
                 cwd=root_dir,
                 stdout=f,
                 stderr=f,
             )
 
-        return [run]
+        return proc
+
+    def _start_prev(self):
+        run_dir, log_dir = self.create_run_dir_log_dir()
+        root_dir = (self.curr_dir / "../..").resolve()
+
+        run_ranges = [
+            (1, 15),
+            (16, 26),
+            (27, 40),
+            (41, 50),
+        ]
+
+        runs = []
+        for r_lo, r_hi in run_ranges:
+            run = self._start_prev_range(root_dir, run_dir, log_dir, r_lo, r_hi)
+            runs.append(run)
+
+        return runs
 
     def run(self):
         server_cmd = [

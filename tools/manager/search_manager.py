@@ -66,6 +66,7 @@ class SearchManager:
             self.parent_run_dir = Path(run_dir)
 
         self.ranges = self.compute_ranges()
+        print(f"Using run ranges: {self.ranges}")
 
     def create_run_dir_log_dir(self):
         root_run_dir = self.parent_run_dir / "runs" / f"run_{self.curr_run_count}"
@@ -186,11 +187,12 @@ class SearchManager:
             "--worker_io_dir", str(self.worker_io_dir),
         ]
 
-        disk_channel_server = subprocess.Popen(
-            server_cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        with open(self.parent_run_dir / "disk_channel_server.log", "w") as f:
+            disk_channel_server = subprocess.Popen(
+                server_cmd,
+                stdout=f,
+                stderr=f,
+            )
 
         runs = []
         for _ in range(self.run_count):
@@ -201,6 +203,8 @@ class SearchManager:
 
         for run in runs:
             run.wait()
+
+        sleep(10)
 
         requests.get(f"http://localhost:{self.port}/close")
 
@@ -242,6 +246,7 @@ if __name__ == "__main__":
     parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
     parser.add_argument("--run_dir", type=str, required=False, default=None)
     parser.add_argument("--run_count", type=int, required=False, default=1)
+    parser.add_argument("--ranges", type=int, required=False, default=4)
     parser.add_argument("--test", action='store_true')
     args = parser.parse_args()
 
@@ -263,7 +268,7 @@ if __name__ == "__main__":
 
     worker_io_dir = Path(args.worker_io_dir)
 
-    run_ranges = 4
+    run_ranges = args.ranges
 
     manager = SearchManager(mode, worker_io_dir, args.run_dir, 8000, args.level, args.run_count, run_ranges)
 

@@ -5,10 +5,41 @@ from time import sleep
 from datetime import datetime
 import requests
 import argparse
+from math import ceil
+
+def split_into_ranges(nums, n_ranges):
+    if not nums:
+        return []
+
+    nums = sorted(set(nums))  # ensure sorted unique
+    total = len(nums)
+    ranges = []
+    
+    # Compute how many numbers per range (roughly)
+    per_range = ceil(total / n_ranges)
+    
+    for i in range(n_ranges):
+        start_idx = i * per_range
+        end_idx = min((i + 1) * per_range, total) - 1
+        
+        if start_idx >= total:
+            break
+        
+        start_val = nums[start_idx]
+        end_val = nums[end_idx]
+        
+        # Expand the end to cover gap to next number
+        if i < n_ranges - 1:
+            next_start_val = nums[end_idx + 1]
+            end_val = next_start_val - 1
+        
+        ranges.append((start_val, end_val))
+    
+    return ranges
 
 
 class SearchManager:
-    def __init__(self, mode, worker_io_dir, run_dir, port, level):
+    def __init__(self, mode, worker_io_dir, run_dir, port, level, run_count, range_count):
         self.mode = mode
         self.use_agents = mode.split("_")[1] == "agents"
 
@@ -16,14 +47,16 @@ class SearchManager:
         self.port = port
         self.level = level
         self.curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+        self.root_dir = (self.curr_dir / "../..").resolve()
+        self.run_count = run_count
 
         self.curr_run_count = 0
         self.curr_partition_id = 0
 
-        if run_dir is None:
-            root_dir = (self.curr_dir / "../..").resolve()
+        self.range_count = range_count
 
-            data_dir = (root_dir / "data").resolve()
+        if run_dir is None:
+            data_dir = (self.root_dir / "data").resolve()
             run_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             run_dir = data_dir / "runs" / run_name
             run_dir.mkdir(exist_ok=True)
@@ -31,6 +64,8 @@ class SearchManager:
             self.parent_run_dir = run_dir
         else:
             self.parent_run_dir = Path(run_dir)
+
+        self.ranges = self.compute_ranges()
 
     def create_run_dir_log_dir(self):
         root_run_dir = self.parent_run_dir / "runs" / f"run_{self.curr_run_count}"
@@ -46,14 +81,14 @@ class SearchManager:
 
         return run_dir, log_dir
 
-    def _start_openevolve_range(self, openevolve_dir, run_dir, log_dir, root_dir, task_start, task_end):
+    def _start_openevolve_range(self, openevolve_dir, run_dir, log_dir, task_start, task_end):
         os.makedirs(run_dir, exist_ok=True)
 
         run_cmd = [
             "python",
             "examples/kernelbench/run.py",
             "--kernel_bench_dir",
-            str(root_dir),
+            str(self.root_dir),
             "--level",
             self.level,
             "--task_start",
@@ -84,23 +119,16 @@ class SearchManager:
 
         run_dir, log_dir = self.create_run_dir_log_dir()
 
-        root_dir = (self.curr_dir / "../..").resolve()
-
-        run_ranges = [
-            (1, 15),
-            (16, 26),
-            (27, 40),
-            (41, 50),
-        ]
+        run_ranges = self.ranges
 
         runs = []
         for r_lo, r_hi in run_ranges:
-            run = self._start_openevolve_range(openevolve_dir, run_dir, log_dir, root_dir, r_lo, r_hi)
+            run = self._start_openevolve_range(openevolve_dir, run_dir, log_dir, r_lo, r_hi)
             runs.append(run)
 
         return runs
 
-    def _start_prev_range(self, root_dir, run_dir, log_dir, task_start, task_end):
+    def _start_prev_range(self, run_dir, log_dir, task_start, task_end):
         os.makedirs(run_dir, exist_ok=True)
 
         # configs
@@ -132,7 +160,7 @@ class SearchManager:
         with open(log_path, "w") as f:
             proc = subprocess.Popen(
                 run_cmd,
-                cwd=root_dir,
+                cwd=self.root_dir,
                 stdout=f,
                 stderr=f,
             )
@@ -141,18 +169,12 @@ class SearchManager:
 
     def _start_prev(self):
         run_dir, log_dir = self.create_run_dir_log_dir()
-        root_dir = (self.curr_dir / "../..").resolve()
 
-        run_ranges = [
-            (1, 15),
-            (16, 26),
-            (27, 40),
-            (41, 50),
-        ]
+        run_ranges = self.ranges
 
         runs = []
         for r_lo, r_hi in run_ranges:
-            run = self._start_prev_range(root_dir, run_dir, log_dir, r_lo, r_hi)
+            run = self._start_prev_range(run_dir, log_dir, r_lo, r_hi)
             runs.append(run)
 
         return runs
@@ -171,10 +193,11 @@ class SearchManager:
         )
 
         runs = []
-        if self.mode == "openevolve_agents" or self.mode == "openevolve_noagents":
-            runs += self._start_openevolve()
-        else:
-            runs += self._start_prev()
+        for _ in range(self.run_count):
+            if self.mode == "openevolve_agents" or self.mode == "openevolve_noagents":
+                runs += self._start_openevolve()
+            else:
+                runs += self._start_prev()
 
         for run in runs:
             run.wait()
@@ -185,16 +208,63 @@ class SearchManager:
         disk_channel_server.wait()
 
 
+    def compute_ranges(self):
+        range_count = self.range_count
+
+        tasks = []
+
+        level_dir = self.root_dir / f"KernelBench/level{self.level}"
+        for filename in os.listdir(level_dir):
+            task = int(filename.split("_")[0])
+            tasks.append(task)
+
+        tasks = sorted(tasks)
+
+        return split_into_ranges(tasks, range_count)
+
+def test_split_into_ranges():
+    # nums = [1, 5, 14, 16, 17, 26, 28, 33, 34, 42, 50]
+    # result = split_into_ranges(nums, 4)
+    # print(result)
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 4)
+    print(manager.ranges)
+    assert manager.ranges == [(1, 15), (16, 26), (27, 40), (41, 50)], "ranges incorrect for level 3-metr"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 5)
+    print(manager.ranges)
+    assert manager.ranges == [(1, 3), (4, 6), (7, 9), (10, 12), (13, 14)], "ranges incorrect for level 5"
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--level", type=str, required=False, default="3-metr")
     parser.add_argument("--mode", type=str, required=True)
     parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
     parser.add_argument("--run_dir", type=str, required=False, default=None)
+    parser.add_argument("--run_count", type=int, required=False, default=1)
+    parser.add_argument("--test", action='store_true')
     args = parser.parse_args()
 
+    if args.test:
+        test_split_into_ranges()
+        exit(0)
+
+    valid_modes = {
+        "openevolve_agents",
+        "openevolve_noagents",
+        "prev_agents",
+        "prev_noagents",
+    }
+
+    if args.mode not in valid_modes:
+        raise Exception("Provided mode not in valid modes: {args.mode}, valid modes are: {valid_modes}")
+
     mode = args.mode
+
     worker_io_dir = Path(args.worker_io_dir)
 
-    manager = SearchManager(mode, worker_io_dir, args.run_dir, 8000, args.level)
+    run_ranges = 4
+
+    manager = SearchManager(mode, worker_io_dir, args.run_dir, 8000, args.level, args.run_count, run_ranges)
+
     manager.run()

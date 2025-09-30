@@ -7,34 +7,34 @@ import requests
 import argparse
 from math import ceil
 
+from math import ceil
+
 def split_into_ranges(nums, n_ranges):
     if not nums:
         return []
-
-    nums = sorted(set(nums))  # ensure sorted unique
+    nums = sorted(set(nums))
     total = len(nums)
+    if n_ranges <= 0:
+        raise ValueError("n_ranges must be > 0")
+    # keep your original edge-case behavior: if you request >= total ranges,
+    # return one range per number
+    if n_ranges >= total:
+        return [(x, x) for x in nums]
+    
+    base = total // n_ranges
+    remainder = total % n_ranges  # first `remainder` ranges get one extra element
     ranges = []
-    
-    # Compute how many numbers per range (roughly)
-    per_range = ceil(total / n_ranges)
-    
+    idx = 0
     for i in range(n_ranges):
-        start_idx = i * per_range
-        end_idx = min((i + 1) * per_range, total) - 1
-        
-        if start_idx >= total:
-            break
-        
-        start_val = nums[start_idx]
-        end_val = nums[end_idx]
-        
-        # Expand the end to cover gap to next number
+        size = base + (1 if i < remainder else 0)
+        start_val = nums[idx]
+        end_val = nums[idx + size - 1]
+        idx += size
+        # expand end to fill the gap up to just before the next group's start
         if i < n_ranges - 1:
-            next_start_val = nums[end_idx + 1]
-            end_val = next_start_val - 1
-        
+            next_start = nums[idx]
+            end_val = next_start - 1
         ranges.append((start_val, end_val))
-    
     return ranges
 
 
@@ -145,7 +145,7 @@ class SearchManager:
             f"run_dir={run_dir}",
             f"server_type={server_type}",
             f"model_name={model_name}",
-            "num_workers=30",
+            "num_workers=10",
             f"level={self.level}",
             f"task_start={task_start}",
             f"task_end={task_end}",
@@ -234,13 +234,40 @@ def test_split_into_ranges():
     # result = split_into_ranges(nums, 4)
     # print(result)
 
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 36)
+    print(manager.ranges)
+    assert manager.ranges == [
+        (1, 3), (4, 5), (6, 7), (8, 8), (9, 9), (10, 12), (13, 13), (14, 14), (15, 15), (16, 16), (17, 18),
+        (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 28), (29, 29),
+        (30, 30), (31, 32), (33, 35), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42),
+        (43, 43), (44, 47), (48, 48), (49, 49), (50, 50)
+    ], "ranges incorrect for level 3-metr, 36 ranges"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 37)
+    print(manager.ranges)
+    assert manager.ranges == [
+        (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
+        (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
+        (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
+        (48, 48), (49, 49), (50, 50)
+    ], "ranges incorrect for level 3-metr, 37 ranges"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 50)
+    print(manager.ranges)
+    assert manager.ranges == [
+        (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
+        (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
+        (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
+        (48, 48), (49, 49), (50, 50)
+    ], "ranges incorrect for level 3-metr, 50 ranges"
+
     manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 4)
     print(manager.ranges)
-    assert manager.ranges == [(1, 15), (16, 26), (27, 40), (41, 50)], "ranges incorrect for level 3-metr, 4 ranges"
+    assert manager.ranges == [(1, 15), (16, 25), (26, 38), (39, 50)], "ranges incorrect for level 3-metr, 4 ranges"
 
     manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 5)
     print(manager.ranges)
-    assert manager.ranges == [(1, 13), (14, 22), (23, 32), (33, 42), (43, 50)], "ranges incorrect for level 3-metr, 5 ranges"
+    assert manager.ranges == [(1, 13), (14, 22), (23, 30), (31, 40), (41, 50)], "ranges incorrect for level 3-metr, 5 ranges"
 
     manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 5)
     print(manager.ranges)
@@ -253,7 +280,7 @@ if __name__ == "__main__":
     parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
     parser.add_argument("--run_dir", type=str, required=False, default=None)
     parser.add_argument("--run_count", type=int, required=False, default=1)
-    parser.add_argument("--ranges", type=int, required=False, default=5)
+    parser.add_argument("--ranges", type=int, required=False, default=50)
     parser.add_argument("--test", action='store_true')
     args = parser.parse_args()
 

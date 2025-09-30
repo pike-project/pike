@@ -6,6 +6,7 @@ import shutil
 from datetime import datetime
 from time import sleep
 import signal
+import time
 
 """
 The parallel manager does the following:
@@ -45,10 +46,10 @@ class ParallelManager:
             worker_script_path,
             "--worker_io_dir",
             self.worker_io_dir,
-            "--gpu_count", 2,
-            "--cpu_count", 40,
-            "--max_active_tasks", 20,
-            "--allocation_time", "24:00:00",
+            "--gpu_count", 4,
+            "--cpu_count", 56,
+            "--max_active_tasks", 28,
+            "--allocation_time", "48:00:00",
         ]
         cmd = [str(x) for x in cmd]
 
@@ -78,8 +79,8 @@ class ParallelManager:
             "srun",
             "--account=ac_binocular",
             "--partition=lr8",
-            "--mincpus=64",
-            "--mem=64G",
+            "--mincpus=100",
+            "--mem=256G",
             "--nodes=1",
             "--qos=lr8_normal",
             "--time=72:0:0",
@@ -90,7 +91,7 @@ class ParallelManager:
             str(self.worker_io_dir),
             "--mode", "prev_noagents",
             "--run_dir", str(self.run_dir),
-            "--level", "0",
+            "--level", "3-metr",
         ]
 
         with open(self.run_dir / "search.log", "w") as f:
@@ -111,8 +112,16 @@ class ParallelManager:
 
         print("Worker ready! Starting search.")
 
+        start_time = time.time()
+
         search = self.start_search()
         search.wait()
+
+        end_time = time.time()
+
+        search_time = end_time - start_time
+
+        print(f"Time to complete search: {search_time:.2f}s")
 
         worker.terminate()
         worker.wait()

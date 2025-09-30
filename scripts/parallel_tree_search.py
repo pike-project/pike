@@ -678,8 +678,12 @@ class ParallelTreeSearch:
     def get_init_queries(self, ideas) -> list[Query]:
         queries = []
 
+        num_samples = self.config.num_samples
+
         curr_sample_id = 0
         for problem_id in self.problem_ids:
+            self.inc_budget(problem_id, num_samples)
+
             problem_code = self.get_problem_code(problem_id)
             problem_ideas = ideas[problem_id]
             for idea in problem_ideas:
@@ -814,16 +818,20 @@ class ParallelTreeSearch:
                 self.phase_solutions[problem_id] = []
                 self.phase_solutions_by_branch[problem_id] = {}
 
+            max_fix_attempts = self.config.max_fix_attempts
+
             # add 1 to max_fix_attempts since we need to include the initial attempt too
-            for fix_iter in range(self.config.max_fix_attempts + 1):
+            for fix_iter in range(max_fix_attempts + 1):
                 print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")
                 new_samples = self.gen_samples(queries)
                 eval_data = self.run_eval(new_samples)
                 self.save_solutions(eval_data)
-                queries = self.get_direct_fix_queries(eval_data)
-                if len(queries) == 0:
-                    print(f"======== All solutions passing/failed, exiting at phase: {phase}, fix iter: {fix_iter} ========")
-                    break
+                # do not generate new queries on the last iteration
+                if fix_iter < max_fix_attempts:
+                    queries = self.get_direct_fix_queries(eval_data)
+                    if len(queries) == 0:
+                        print(f"======== All solutions passing/failed, exiting at phase: {phase}, fix iter: {fix_iter} ========")
+                        break
             
             print(f"\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
             print(f"Phase {phase} complete.")

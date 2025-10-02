@@ -56,7 +56,8 @@ class DiskChannelManager:
         self._stopping = True
 
     def poll(self, eval_id):
-        return self.completed_tasks.pop(eval_id, None)
+        # return self.completed_tasks.pop(eval_id, None)
+        return self.completed_tasks.get(eval_id)
 
     async def close(self):
         print("Sending disk_channel close message")

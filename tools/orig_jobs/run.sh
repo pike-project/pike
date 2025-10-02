@@ -13,14 +13,14 @@ EVAL_PORT=$1
 LEVEL=3-metr
 # inclusive range
 TASK_START=1
-TASK_END=50
+TASK_END=1
 
 NUM_SAMPLES=10
 NUM_PHASES=30
 MAX_FIX_ATTEMPTS=0
 
 # True or False
-DRY_RUN=False
+DRY_RUN=True
 
 SERVER_TYPE=google
 MODEL_NAME=gemini-2.5-pro
@@ -40,7 +40,7 @@ WORKER_INPUT_DIR=worker_io/input
 WORKER_OUTPUT_DIR=worker_io/output
 
 # "python -u" makes output unbuffered, so we can see it immediately
-python -u scripts/parallel_tree_search.py run_dir=$RUN_DIR server_type=$SERVER_TYPE model_name=$MODEL_NAME num_workers=30 worker_input_dir=$WORKER_INPUT_DIR worker_output_dir=$WORKER_OUTPUT_DIR level=$LEVEL task_start=$TASK_START task_end=$TASK_END num_samples=$NUM_SAMPLES num_phases=$NUM_PHASES max_fix_attempts=$MAX_FIX_ATTEMPTS dry_run=$DRY_RUN eval_port=$EVAL_PORT | tee -a $LOG_PATH
+python -u scripts/parallel_tree_search.py run_dir=$RUN_DIR server_type=$SERVER_TYPE model_name=$MODEL_NAME num_workers=30 level=$LEVEL task_start=$TASK_START task_end=$TASK_END num_samples=$NUM_SAMPLES num_phases=$NUM_PHASES max_fix_attempts=$MAX_FIX_ATTEMPTS dry_run=$DRY_RUN eval_port=$EVAL_PORT | tee -a $LOG_PATH
 
 if [ "$DRY_RUN" = "True" ]; then
     DRY_RUN_FLAG="--dry_run"

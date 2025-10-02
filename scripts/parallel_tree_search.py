@@ -10,6 +10,7 @@ from time import sleep
 import asyncio
 import uuid
 import random
+import time
 from enum import Enum
 import requests
 
@@ -337,13 +338,45 @@ class ParallelTreeSearch:
         
         return filtered_query_results
 
+    def mock_eval_result(self, sample_id):
+        if random.random() < 0.5:
+            return {
+                "sample_id": sample_id,
+                "results": {
+                    "stdout": "this is dry_run stdout",
+                    "stderr": "this is dry_run stderr",
+                    "timed_out": False,
+                    "eval_results": {
+                        "correct": True,
+                        "runtime": random.random() * 10,
+                        "max_diff": [0.0001],
+                    }
+                }
+            }
+        else:
+            return {
+                "sample_id": sample_id,
+                "results": {
+                    "stdout": "this is dry_run stdout",
+                    "stderr": "this is dry_run stderr",
+                    "timed_out": False,
+                    "eval_results": {
+                        "loaded": False,
+                        # "correct": True,
+                        # "runtime": random.random() * 10,
+                        # "max_diff": [0.0001],
+                    }
+                }
+            }
+
     async def eval_samples(self, samples):
+        print("Starting sample eval...")
+
         eval_id_to_sample = {}
 
         base_url = f"http://localhost:{self.config.eval_port}"
 
         for sample in samples:
-            eval_id = str(uuid.uuid4())
             problem_id = sample["problem_id"]
             code = sample["code"]
 
@@ -355,32 +388,52 @@ class ParallelTreeSearch:
             }
 
             try:
-                res = requests.get(f"{base_url}{submit_path}", params=submit_params)
-                eval_id = res.text
+                if self.config.dry_run:
+                    eval_id = str(uuid.uuid4())
+                else:
+                    res = requests.get(f"{base_url}{submit_path}", params=submit_params)
+                    eval_id = res.text
 
                 eval_id_to_sample[eval_id] = sample
             except Exception as e:
+                print(e)
                 continue
 
         all_results = []
 
+        start_time = time.time()
+
         num_samples = len(samples)
         for (eval_id, sample) in eval_id_to_sample.items():
+            if self.config.dry_run:
+                # skip a sample result with random probability on dry run
+                if random.random() > 0.1:
+                    all_results.append(self.mock_eval_result(sample["sample_id"]))
+                continue
 
             poll_path = "/poll"
             poll_params = {"id": eval_id}
 
+            data = None
             while True:
                 try:
                     res = requests.get(f"{base_url}{poll_path}", params=poll_params)
                 except Exception as e:
-                    asyncio.sleep(1.0)
+                    print(e)
+                    await asyncio.sleep(1.0)
                     continue
                 data = res.json()
                 if data is not None:
                     break
 
-                asyncio.sleep(1.0)
+                # one hour timeout to give up
+                if time.time() - start_time > 60 * 60:
+                    break
+
+                await asyncio.sleep(1.0)
+
+            if data is None:
+                continue
 
             results = data["results"]
             sample_id = sample["sample_id"]
@@ -400,43 +453,19 @@ class ParallelTreeSearch:
         
         all_results.sort(key=lambda x: x["sample_id"])
 
+        print(f"Got results for {len(all_results)}/{len(eval_id_to_sample.keys())} samples")
+
         return all_results
 
     def run_eval(self, samples):
-        if self.config.dry_run:
-            all_results = []
-            for s in samples:
-                if random.random() < 0.5:
-                    all_results.append({
-                        "sample_id": s["sample_id"],
-                        "results": {
-                            "stdout": "this is dry_run stdout",
-                            "stderr": "this is dry_run stderr",
-                            "timed_out": False,
-                            "eval_results": {
-                                "correct": True,
-                                "runtime": random.random() * 10,
-                                "max_diff": [0.0001],
-                            }
-                        }
-                    })
-                else:
-                    all_results.append({
-                        "sample_id": s["sample_id"],
-                        "results": {
-                            "stdout": "this is dry_run stdout",
-                            "stderr": "this is dry_run stderr",
-                            "timed_out": False,
-                            "eval_results": {
-                                "loaded": False,
-                                # "correct": True,
-                                # "runtime": random.random() * 10,
-                                # "max_diff": [0.0001],
-                            }
-                        }
-                    })
-        else:
-            all_results = asyncio.run(self.eval_samples(samples))
+        # if self.config.dry_run:
+        #     all_results = []
+        #     for s in samples:
+        #         all_results.append(self.mock_eval_result(s["sample_id"]))
+        # else:
+        #     all_results = asyncio.run(self.eval_samples(samples))
+
+        all_results = asyncio.run(self.eval_samples(samples))
 
         final_results = []
 

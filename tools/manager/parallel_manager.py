@@ -49,7 +49,7 @@ class ParallelManager:
             "--gpu_count", 4,
             "--cpu_count", 56,
             "--max_active_tasks", 28,
-            "--allocation_time", "48:00:00",
+            "--allocation_time", "72:00:00",
         ]
         cmd = [str(x) for x in cmd]
 
@@ -75,6 +75,8 @@ class ParallelManager:
     def start_search(self):
         search_manager_path = (curr_dir / "search_manager.py").resolve()
 
+        run_count = 3
+
         cmd = [
             "srun",
             "--account=ac_binocular",
@@ -92,6 +94,7 @@ class ParallelManager:
             "--mode", "prev_noagents",
             "--run_dir", str(self.run_dir),
             "--level", "3-metr",
+            "--run_count", str(run_count),
         ]
 
         with open(self.run_dir / "search.log", "w") as f:
@@ -118,7 +121,6 @@ class ParallelManager:
         search.wait()
 
         end_time = time.time()
-
         search_time = end_time - start_time
 
         print(f"Time to complete search: {search_time:.2f}s")

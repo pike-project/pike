@@ -6,8 +6,7 @@ from datetime import datetime
 import requests
 import argparse
 from math import ceil
-
-from math import ceil
+import time
 
 def split_into_ranges(nums, n_ranges):
     if not nums:
@@ -194,15 +193,23 @@ class SearchManager:
                 stderr=f,
             )
 
-        runs = []
         for _ in range(self.run_count):
+            runs = []
+
+            start_time = time.time()
+
             if self.mode == "openevolve_agents" or self.mode == "openevolve_noagents":
                 runs += self._start_openevolve()
             else:
                 runs += self._start_prev()
 
-        for run in runs:
-            run.wait()
+            for run in runs:
+                run.wait()
+            
+            end_time = time.time()
+            run_time = end_time - start_time
+
+            print(f"Time to complete run: {run_time:.2f}s")
 
         sleep(10)
 

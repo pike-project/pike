@@ -37,6 +37,10 @@ class ParallelManager:
 
         self.worker_io_dir = worker_io_dir
 
+        self.run_level = "5"
+        self.run_mode = "prev_agents"
+        self.run_count = 1
+
     # blocks until the worker is ready
     def start_eval_worker(self):
         worker_script_path = (curr_dir / "../worker_jobs/lrc.py").resolve()
@@ -75,8 +79,6 @@ class ParallelManager:
     def start_search(self):
         search_manager_path = (curr_dir / "search_manager.py").resolve()
 
-        run_count = 1
-
         cmd = [
             "srun",
             "--account=ac_binocular",
@@ -91,10 +93,10 @@ class ParallelManager:
             str(search_manager_path),
             "--worker_io_dir",
             str(self.worker_io_dir),
-            "--mode", "prev_agents",
+            "--mode", self.run_mode,
             "--run_dir", str(self.run_dir),
-            "--level", "5",
-            "--run_count", str(run_count),
+            "--level", self.run_level,
+            "--run_count", str(self.run_count),
         ]
 
         with open(self.run_dir / "search.log", "w") as f:
@@ -107,6 +109,8 @@ class ParallelManager:
         return search_proc
 
     def run(self):
+        print(f"Level: {self.run_level}, Mode: {self.run_mode}, Run count: {self.run_count}")
+
         print("Starting worker, waiting for it to be ready...")
 
         worker = self.start_eval_worker()

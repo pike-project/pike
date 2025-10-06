@@ -46,10 +46,10 @@ class ParallelManager:
             worker_script_path,
             "--worker_io_dir",
             self.worker_io_dir,
-            "--gpu_count", 4,
-            "--cpu_count", 56,
-            "--max_active_tasks", 28,
-            "--allocation_time", "72:00:00",
+            "--gpu_count", 2,
+            "--cpu_count", 40,
+            "--max_active_tasks", 20,
+            "--allocation_time", "24:00:00",
         ]
         cmd = [str(x) for x in cmd]
 
@@ -75,7 +75,7 @@ class ParallelManager:
     def start_search(self):
         search_manager_path = (curr_dir / "search_manager.py").resolve()
 
-        run_count = 3
+        run_count = 1
 
         cmd = [
             "srun",
@@ -91,9 +91,9 @@ class ParallelManager:
             str(search_manager_path),
             "--worker_io_dir",
             str(self.worker_io_dir),
-            "--mode", "prev_noagents",
+            "--mode", "prev_agents",
             "--run_dir", str(self.run_dir),
-            "--level", "3-metr",
+            "--level", "5",
             "--run_count", str(run_count),
         ]
 

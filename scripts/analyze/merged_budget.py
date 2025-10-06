@@ -9,7 +9,7 @@ import pandas as pd
 # --- Primary Configuration Flag ---
 # Set to False for the original structure (phases/agents/steps)
 # Set to True for the new structure (iter_output/iter/attempts)
-USE_OPENEVOLVE_STRUCTURE = True
+USE_OPENEVOLVE_STRUCTURE = False
 
 # --- Common Configuration ---
 target_attempt = 300
@@ -20,12 +20,14 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 if not USE_OPENEVOLVE_STRUCTURE:
     # CONFIGURATION FOR ORIGINAL "phases/agents/steps" STRUCTURE
-    run_name = "h100_level_3-metr_trial_0"
-    output_label = "prev_agents"
-    plot_title = "Previous Agents Speedup by Step (Level 3-metr, H100)"
+    output_label = "prev_noagents"
+    plot_title = "Previous No Agents Speedup by Step (Level 3-metr, H100)"
     plot_xlabel = "Cumulative Step Number"
 
-    root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
+    run_name = "h100_level_3-metr_prev_noagents_trial_0"
+    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
+    # run_name = "h100_level_3-metr_trial_0"
+    # root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
     eager_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/eager.json").resolve()
     sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/level3-metr/{output_label}_{target_attempt}/best_solutions").resolve()
     output_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/runtimes/{output_label}.json").resolve()
@@ -37,6 +39,9 @@ if not USE_OPENEVOLVE_STRUCTURE:
     # - Tuples (task_num, phase_num, agent_num, step_num) to blacklist a specific attempt.
     # - Integers (task_num) to set the speedup to 1.0 for an entire task.
     BLACKLIST = {
+        "h100_level_3-metr_prev_noagents_trial_0": {
+            39,
+        },
         "h100_level_3-metr_trial_0": {
             (40, 4, 297, 1), # Blacklists a specific attempt
             # 42, # Sets speedup to 1.0 for a task

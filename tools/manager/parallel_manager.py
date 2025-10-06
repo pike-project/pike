@@ -37,7 +37,7 @@ class ParallelManager:
 
         self.worker_io_dir = worker_io_dir
 
-        self.run_level = "5"
+        self.run_level = "3-metr"
         self.run_mode = "prev_agents"
         self.run_count = 1
 
@@ -50,7 +50,7 @@ class ParallelManager:
             worker_script_path,
             "--worker_io_dir",
             self.worker_io_dir,
-            "--gpu_count", 2,
+            "--gpu_count", 4,
             "--cpu_count", 40,
             "--max_active_tasks", 20,
             "--allocation_time", "24:00:00",

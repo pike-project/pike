@@ -20,11 +20,13 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 if not USE_OPENEVOLVE_STRUCTURE:
     # CONFIGURATION FOR ORIGINAL "phases/agents/steps" STRUCTURE
+
+    run_name = "h100_level_3-metr_prev_noagents_trial_1"
     output_label = "prev_noagents"
+
     plot_title = "Previous No Agents Speedup by Step (Level 3-metr, H100)"
     plot_xlabel = "Cumulative Step Number"
 
-    run_name = "h100_level_3-metr_prev_noagents_trial_0"
     root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
     # run_name = "h100_level_3-metr_trial_0"
     # root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
@@ -42,6 +44,11 @@ if not USE_OPENEVOLVE_STRUCTURE:
         "h100_level_3-metr_prev_noagents_trial_0": {
             39,
         },
+        "h100_level_3-metr_prev_noagents_trial_1": {
+            37,
+            39,
+            42,
+        },
         "h100_level_3-metr_trial_0": {
             (40, 4, 297, 1), # Blacklists a specific attempt
             # 42, # Sets speedup to 1.0 for a task
@@ -49,8 +56,10 @@ if not USE_OPENEVOLVE_STRUCTURE:
     }
 else:
     # CONFIGURATION FOR NEW "iter_output/iter/attempts" STRUCTURE
+
     run_name = "h100_level_3-metr_trial_4"
     output_label = "oe_agents"
+
     plot_title = "OpenEvolve Agents Speedup by Attempt (Level 3-metr, H100)"
     plot_xlabel = "Attempt Number"
 
@@ -324,6 +333,8 @@ if __name__ == "__main__":
 
     # 2. Print geometric mean of speedups
     if speedup_list:
+        speedup_list = [v if v > 1 else 1 for v in speedup_list]
+
         geo_mean = gmean(speedup_list)
         print(f"\nGeometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
 

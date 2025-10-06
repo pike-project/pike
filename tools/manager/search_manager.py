@@ -186,12 +186,17 @@ class SearchManager:
             "--worker_io_dir", str(self.worker_io_dir),
         ]
 
-        with open(self.parent_run_dir / "disk_channel_server.log", "w") as f:
-            disk_channel_server = subprocess.Popen(
-                server_cmd,
-                stdout=f,
-                stderr=f,
-            )
+        # with open(self.parent_run_dir / "disk_channel_server.log", "w") as f:
+        #     disk_channel_server = subprocess.Popen(
+        #         server_cmd,
+        #         stdout=f,
+        #         stderr=f,
+        #     )
+        disk_channel_server = subprocess.Popen(
+            server_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
         for _ in range(self.run_count):
             runs = []

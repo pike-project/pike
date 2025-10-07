@@ -7,17 +7,13 @@ import torch.nn.functional as F
 from typing import Callable
 from diffusers.models import ModelMixin
 from diffusers.configuration_utils import ConfigMixin, register_to_config
-try:
-    import flash_attn
-    from flash_attn.flash_attn_interface import _flash_attn_forward
-    from flash_attn.flash_attn_interface import flash_attn_varlen_func
-except ImportError:
-    flash_attn = None
-    flash_attn_varlen_func = None
-    _flash_attn_forward = None
+import flash_attn
+from flash_attn.flash_attn_interface import _flash_attn_forward
+from flash_attn.flash_attn_interface import flash_attn_varlen_func
 import collections.abc
 
 from itertools import repeat
+from functools import partial
 
 
 def _ntuple(n):
@@ -1725,15 +1721,18 @@ text_length = 10
 def get_inputs():
     # Generate sample video tensor [B, C, T, H, W]
     x = torch.randn(batch_size, c_block, T, hw_over_8, hw_over_8)*10
+    x = x.to(torch.bfloat16) # Fix: cast to bfloat16
     
     # Timestep tensor [B]
     t = torch.full((batch_size,), 3.0)
     
     # Text states [B, L, D]
     text_states = torch.randn(batch_size, text_length, text_states_dim)
+    text_states = text_states.to(torch.bfloat16) # Fix: cast to bfloat16
     
     # Text states for modulation [B, D]
     text_states_2 = torch.randn(batch_size, text_states_dim)
+    text_states_2 = text_states_2.to(torch.bfloat16) # Fix: cast to bfloat16
     
     # Text mask [B, L]
     text_mask = torch.ones(batch_size, text_length)
@@ -1773,4 +1772,3 @@ if __name__ == "__main__":
     decoder_output = decoder(*get_inputs())
     print("Decoder output shape:", decoder_output.shape)
     torchviz.make_dot(decoder_output.mean(), params=dict(decoder.named_parameters()))
-    

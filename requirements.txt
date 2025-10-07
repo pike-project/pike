@@ -18,6 +18,3 @@ archon-ai
 einops
 aiofiles
 filelock
-diffusers
-opt_einsum
-flash_attn

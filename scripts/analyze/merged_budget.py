@@ -21,20 +21,36 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 if not USE_OPENEVOLVE_STRUCTURE:
     # CONFIGURATION FOR ORIGINAL "phases/agents/steps" STRUCTURE
 
-    run_name = "h100_level_3-metr_prev_noagents_trial_1"
-    output_label = "prev_noagents"
+    # run_name = "h100_level_3-metr_prev_noagents_trial_1"
+    # output_label = "prev_noagents"
 
-    plot_title = "Previous No Agents Speedup by Step (Level 3-metr, H100)"
+    run_name = "h100_level_5_prev_agents_trial_0"
+    output_label = "prev_agents"
+    target_dirname = "h100_level5"
+
+    plot_title = "Previous Agents Speedup by Step (Level 5, H100)"
     plot_xlabel = "Cumulative Step Number"
 
-    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
+    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_5").resolve()
     # run_name = "h100_level_3-metr_trial_0"
     # root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
-    eager_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/eager.json").resolve()
+
     sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/level3-metr/{output_label}_{target_attempt}/best_solutions").resolve()
-    output_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/runtimes/{output_label}.json").resolve()
-    plot_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/figs/convergence/{output_label}_convergence.pdf").resolve()
-    all_trajectories_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/tables/speedup_trajectories/{output_label}.csv").resolve()
+
+    results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+
+    runtimes_dir = results_dir / "data/runtimes"
+    convergence_dir = results_dir / "figs/convergence"
+    speedup_traj_dir = results_dir / "data/tables/speedup_trajectories"
+
+    os.makedirs(runtimes_dir, exist_ok=True)
+    os.makedirs(convergence_dir, exist_ok=True)
+    os.makedirs(speedup_traj_dir, exist_ok=True)
+
+    eager_path = runtimes_dir / "eager.json"
+    output_path = runtimes_dir / f"{output_label}.json"
+    plot_path = convergence_dir / f"{output_label}_convergence.pdf"
+    all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
 
     # PATCH 1: Updated comment to clarify behavior.
     # Blacklist format:
@@ -59,17 +75,28 @@ else:
 
     run_name = "h100_level_3-metr_trial_4"
     output_label = "oe_agents"
+    target_dirname = "h100_level3-metr"
 
     plot_title = "OpenEvolve Agents Speedup by Attempt (Level 3-metr, H100)"
     plot_xlabel = "Attempt Number"
 
     root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
-    eager_path = (curr_dir / "../../results/ours/h100_level3-metr/results/data/runtimes/eager.json").resolve()
-    sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/level3-metr/{output_label}_{target_attempt}/best_solutions").resolve()
-    output_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/runtimes/{output_label}.json").resolve()
-    plot_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/figs/convergence/{output_label}_convergence.pdf").resolve()
-    all_trajectories_path = (curr_dir / f"../../results/ours/h100_level3-metr/results/data/tables/speedup_trajectories/{output_label}.csv").resolve()
-    
+    sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
+
+    results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+    runtimes_dir = results_dir / "data/runtimes"
+    convergence_dir = results_dir / "figs/convergence"
+    speedup_traj_dir = results_dir / "data/tables/speedup_trajectories"
+
+    os.makedirs(runtimes_dir, exist_ok=True)
+    os.makedirs(convergence_dir, exist_ok=True)
+    os.makedirs(speedup_traj_dir, exist_ok=True)
+
+    eager_path = runtimes_dir / "eager.json"
+    output_path = runtimes_dir / f"{output_label}.json"
+    plot_path = convergence_dir / f"{output_label}_convergence.pdf"
+    all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
+
     # PATCH 1: Updated comment to clarify behavior.
     # Blacklist format:
     # - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.

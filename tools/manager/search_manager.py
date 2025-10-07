@@ -42,6 +42,8 @@ class SearchManager:
         self.mode = mode
         self.use_agents = mode.split("_")[1] == "agents"
 
+        self.max_fix_attempts = 5 if self.use_agents else 0
+
         self.worker_io_dir = worker_io_dir
         self.port = port
         self.level = level
@@ -99,6 +101,8 @@ class SearchManager:
             str(self.port),
             "--run_dir",
             str(run_dir),
+            "--max_fix_attempts",
+            str(self.max_fix_attempts)
         ]
 
         log_path = log_dir / f"logs_{self.curr_partition_id}.log"
@@ -134,7 +138,6 @@ class SearchManager:
         # configs
         num_samples = 10
         num_phases = 30
-        max_fix_attempts = 5 if self.use_agents else 0
         dry_run = False
         server_type = "google"
         model_name = "gemini-2.5-pro"
@@ -150,7 +153,7 @@ class SearchManager:
             f"task_end={task_end}",
             f"num_samples={num_samples}",
             f"num_phases={num_phases}",
-            f"max_fix_attempts={max_fix_attempts}",
+            f"max_fix_attempts={self.max_fix_attempts}",
             f"dry_run={str(dry_run)}",
             f"eval_port={self.port}",
         ]

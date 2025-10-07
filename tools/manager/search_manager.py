@@ -296,6 +296,7 @@ if __name__ == "__main__":
     parser.add_argument("--run_dir", type=str, required=False, default=None)
     parser.add_argument("--run_count", type=int, required=False, default=1)
     parser.add_argument("--ranges", type=int, required=False, default=50)
+    parser.add_argument("--port", type=int, required=False, default=8000)
     parser.add_argument("--test", action='store_true')
     args = parser.parse_args()
 
@@ -319,6 +320,6 @@ if __name__ == "__main__":
 
     run_ranges = args.ranges
 
-    manager = SearchManager(mode, worker_io_dir, args.run_dir, 8000, args.level, args.run_count, run_ranges)
+    manager = SearchManager(mode, worker_io_dir, args.run_dir, args.port, args.level, args.run_count, run_ranges)
 
     manager.run()

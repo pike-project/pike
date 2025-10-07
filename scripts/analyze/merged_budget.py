@@ -35,7 +35,7 @@ if not USE_OPENEVOLVE_STRUCTURE:
     # run_name = "h100_level_3-metr_trial_0"
     # root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
 
-    sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/level3-metr/{output_label}_{target_attempt}/best_solutions").resolve()
+    sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/level5/{output_label}_{target_attempt}/best_solutions").resolve()
 
     results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
 
@@ -336,10 +336,16 @@ if __name__ == "__main__":
                 dest_file = sol_dest_dir / f"task_{task_number}.py"
                 shutil.copy(best_code_path, dest_file)
         else:
-            print(f"{task_name} (id={task_number}): missing runtime")
+            # MODIFICATION: Handle cases where the runtime is completely missing.
+            # Set the final speedup to 1.0 for the geomean calculation.
+            print(f"{task_name} (id={task_number}): missing runtime, speedup set to 1.0")
+            if eager is not None:
+                speedup_list.append(1.0)
 
         # --- Process Progress Data (for convergence plot and CSV) ---
         # PATCH 3: Create speedup trajectory, setting to 1.0 if blacklisted
+        # This also correctly handles the missing runtime case: `progress` will be
+        # a list of `None`s, resulting in a speedup trajectory of all 1.0s.
         if eager is not None:
             if is_task_speedup_blacklisted:
                 speedup_progress = [1.0] * target_attempt

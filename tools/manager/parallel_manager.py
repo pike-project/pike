@@ -39,7 +39,7 @@ class ParallelManager:
 
         self.run_level = "3-metr"
         self.run_mode = "openevolve_noagents"
-        self.run_count = 1
+        self.run_count = 3
 
     # blocks until the worker is ready
     def start_eval_worker(self):
@@ -51,9 +51,9 @@ class ParallelManager:
             "--worker_io_dir",
             self.worker_io_dir,
             "--gpu_count", 4,
-            "--cpu_count", 40,
-            "--max_active_tasks", 20,
-            "--allocation_time", "24:00:00",
+            "--cpu_count", 56,
+            "--max_active_tasks", 28,
+            "--allocation_time", "48:00:00",
         ]
         cmd = [str(x) for x in cmd]
 

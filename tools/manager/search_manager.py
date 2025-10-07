@@ -64,7 +64,7 @@ class SearchManager:
 
             self.parent_run_dir = run_dir
         else:
-            self.parent_run_dir = Path(run_dir)
+            self.parent_run_dir = Path(run_dir).resolve()
 
         self.ranges = self.compute_ranges()
         print(f"Using run ranges: {self.ranges}")

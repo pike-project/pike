@@ -659,6 +659,9 @@ class Model(nn.Module):
         Returns:
             torch.Tensor: Output tensor after expert routing and computation.
         """
+        # Corrected line: Ensure input tensor dtype matches model's weight dtype.
+        x = x.to(self.gate.weight.dtype)
+        
         shape = x.size()
         x = x.view(-1, self.dim)
         weights, indices = self.gate(x)

@@ -170,6 +170,9 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: Tensor with rotary embeddings applied.
     """
+    # Ensure freqs_cis is on the same device as x to prevent a RuntimeError
+    freqs_cis = freqs_cis.to(x.device)
+    
     dtype = x.dtype
     x = torch.view_as_complex(x.float().view(*x.shape[:-1], -1, 2))
     freqs_cis = freqs_cis.view(1, x.size(1), 1, x.size(-1))

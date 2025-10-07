@@ -434,6 +434,7 @@ class MLPEmbedder(nn.Module):
         self.out_layer = nn.Linear(hidden_dim, hidden_dim, bias=True, **factory_kwargs)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.to(self.in_layer.weight.dtype)
         return self.out_layer(self.silu(self.in_layer(x)))
 
 

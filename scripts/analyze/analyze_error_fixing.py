@@ -4,40 +4,88 @@ from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# Root directory
-# root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
-root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks").resolve()
-# root_dir = (curr_dir / "../../data/parallel_runs/").resolve()
+USE_OPENEVOLVE_STRUCTURE = True
+target_attempt = 300
 
 iter_attempt_counts = defaultdict(list)
 
-total_attempts = 0
-total_iters = 0
+# total_attempts = 0
+# total_iters = 0
 
-for task_name in os.listdir(root_dir):
-    task_path = os.path.join(root_dir, task_name)
-    if not os.path.isdir(task_path) or not task_name.startswith("task"):
-        continue
+if USE_OPENEVOLVE_STRUCTURE:
+    # root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
+    root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks").resolve()
 
-    iter_output_dir = os.path.join(task_path, "output", "iter_output")
-    if not os.path.exists(iter_output_dir):
-        continue
+    for task_name in os.listdir(root_dir):
+        task = int(task_name.split("task")[1])
 
-    for iter_name in os.listdir(iter_output_dir):
-        iter_path = os.path.join(iter_output_dir, iter_name)
-        if not os.path.isdir(iter_path) or not iter_name.startswith("iter_"):
+        task_path = os.path.join(root_dir, task_name)
+        if not os.path.isdir(task_path) or not task_name.startswith("task"):
             continue
 
-        attempts_dir = os.path.join(iter_path, "attempts")
-        if not os.path.exists(attempts_dir):
+        iter_output_dir = os.path.join(task_path, "output", "iter_output")
+        if not os.path.exists(iter_output_dir):
             continue
 
-        attempt_count = sum(
-            os.path.isdir(os.path.join(attempts_dir, d)) and d.startswith("attempt_")
-            for d in os.listdir(attempts_dir)
-        )
+        iter_names = os.listdir(iter_output_dir)
+        iter_numbers = [int(iter_name.split("_")[1]) for iter_name in iter_names]
+        iter_numbers = sorted(iter_numbers)
 
-        iter_attempt_counts[task_name].append(attempt_count)
+        for iter_number in os.listdir(iter_output_dir):
+            iter_path = os.path.join(iter_output_dir, f"iter_{iter_number}")
+            if not os.path.isdir(iter_path):
+                continue
+
+            attempts_dir = os.path.join(iter_path, "attempts")
+            if not os.path.exists(attempts_dir):
+                continue
+
+            attempt_count = sum(
+                os.path.isdir(os.path.join(attempts_dir, d)) and d.startswith("attempt_")
+                for d in os.listdir(attempts_dir)
+            )
+
+            iter_attempt_counts[task].append(attempt_count)
+else:
+    root_dir = (curr_dir / "../../data/parallel_runs/h100_level_3-metr_prev_noagents_trial_1/runs/runs/run_0/run/levels/level_3-metr").resolve()
+
+    for task_name in os.listdir(root_dir):
+        task = int(task_name.split("_")[1])
+
+        task_path = os.path.join(root_dir, task_name)
+        if not os.path.isdir(task_path) or not task_name.startswith("task"):
+            continue
+
+        phases_dir = os.path.join(task_path, "phases")
+        if not os.path.exists(phases_dir):
+            continue
+
+        phase_names = os.listdir(phases_dir)
+        phase_numbers = [int(phase_name.split("_")[1]) for phase_name in phase_names]
+        phase_numbers = sorted(phase_numbers)
+
+        for phase_number in phase_numbers:
+            phase_path = os.path.join(phases_dir, f"phase_{phase_number}")
+            if not os.path.isdir(phase_path):
+                continue
+
+            agents_dir = phase_path / "agents"
+
+            agent_names = os.listdir(agents_dir)
+
+            # TODO: finish iterating here, where the attempt count is the number of steps for a given agent
+
+            # attempts_dir = os.path.join(iter_path, "attempts")
+            # if not os.path.exists(attempts_dir):
+            #     continue
+
+            # attempt_count = sum(
+            #     os.path.isdir(os.path.join(attempts_dir, d)) and d.startswith("attempt_")
+            #     for d in os.listdir(attempts_dir)
+            # )
+
+            # iter_attempt_counts[task].append(attempt_count)
+
 
 # Per-task totals and averages
 per_task_stats = {}
@@ -58,7 +106,7 @@ for task, counts in iter_attempt_counts.items():
 mean_attempts_across_tasks = sum(task_total_attempts_list) / len(task_total_attempts_list) if task_total_attempts_list else 0
 
 # Sort by task number
-sorted_tasks = sorted(per_task_stats.items(), key=lambda x: int(x[0].split("task")[1]))
+sorted_tasks = sorted(per_task_stats.items(), key=lambda x: x[0])
 
 print(f"Mean total attempts across all tasks: {mean_attempts_across_tasks:.2f}")
 print("\nPer-task stats (sorted):")

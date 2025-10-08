@@ -1,15 +1,18 @@
 import os
 from collections import defaultdict
+from pathlib import Path
+
+curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 # Root directory
-root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
+# root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
+root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks").resolve()
+# root_dir = (curr_dir / "../../data/parallel_runs/").resolve()
 
 iter_attempt_counts = defaultdict(list)
 
 total_attempts = 0
 total_iters = 0
-iters_with_6_attempts = 0
-iters_with_gt1_attempt = 0
 
 for task_name in os.listdir(root_dir):
     task_path = os.path.join(root_dir, task_name)
@@ -35,17 +38,6 @@ for task_name in os.listdir(root_dir):
         )
 
         iter_attempt_counts[task_name].append(attempt_count)
-        total_attempts += attempt_count
-        total_iters += 1
-        if attempt_count == 6:
-            iters_with_6_attempts += 1
-        if attempt_count > 1:
-            iters_with_gt1_attempt += 1
-
-# Global stats
-global_avg = total_attempts / total_iters if total_iters > 0 else 0
-global_pct_6 = (iters_with_6_attempts / total_iters * 100) if total_iters > 0 else 0
-global_pct_gt1 = (iters_with_gt1_attempt / total_iters * 100) if total_iters > 0 else 0
 
 # Per-task totals and averages
 per_task_stats = {}
@@ -68,9 +60,6 @@ mean_attempts_across_tasks = sum(task_total_attempts_list) / len(task_total_atte
 # Sort by task number
 sorted_tasks = sorted(per_task_stats.items(), key=lambda x: int(x[0].split("task")[1]))
 
-print("Global average attempts per iter:", global_avg)
-print(f"Global % of iters with 6 attempts: {global_pct_6:.2f}%")
-print(f"Global % of iters requiring >1 attempt: {global_pct_gt1:.2f}%")
 print(f"Mean total attempts across all tasks: {mean_attempts_across_tasks:.2f}")
 print("\nPer-task stats (sorted):")
 for task, (avg, pct_6, pct_gt1, total_attempts_task) in sorted_tasks:

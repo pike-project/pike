@@ -52,7 +52,8 @@ if USE_OPENEVOLVE_STRUCTURE:
 
             iter_attempt_counts[task].append(attempt_count)
 else:
-    root_dir = (curr_dir / "../../data/parallel_runs/h100_level_3-metr_prev_noagents_trial_1/runs/runs/run_0/run/levels/level_3-metr").resolve()
+    # root_dir = (curr_dir / "../../data/parallel_runs/h100_level_3-metr_prev_noagents_trial_1/runs/runs/run_0/run/levels/level_3-metr").resolve()
+    root_dir = (curr_dir / "../../data/runs/h100_level_3-metr_trial_0/levels/level_3-metr").resolve()
 
     for task_name in os.listdir(root_dir):
         if not task_name.startswith("task"):
@@ -101,6 +102,20 @@ else:
 
                 iter_attempt_counts[task].append(step_count)
 
+for task, counts in iter_attempt_counts.items():
+    counts_limited = []
+
+    task_attempts = 0
+    for c in counts:
+        task_attempts += c
+    
+        if task_attempts > target_attempt:
+            break
+
+        counts_limited.append(c)
+    
+    counts.clear()
+    counts += counts_limited
 
 # Per-task totals and averages
 per_task_stats = {}

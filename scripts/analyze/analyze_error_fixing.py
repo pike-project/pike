@@ -1,16 +1,23 @@
 import os
+import json
 from collections import defaultdict
 from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-USE_OPENEVOLVE_STRUCTURE = False
+USE_OPENEVOLVE_STRUCTURE = True
 target_attempt = 300
+
+output_label = "openevolve_agents"
 
 iter_attempt_counts = defaultdict(list)
 
 # total_attempts = 0
 # total_iters = 0
+
+error_fix_attempts_dir = (curr_dir / "../../results/ours/h100_level3-metr/results/data/error_fix_attempts").resolve()
+
+os.makedirs(error_fix_attempts_dir, exist_ok=True)
 
 if USE_OPENEVOLVE_STRUCTURE:
     # root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
@@ -116,6 +123,9 @@ for task, counts in iter_attempt_counts.items():
     
     counts.clear()
     counts += counts_limited
+
+with open(error_fix_attempts_dir / f"{output_label}.json", "w") as f:
+    json.dump(iter_attempt_counts, f)
 
 # Per-task totals and averages
 per_task_stats = {}

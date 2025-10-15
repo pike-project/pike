@@ -9,7 +9,7 @@ import pandas as pd
 # --- Primary Configuration Flag ---
 # Set to False for the original structure (phases/agents/steps)
 # Set to True for the new structure (iter_output/iter/attempts)
-USE_OPENEVOLVE_STRUCTURE = False
+USE_OPENEVOLVE_STRUCTURE = True
 
 # --- Common Configuration ---
 target_attempt = 300
@@ -24,7 +24,7 @@ if not USE_OPENEVOLVE_STRUCTURE:
     # run_name = "h100_level_3-metr_prev_noagents_trial_1"
     # output_label = "prev_noagents"
 
-    run_name = "h100_level_5_prev_agents_trial_0"
+    run_name = "h100_level_3-metr_prev_agents_trial_0"
     output_label = "prev_agents"
     target_dirname = "h100_level5"
 
@@ -73,14 +73,17 @@ if not USE_OPENEVOLVE_STRUCTURE:
 else:
     # CONFIGURATION FOR NEW "iter_output/iter/attempts" STRUCTURE
 
-    run_name = "h100_level_3-metr_trial_4"
-    output_label = "oe_agents"
+    run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+    output_label = "oe_noagents"
     target_dirname = "h100_level3-metr"
 
     plot_title = "OpenEvolve Agents Speedup by Attempt (Level 3-metr, H100)"
     plot_xlabel = "Attempt Number"
 
-    root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
+    # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
+
+    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+
     sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
 
     results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()

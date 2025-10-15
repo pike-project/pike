@@ -33,6 +33,7 @@ class ParallelManager:
         os.makedirs(run_dir, exist_ok=True)
         os.makedirs(worker_io_dir, exist_ok=True)
 
+        self.parent_run_dir = parent_run_dir
         self.run_dir = run_dir
 
         self.worker_io_dir = worker_io_dir
@@ -111,6 +112,8 @@ class ParallelManager:
     def run(self):
         print(f"Level: {self.run_level}, Mode: {self.run_mode}, Run count: {self.run_count}")
 
+        print(f"Parent run dir: {self.parent_run_dir}")
+
         print("Starting worker, waiting for it to be ready...")
 
         worker = self.start_eval_worker()
@@ -133,6 +136,9 @@ class ParallelManager:
         worker.wait()
 
         print("Search complete, worker terminated.")
+
+        print("Removing worker_io dir")
+        shutil.rmtree(self.worker_io_dir)
 
 if __name__ == "__main__":
     pm = ParallelManager()

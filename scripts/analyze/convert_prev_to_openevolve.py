@@ -45,6 +45,7 @@ def convert(src_dir: Path, dst_dir: Path):
     # 2. Process each task directory
     for src_task_path in src_task_dirs:
         task_name = src_task_path.name
+        task_num = int(task_name.split("_")[1])
         print(f"Processing {task_name}...")
 
         # Data structure to hold all step paths for each agent, keyed by agent number.
@@ -63,6 +64,8 @@ def convert(src_dir: Path, dst_dir: Path):
             [d for d in src_phases_root.iterdir() if d.is_dir() and d.name.startswith("phase_")],
             key=lambda p: numeric_suffix(p.name, "phase_")
         )
+
+        curr_iter = 1
 
         for phase_path in phase_paths:
             src_agents_root = phase_path / "agents"
@@ -93,14 +96,16 @@ def convert(src_dir: Path, dst_dir: Path):
         sorted_agent_nums = sorted(agent_to_steps_map.keys())
 
         for agent_num in sorted_agent_nums:
-            iter_num = agent_num  # Direct mapping from agent number to iter number
+            iter_num = curr_iter  # Direct mapping from agent number to iter number
+            curr_iter += 1
             step_paths_for_this_iter = agent_to_steps_map[agent_num]
 
             if not step_paths_for_this_iter:
                 continue  # Skip agents that existed but had no steps
 
             # Create the destination directory for this iter's attempts
-            dst_attempts_root = dst_dir / task_name / "output" / "iter_output" / f"iter_{iter_num}" / "attempts"
+            oe_task_name = f"task{task_num}"
+            dst_attempts_root = dst_dir / oe_task_name / "output" / "iter_output" / f"iter_{iter_num}" / "attempts"
             dst_attempts_root.mkdir(parents=True, exist_ok=True)
 
             # Each step path becomes a sequential attempt within this iter

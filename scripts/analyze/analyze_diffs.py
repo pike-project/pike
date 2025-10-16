@@ -1,5 +1,7 @@
 import os
 import json
+import difflib
+import subprocess
 from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
@@ -24,6 +26,38 @@ os.makedirs(diffs_dir, exist_ok=True)
 # attempt_0 directory at that iter
 
 # --- Helper Function ---
+
+# def diff_counts(a, b):
+#     if isinstance(a, str):
+#         a = a.splitlines()
+#     if isinstance(b, str):
+#         b = b.splitlines()
+
+#     diff = list(difflib.unified_diff(a, b, lineterm=''))
+#     added = sum(1 for line in diff if line.startswith('+ ') and not line.startswith('+++'))
+#     removed = sum(1 for line in diff if line.startswith('- ') and not line.startswith('---'))
+#     return added, removed
+
+def diff_counts(p1, p2):
+    res_removed = subprocess.run(
+        f'diff -u {p1} {p2} | grep -E "^\-" | wc -l',
+        shell=True,
+        capture_output=True,
+        text=True
+    )
+
+    removed = int(res_removed.stdout.strip()) - 1
+
+    res_added = subprocess.run(
+        f'diff -u {p1} {p2} | grep -E "^\+" | wc -l',
+        shell=True,
+        capture_output=True,
+        text=True
+    )
+
+    added = int(res_added.stdout.strip()) - 1
+
+    return added, removed
 
 def strip_whitespace_and_comments(code: str) -> str:
     lines = code.splitlines()
@@ -85,6 +119,8 @@ for task_path in sorted_task_dirs:
 
     # Iterate through each sorted iteration directory
     for iter_path in sorted_iter_dirs:
+        iter_number = int(iter_path.name.split("_")[1])
+
         attempts_dir = iter_path / "attempts"
 
         attempt_count = len(os.listdir(attempts_dir))
@@ -109,7 +145,7 @@ for task_path in sorted_task_dirs:
                 kernel_content = kernel_file.read_text(encoding='utf-8')
 
                 # Save the pair of strings for this task
-                task_data[task_name].append((prompt_content, kernel_content))
+                task_data[task_name].append((iter_number, prompt_content, kernel_content))
 
             except Exception as e:
                 print(f"  -> Error reading files in {attempt_0_path}: {e}")
@@ -128,7 +164,7 @@ for task, data_list in task_data.items():
     total_pairs += num_pairs
     print(f"- Task '{task}': Found {num_pairs} pairs of (prompt.md, code.py) from attempt_0.")
 
-    for idx, (prompt, code) in enumerate(data_list):
+    for idx, (iter_number, prompt, code) in enumerate(data_list):
         seed = prompt.split("```python\n")[-1].split("```")[0]
         diff_dir = diffs_dir / task / f"diff_{idx}"
 
@@ -137,10 +173,12 @@ for task, data_list in task_data.items():
 
         os.makedirs(diff_dir, exist_ok=True)
 
-        with open(diff_dir / "seed.py", "w") as f:
+        seed_path = diff_dir / "seed.py"
+        with open(seed_path, "w") as f:
             f.write(seed_stripped)
 
-        with open(diff_dir / "code.py", "w") as f:
+        code_path = diff_dir / "code.py"
+        with open(code_path, "w") as f:
             f.write(code_stripped)
         # if idx == 1:
         #     print("\n\n=============== CODE ==============")
@@ -148,6 +186,10 @@ for task, data_list in task_data.items():
         #     print("===================================")
         #     print(code)
         #     print("===================================\n\n")
+        
+        diff_added, diff_removed = diff_counts(seed_path, code_path)
+        # diff_added, diff_removed = diff_counts(seed_stripped, code_stripped)
+        print(f"Iter {iter_number}: ", diff_added, diff_removed)
 
 print(f"\nTotal pairs collected across all tasks: {total_pairs}")
 

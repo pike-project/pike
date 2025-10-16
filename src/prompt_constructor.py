@@ -137,7 +137,7 @@ def prompt_generate_custom_cuda_from_prompt_template(ref_arch_src: str, idea: st
 
     prompt += INIT_INSTRUCTION
 
-    prompt += f"\nFocus specifically on the following optimization task: {idea}"
+    # prompt += f"\nFocus specifically on the following optimization task: {idea}"
 
     return prompt
 

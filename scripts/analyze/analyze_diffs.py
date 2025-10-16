@@ -6,11 +6,15 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt_count = 300
 
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+
+diffs_dir = (curr_dir / "../../data/diffs" / run_name).resolve()
+
+os.makedirs(diffs_dir, exist_ok=True)
 
 # iterate tasks in the root dir, and for each task,
 # go through attempt_0 at each iter, up to the cumulative attempt number of target_attempt
@@ -20,6 +24,17 @@ root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/
 # attempt_0 directory at that iter
 
 # --- Helper Function ---
+
+def strip_whitespace_and_comments(code: str) -> str:
+    lines = code.splitlines()
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        # skip blank or comment-only lines
+        if not stripped or stripped.startswith("#"):
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned)
 
 def numeric_suffix(name: str, prefix: str) -> int:
     """Extract integer suffix from names like 'task12', 'iter_3'."""
@@ -49,7 +64,6 @@ except FileNotFoundError:
 # Iterate through each sorted task directory
 for task_path in sorted_task_dirs:
     task_name = task_path.name
-    print(f"Processing {task_name}...")
     task_data[task_name] = []
 
     iter_output_dir = task_path / "output" / "iter_output"
@@ -100,16 +114,40 @@ for task_path in sorted_task_dirs:
             except Exception as e:
                 print(f"  -> Error reading files in {attempt_0_path}: {e}")
 
-    print(total_attempt_count)
+    print(f"Processed {task_name}, total attempts: {total_attempt_count}")
 
 # --- Verification ---
 print("\n--- Traversal Complete ---")
 print("Summary of collected data:")
 total_pairs = 0
 for task, data_list in task_data.items():
+    if task != "task1":
+        continue
+
     num_pairs = len(data_list)
     total_pairs += num_pairs
     print(f"- Task '{task}': Found {num_pairs} pairs of (prompt.md, code.py) from attempt_0.")
+
+    for idx, (prompt, code) in enumerate(data_list):
+        seed = prompt.split("```python\n")[-1].split("```")[0]
+        diff_dir = diffs_dir / task / f"diff_{idx}"
+
+        code_stripped = strip_whitespace_and_comments(code)
+        seed_stripped = strip_whitespace_and_comments(seed)
+
+        os.makedirs(diff_dir, exist_ok=True)
+
+        with open(diff_dir / "seed.py", "w") as f:
+            f.write(seed_stripped)
+
+        with open(diff_dir / "code.py", "w") as f:
+            f.write(code_stripped)
+        # if idx == 1:
+        #     print("\n\n=============== CODE ==============")
+        #     print(seed)
+        #     print("===================================")
+        #     print(code)
+        #     print("===================================\n\n")
 
 print(f"\nTotal pairs collected across all tasks: {total_pairs}")
 

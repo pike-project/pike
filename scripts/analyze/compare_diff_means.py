@@ -40,6 +40,10 @@ with open(output_file, 'w') as f:
 
 print(f"Elementwise difference saved to {output_file}")
 
+# --- Compute mean of means ---
+mean1 = np.mean(array1)
+mean2 = np.mean(array2)
+
 # --- Create histogram in the same theme ---
 plt.figure(figsize=(4, 3))
 
@@ -58,6 +62,10 @@ plt.hist(
     label=label_title_map[1][1],
     edgecolor="black"
 )
+
+# --- Add dashed vertical lines for mean of means ---
+plt.axvline(mean1, color='blue', linestyle='--', linewidth=1)
+plt.axvline(mean2, color='orange', linestyle='--', linewidth=1)
 
 # --- Gridlines and labels ---
 plt.grid(axis='y', linestyle='--', alpha=0.7)

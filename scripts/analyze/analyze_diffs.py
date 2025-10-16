@@ -2,14 +2,17 @@ import os
 import json
 from pathlib import Path
 
-target_attempt = 300
-
-run_name = "h100_level_3-metr_prev_agents_trial_1"
-
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
-root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
-# TODO: iterate tasks in the root dir, and for each task,
+target_attempt_count = 300
+
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+
+# iterate tasks in the root dir, and for each task,
 # go through attempt_0 at each iter, up to the cumulative attempt number of target_attempt
 # (which should include attempts outside of just attempt_0)
 # For each attempt_0, save for this task the pair of (prompt.md, code.py)
@@ -64,9 +67,18 @@ for task_path in sorted_task_dirs:
         print(f"  -> 'iter_output' directory disappeared or is unreadable. Skipping.")
         continue
     
+    total_attempt_count = 0
+
     # Iterate through each sorted iteration directory
     for iter_path in sorted_iter_dirs:
-        attempt_0_path = iter_path / "attempts" / "attempt_0"
+        attempts_dir = iter_path / "attempts"
+
+        attempt_count = len(os.listdir(attempts_dir))
+        total_attempt_count += attempt_count
+        if total_attempt_count > target_attempt_count:
+            break
+
+        attempt_0_path = attempts_dir / "attempt_0"
 
         # We are only interested in attempt_0 for each iteration
         if not attempt_0_path.exists():
@@ -87,8 +99,8 @@ for task_path in sorted_task_dirs:
 
             except Exception as e:
                 print(f"  -> Error reading files in {attempt_0_path}: {e}")
-        else:
-            print(f"  -> Missing 'prompt.md' or 'code.py' in {attempt_0_path}")
+
+    print(total_attempt_count)
 
 # --- Verification ---
 print("\n--- Traversal Complete ---")
@@ -101,14 +113,14 @@ for task, data_list in task_data.items():
 
 print(f"\nTotal pairs collected across all tasks: {total_pairs}")
 
-# Optional: Print an example from the first task that has data
-first_task_with_data = next((task for task, data in task_data.items() if data), None)
-if first_task_with_data:
-    print(f"\nExample from the first iteration of '{first_task_with_data}':")
-    example_prompt, example_kernel = task_data[first_task_with_data][0]
+# # Optional: Print an example from the first task that has data
+# first_task_with_data = next((task for task, data in task_data.items() if data), None)
+# if first_task_with_data:
+#     print(f"\nExample from the first iteration of '{first_task_with_data}':")
+#     example_prompt, example_kernel = task_data[first_task_with_data][0]
     
-    print("\n--- prompt.md (first 300 characters) ---")
-    print(example_prompt[:300] + "..." if len(example_prompt) > 300 else example_prompt)
+#     print("\n--- prompt.md (first 300 characters) ---")
+#     print(example_prompt[:300] + "..." if len(example_prompt) > 300 else example_prompt)
     
-    print("\n--- code.py (first 300 characters) ---")
-    print(example_kernel[:300] + "..." if len(example_kernel) > 300 else example_kernel)
+#     print("\n--- code.py (first 300 characters) ---")
+#     print(example_kernel[:300] + "..." if len(example_kernel) > 300 else example_kernel)

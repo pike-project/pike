@@ -1,0 +1,114 @@
+import os
+import json
+from pathlib import Path
+
+target_attempt = 300
+
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+
+curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+
+# TODO: iterate tasks in the root dir, and for each task,
+# go through attempt_0 at each iter, up to the cumulative attempt number of target_attempt
+# (which should include attempts outside of just attempt_0)
+# For each attempt_0, save for this task the pair of (prompt.md, code.py)
+# where these pieces of data are the raw string read in from that particular file in the
+# attempt_0 directory at that iter
+
+# --- Helper Function ---
+
+def numeric_suffix(name: str, prefix: str) -> int:
+    """Extract integer suffix from names like 'task12', 'iter_3'."""
+    try:
+        return int(name.replace(prefix, "").replace("_", ""))
+    except ValueError:
+        raise ValueError(f"Could not extract numeric suffix from '{name}' with prefix '{prefix}'")
+
+# --- Main Traversal and Data Extraction Logic ---
+
+# Dictionary to hold the final results.
+# Structure: { "task_0": [(prompt_content_iter_0, kernel_content_iter_0), (prompt_content_iter_1, kernel_content_iter_1), ...], ... }
+task_data = {}
+
+print(f"Starting traversal of: {root_dir}\n")
+
+try:
+    # Get a list of all directories in root_dir starting with "task"
+    task_dirs = [d for d in root_dir.iterdir() if d.is_dir() and d.name.startswith("task")]
+    # Sort the task directories numerically
+    sorted_task_dirs = sorted(task_dirs, key=lambda d: numeric_suffix(d.name, "task"))
+
+except FileNotFoundError:
+    print(f"Error: Root directory not found at '{root_dir}'. Please check the path.")
+    sorted_task_dirs = []
+
+# Iterate through each sorted task directory
+for task_path in sorted_task_dirs:
+    task_name = task_path.name
+    print(f"Processing {task_name}...")
+    task_data[task_name] = []
+
+    iter_output_dir = task_path / "output" / "iter_output"
+
+    if not iter_output_dir.exists():
+        print(f"  -> No 'iter_output' directory found. Skipping.")
+        continue
+
+    # Get and sort the iteration directories within the task
+    try:
+        iter_dirs = [d for d in iter_output_dir.iterdir() if d.is_dir() and d.name.startswith("iter_")]
+        sorted_iter_dirs = sorted(iter_dirs, key=lambda d: numeric_suffix(d.name, "iter_"))
+    except FileNotFoundError:
+        # This case is unlikely if iter_output_dir exists, but good for safety
+        print(f"  -> 'iter_output' directory disappeared or is unreadable. Skipping.")
+        continue
+    
+    # Iterate through each sorted iteration directory
+    for iter_path in sorted_iter_dirs:
+        attempt_0_path = iter_path / "attempts" / "attempt_0"
+
+        # We are only interested in attempt_0 for each iteration
+        if not attempt_0_path.exists():
+            continue
+
+        prompt_file = attempt_0_path / "prompt.md"
+        kernel_file = attempt_0_path / "code.py"
+
+        # Check if both required files exist
+        if prompt_file.exists() and kernel_file.exists():
+            try:
+                # Read the raw string content from each file
+                prompt_content = prompt_file.read_text(encoding='utf-8')
+                kernel_content = kernel_file.read_text(encoding='utf-8')
+
+                # Save the pair of strings for this task
+                task_data[task_name].append((prompt_content, kernel_content))
+
+            except Exception as e:
+                print(f"  -> Error reading files in {attempt_0_path}: {e}")
+        else:
+            print(f"  -> Missing 'prompt.md' or 'code.py' in {attempt_0_path}")
+
+# --- Verification ---
+print("\n--- Traversal Complete ---")
+print("Summary of collected data:")
+total_pairs = 0
+for task, data_list in task_data.items():
+    num_pairs = len(data_list)
+    total_pairs += num_pairs
+    print(f"- Task '{task}': Found {num_pairs} pairs of (prompt.md, code.py) from attempt_0.")
+
+print(f"\nTotal pairs collected across all tasks: {total_pairs}")
+
+# Optional: Print an example from the first task that has data
+first_task_with_data = next((task for task, data in task_data.items() if data), None)
+if first_task_with_data:
+    print(f"\nExample from the first iteration of '{first_task_with_data}':")
+    example_prompt, example_kernel = task_data[first_task_with_data][0]
+    
+    print("\n--- prompt.md (first 300 characters) ---")
+    print(example_prompt[:300] + "..." if len(example_prompt) > 300 else example_prompt)
+    
+    print("\n--- code.py (first 300 characters) ---")
+    print(example_kernel[:300] + "..." if len(example_kernel) > 300 else example_kernel)

@@ -8,11 +8,11 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt_count = 300
 
-# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
-
 run_name = "h100_level_3-metr_prev_agents_trial_1"
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
 diffs_dir = (curr_dir / "../../data/diffs" / run_name).resolve()
 
@@ -164,6 +164,8 @@ for task, data_list in task_data.items():
     total_pairs += num_pairs
     print(f"- Task '{task}': Found {num_pairs} pairs of (prompt.md, code.py) from attempt_0.")
 
+    total_lines_changed = 0
+
     for idx, (iter_number, prompt, code) in enumerate(data_list):
         seed = prompt.split("```python\n")[-1].split("```")[0]
         diff_dir = diffs_dir / task / f"diff_{idx}"
@@ -188,8 +190,14 @@ for task, data_list in task_data.items():
         #     print("===================================\n\n")
         
         diff_added, diff_removed = diff_counts(seed_path, code_path)
+        lines_changed = diff_added + diff_removed
+        total_lines_changed += lines_changed
         # diff_added, diff_removed = diff_counts(seed_stripped, code_stripped)
         print(f"Iter {iter_number}: ", diff_added, diff_removed)
+
+    mean_lines_changed = total_lines_changed / len(data_list)
+
+    print(f"Mean lines changed: {mean_lines_changed}")
 
 print(f"\nTotal pairs collected across all tasks: {total_pairs}")
 

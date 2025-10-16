@@ -14,6 +14,10 @@ def numeric_suffix(name: str, prefix: str) -> int:
     except ValueError:
         raise Exception(f"Numeric suffix failed: name -> {name}, prefix -> {prefix}")
 
+def copy_file(src_path, dst_path):
+    if src_path.exists():
+        shutil.copy(src_path, dst_path)
+
 def convert(src_dir: Path, dst_dir: Path):
     """
     Converts the "prev" directory structure to the "openevolve" structure.
@@ -97,29 +101,34 @@ def convert(src_dir: Path, dst_dir: Path):
                     dst_attempt_path.mkdir(exist_ok=True)
 
                     # --- File Conversion ---
-                    src_kernel_file = step_path / "kernel.py"
+
+                    # a) Copy files
+                    copy_file(step_path / "kernel.py", dst_attempt_path / "code.py")
+                    copy_file(step_path / "prompt.md", dst_attempt_path / "prompt.md")
+                    copy_file(step_path / "query_result.md", dst_attempt_path / "response.md")
+                    copy_file(step_path / "query_result_full_llm_response.json", dst_attempt_path / "raw_response.json")
+
                     src_eval_file = step_path / "eval_results.json"
-                    
-                    dst_code_file = dst_attempt_path / "code.py"
                     dst_metrics_file = dst_attempt_path / "metrics_artifacts.json"
 
-                    # a) Copy kernel.py to code.py
-                    if src_kernel_file.exists():
-                        shutil.copy(src_kernel_file, dst_code_file)
-
                     # b) Transform eval_results.json to metrics_artifacts.json
+                    metrics_data = {}
                     if src_eval_file.exists():
                         try:
                             with src_eval_file.open("r") as f:
                                 eval_data = json.load(f)
+                            metrics_data["artifacts"] = {
+                                "results": eval_data,
+                            }
                             runtime = eval_data.get("eval_results", {}).get("runtime")
                             if runtime is not None:
-                                metrics_data = {"metrics": {"runtime": runtime}}
-                                with dst_metrics_file.open("w") as f:
-                                    json.dump(metrics_data, f, indent=4)
+                                metrics_data["metrics"] = {"runtime": runtime}
                         except (json.JSONDecodeError, KeyError) as e:
                             print(f"    - Warning: Could not process {src_eval_file}. Error: {e}")
                     
+                    with dst_metrics_file.open("w") as f:
+                        json.dump(metrics_data, f, indent=4)
+
                     total_attempts_converted += 1
 
                 # Crucially, increment the iter_counter AFTER processing all steps for this agent

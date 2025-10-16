@@ -39,8 +39,8 @@ class ParallelManager:
         self.worker_io_dir = worker_io_dir
 
         self.run_level = "3-metr"
-        self.run_mode = "openevolve_noagents"
-        self.run_count = 3
+        self.run_mode = "openevolve_agents"
+        self.run_count = 1
 
     # blocks until the worker is ready
     def start_eval_worker(self):

@@ -6,11 +6,6 @@ from scipy.stats import gmean
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# --- Primary Configuration Flag ---
-# Set to False for the original structure (phases/agents/steps)
-# Set to True for the new structure (iter_output/iter/attempts)
-USE_OPENEVOLVE_STRUCTURE = False
-
 # --- Common Configuration ---
 target_attempt = 300
 OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
@@ -18,101 +13,70 @@ OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-if not USE_OPENEVOLVE_STRUCTURE:
-    # CONFIGURATION FOR ORIGINAL "phases/agents/steps" STRUCTURE
+# run_name = "h100_level_3-metr_prev_noagents_trial_1"
+# output_label = "prev_noagents"
 
-    # run_name = "h100_level_3-metr_prev_noagents_trial_1"
-    # output_label = "prev_noagents"
+# run_name = "h100_level_3-metr_prev_agents_trial_0"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# output_label = "prev_agents_test2"
+# target_dirname = "h100_level3-metr"
 
-    # run_name = "h100_level_3-metr_prev_agents_trial_0"
-    run_name = "h100_level_3-metr_prev_agents_trial_1"
-    output_label = "prev_agents_test2"
-    target_dirname = "h100_level3-metr"
+# plot_title = "Prev Agents Speedup by Attempt (Level 3-metr, H100)"
+# plot_xlabel = "Attempt Number"
 
-    plot_title = "Prev Agents Speedup by Attempt (Level 3-metr, H100)"
-    plot_xlabel = "Attempt Number"
+# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
 
-    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
-    # run_name = "h100_level_3-metr_trial_0"
-    # root_dir = (curr_dir / "../../data/runs" / run_name / "levels/level_3-metr").resolve()
+# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+output_label = "prev_agents_test1"
+target_dirname = "h100_level3-metr"
 
-    sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/level5/{output_label}_{target_attempt}/best_solutions").resolve()
+plot_title = "Prev Agents Speedup by Attempt (Level 3-metr, H100)"
+plot_xlabel = "Attempt Number"
 
-    results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+# root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
 
-    runtimes_dir = results_dir / "data/runtimes"
-    convergence_dir = results_dir / "figs/convergence"
-    speedup_traj_dir = results_dir / "data/tables/speedup_trajectories"
+# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
-    os.makedirs(runtimes_dir, exist_ok=True)
-    os.makedirs(convergence_dir, exist_ok=True)
-    os.makedirs(speedup_traj_dir, exist_ok=True)
+sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
 
-    eager_path = runtimes_dir / "eager.json"
-    output_path = runtimes_dir / f"{output_label}.json"
-    plot_path = convergence_dir / f"{output_label}_convergence.pdf"
-    all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
+results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+runtimes_dir = results_dir / "data/runtimes"
+convergence_dir = results_dir / "figs/convergence"
+speedup_traj_dir = results_dir / "data/tables/speedup_trajectories"
 
-    # PATCH 1: Updated comment to clarify behavior.
-    # Blacklist format:
-    # - Tuples (task_num, phase_num, agent_num, step_num) to blacklist a specific attempt.
-    # - Integers (task_num) to set the speedup to 1.0 for an entire task.
-    BLACKLIST = {
-        "h100_level_3-metr_prev_noagents_trial_0": {
-            39,
-        },
-        "h100_level_3-metr_prev_noagents_trial_1": {
-            37,
-            39,
-            42,
-        },
-        "h100_level_3-metr_trial_0": {
-            (40, 4, 297, 1), # Blacklists a specific attempt
-            # 42, # Sets speedup to 1.0 for a task
-        },
-    }
-else:
-    # CONFIGURATION FOR NEW "iter_output/iter/attempts" STRUCTURE
+os.makedirs(runtimes_dir, exist_ok=True)
+os.makedirs(convergence_dir, exist_ok=True)
+os.makedirs(speedup_traj_dir, exist_ok=True)
 
-    # run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-    run_name = "h100_level_3-metr_prev_agents_trial_1"
-    output_label = "prev_agents_test1"
-    target_dirname = "h100_level3-metr"
+eager_path = runtimes_dir / "eager.json"
+output_path = runtimes_dir / f"{output_label}.json"
+plot_path = convergence_dir / f"{output_label}_convergence.pdf"
+all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
 
-    plot_title = "Prev Agents Speedup by Attempt (Level 3-metr, H100)"
-    plot_xlabel = "Attempt Number"
-
-    # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
-
-    # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
-    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
-
-    sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
-
-    results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
-    runtimes_dir = results_dir / "data/runtimes"
-    convergence_dir = results_dir / "figs/convergence"
-    speedup_traj_dir = results_dir / "data/tables/speedup_trajectories"
-
-    os.makedirs(runtimes_dir, exist_ok=True)
-    os.makedirs(convergence_dir, exist_ok=True)
-    os.makedirs(speedup_traj_dir, exist_ok=True)
-
-    eager_path = runtimes_dir / "eager.json"
-    output_path = runtimes_dir / f"{output_label}.json"
-    plot_path = convergence_dir / f"{output_label}_convergence.pdf"
-    all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
-
-    # PATCH 1: Updated comment to clarify behavior.
-    # Blacklist format:
-    # - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
-    # - Integers (task_number) to set the speedup to 1.0 for an entire task.
-    BLACKLIST = {
-        "h100_level_3-metr_trial_4": {
-            # (13, 229, 0), # Blacklists a specific attempt
-            13, # Sets speedup to 1.0 for a task
-        },
-    }
+# PATCH 1: Updated comment to clarify behavior.
+# Blacklist format:
+# - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
+# - Integers (task_number) to set the speedup to 1.0 for an entire task.
+BLACKLIST = {
+    "h100_level_3-metr_trial_4": {
+        # (13, 229, 0), # Blacklists a specific attempt
+        13, # Sets speedup to 1.0 for a task
+    },
+    "h100_level_3-metr_trial_0": {
+        (40, 4, 297, 1), # Blacklists a specific attempt
+        # 42, # Sets speedup to 1.0 for a task
+    },
+    "h100_level_3-metr_prev_noagents_trial_0": {
+        39,
+    },
+    "h100_level_3-metr_prev_noagents_trial_1": {
+        37,
+        39,
+        42,
+    },
+}
 
 
 # --- Load Eager Runtimes (with robust error handling) ---
@@ -290,7 +254,7 @@ if __name__ == "__main__":
     
     current_blacklist = BLACKLIST.get(run_name, set())
 
-    print(f"Processing run: {run_name} (Structure: {'OpenEvolve' if USE_OPENEVOLVE_STRUCTURE else 'Original'})")
+    print(f"Processing run: {run_name}")
 
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
@@ -298,14 +262,9 @@ if __name__ == "__main__":
         
         is_task_speedup_blacklisted = task_number in current_blacklist
 
-        if not USE_OPENEVOLVE_STRUCTURE:
-            progress, best, best_code_path, best_combo = get_progress_phases_agents_steps(
-                task_path, task_number, target_attempt
-            )
-        else:
-            progress, best, best_code_path, best_combo = get_progress_iters_attempts(
-                task_path, task_number, target_attempt
-            )
+        progress, best, best_code_path, best_combo = get_progress_iters_attempts(
+            task_path, task_number, target_attempt
+        )
 
         eager = get_eager_runtime(eager_runtimes, task_number)
 
@@ -314,10 +273,7 @@ if __name__ == "__main__":
             results.append({"problem_id": task_number, "runtime": best})
 
             if best_combo:
-                if not USE_OPENEVOLVE_STRUCTURE:
-                    combo_str = f"phase_{best_combo[0]}/agent_{best_combo[1]}/step_{best_combo[2]}"
-                else:
-                    combo_str = f"iter_{best_combo[0]}/attempt_{best_combo[1]}"
+                combo_str = f"iter_{best_combo[0]}/attempt_{best_combo[1]}"
             else:
                 combo_str = "N/A"
 

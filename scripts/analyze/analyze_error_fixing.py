@@ -7,10 +7,17 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt = 300
 
-run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
-output_label = "openevolve_agents_mutation"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# output_label = "prev_agents"
+
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+output_label = "openevolve_agents"
+
+# run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
+# output_label = "openevolve_agents_mutation"
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
+
 target_dirname = "h100_level3-metr"
 
 iter_attempt_counts = defaultdict(list)

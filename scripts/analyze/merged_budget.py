@@ -13,28 +13,21 @@ OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# output_label = "prev_agents"
+
 # run_name = "h100_level_3-metr_prev_noagents_trial_1"
 # output_label = "prev_noagents"
 
-# run_name = "h100_level_3-metr_prev_agents_trial_0"
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# output_label = "prev_agents_test2"
-# target_dirname = "h100_level3-metr"
+# run_name = "h100_level_3-metr_prev_agents_no_iba_0"
+# output_label = "prev_agents_no_iba"
 
-# plot_title = "Prev Agents Speedup by Attempt (Level 3-metr, H100)"
-# plot_xlabel = "Attempt Number"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# output_label = "openevolve_agents"
 
-# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
+run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+output_label = "openevolve_noagents"
 
-# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# output_label = "prev_agents_test1"
-
-# run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
-# output_label = "openevolve_agents_mutation"
-
-run_name = "h100_level_3-metr_prev_agents_no_iba_0"
-output_label = "prev_agents_no_iba"
 target_dirname = "h100_level3-metr"
 
 plot_title = "OpenEvolve Agents Speedup by Attempt (Level 3-metr, H100)"

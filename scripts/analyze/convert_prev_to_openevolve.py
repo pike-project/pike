@@ -4,6 +4,9 @@ import shutil
 from pathlib import Path
 import argparse
 
+# quick conversion one liner:
+# mv run run_prev && python ../../../../../../scripts/analyze/convert_prev_to_openevolve.py --src run_prev --dst run
+
 def numeric_suffix(name: str, prefix: str) -> int:
     """
     Extracts an integer suffix from directory/file names like 'task12', 'agent_3', etc.

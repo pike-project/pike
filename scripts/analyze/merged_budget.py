@@ -27,17 +27,23 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/levels/level_3-metr").resolve()
 
 # run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-run_name = "h100_level_3-metr_prev_agents_trial_1"
-output_label = "prev_agents_test1"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# output_label = "prev_agents_test1"
+
+# run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
+# output_label = "openevolve_agents_mutation"
+
+run_name = "h100_level_3-metr_prev_agents_no_iba_0"
+output_label = "prev_agents_no_iba"
 target_dirname = "h100_level3-metr"
 
-plot_title = "Prev Agents Speedup by Attempt (Level 3-metr, H100)"
+plot_title = "OpenEvolve Agents Speedup by Attempt (Level 3-metr, H100)"
 plot_xlabel = "Attempt Number"
 
 # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
 
-# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
-root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
 sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
 

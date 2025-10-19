@@ -8,11 +8,14 @@ import numpy as np
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 
 output_dir = (curr_dir / "../../../data/diffs" / run_name).resolve()
 samples_dir = output_dir / "samples"
 embeddings_dir = output_dir / "embeddings"
+
+cos_sims = []
 
 for task in sorted(os.listdir(embeddings_dir), key=lambda x: int(x.split("_")[1])):
     task_dir = embeddings_dir / task
@@ -25,4 +28,8 @@ for task in sorted(os.listdir(embeddings_dir), key=lambda x: int(x.split("_")[1]
 
         cos_sim = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
 
-        print(cos_sim)
+        cos_sims.append(cos_sim)
+
+sims_mean = np.mean(np.array(cos_sims))
+
+print(f"Sims mean: {sims_mean}")

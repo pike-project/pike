@@ -14,10 +14,9 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt_count = 300
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
 output_dir = (curr_dir / "../../data/diffs" / run_name).resolve()

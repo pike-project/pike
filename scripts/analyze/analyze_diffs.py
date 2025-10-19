@@ -2,8 +2,13 @@ import os
 import json
 import difflib
 import shutil
+import tiktoken
 import subprocess
 from pathlib import Path
+from openai import OpenAI
+import numpy as np
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -15,10 +20,11 @@ target_attempt_count = 300
 run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
+output_dir = (curr_dir / "../../data/diffs" / run_name).resolve()
+samples_dir = output_dir / "samples"
+embeddings_dir = output_dir / "embeddings"
 
-diffs_dir = (curr_dir / "../../data/diffs" / run_name).resolve()
-
-os.makedirs(diffs_dir, exist_ok=True)
+os.makedirs(samples_dir, exist_ok=True)
 
 # iterate tasks in the root dir, and for each task,
 # go through attempt_0 at each iter, up to the cumulative attempt number of target_attempt
@@ -39,6 +45,21 @@ os.makedirs(diffs_dir, exist_ok=True)
 #     added = sum(1 for line in diff if line.startswith('+ ') and not line.startswith('+++'))
 #     removed = sum(1 for line in diff if line.startswith('- ') and not line.startswith('---'))
 #     return added, removed
+
+def num_tokens_from_string(string: str, encoding_name="cl100k_base") -> int:
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.get_encoding(encoding_name)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
+
+def save_embedding_response(text, output_path):
+    emb_res = client.embeddings.create(input=text, model="text-embedding-3-large")
+    emb = emb_res.data[0].embedding
+    np_arr = np.array(emb)
+    # with open(output_path, "w") as f:
+    #     json.dump(emb_res.to_dict(), f, indent=4)
+    
+    np.save(output_path, np_arr)
 
 def diff_counts(p1, p2):
     res_removed = subprocess.run(
@@ -158,30 +179,39 @@ for task_path in sorted_task_dirs:
 print("\n--- Traversal Complete ---")
 print("Summary of collected data:")
 total_pairs = 0
+total_tokens = 0
 
 means = []
 
-for task, data_list in task_data.items():
+for task_raw, data_list in task_data.items():
+    task_num = int(task_raw.split("task")[1])
+    task_dirname = f"task_{task_num}"
+
     num_pairs = len(data_list)
     total_pairs += num_pairs
-    print(f"- Task '{task}': Found {num_pairs} pairs of (prompt.md, code.py) from attempt_0.")
+    print(f"- Task '{task_dirname}': Found {num_pairs} pairs of (prompt.md, code.py) from attempt_0.")
 
     total_lines_changed = 0
 
     for idx, (iter_number, prompt, code) in enumerate(data_list):
         seed = prompt.split("```python\n")[-1].split("```")[0]
-        diff_dir = diffs_dir / task / f"diff_{idx}"
+        sample_dir = samples_dir / task_dirname / f"sample_{idx}"
 
         code_stripped = strip_whitespace_and_comments(code)
         seed_stripped = strip_whitespace_and_comments(seed)
 
-        os.makedirs(diff_dir, exist_ok=True)
+        os.makedirs(sample_dir, exist_ok=True)
 
-        seed_path = diff_dir / "seed.py"
+        code_tokens = num_tokens_from_string(code_stripped)
+        seed_tokens = num_tokens_from_string(seed_stripped)
+
+        total_tokens += code_tokens + seed_tokens
+
+        seed_path = sample_dir / "seed.py"
         with open(seed_path, "w") as f:
             f.write(seed_stripped)
 
-        code_path = diff_dir / "code.py"
+        code_path = sample_dir / "code.py"
         with open(code_path, "w") as f:
             f.write(code_stripped)
         # if idx == 1:
@@ -191,20 +221,32 @@ for task, data_list in task_data.items():
         #     print(code)
         #     print("===================================\n\n")
         
-        diff_added, diff_removed = diff_counts(seed_path, code_path)
-        lines_changed = diff_added + diff_removed
-        total_lines_changed += lines_changed
-        # diff_added, diff_removed = diff_counts(seed_stripped, code_stripped)
-        # print(f"Iter {iter_number}: ", diff_added, diff_removed)
+        # diff_added, diff_removed = diff_counts(seed_path, code_path)
+        # lines_changed = diff_added + diff_removed
+        # total_lines_changed += lines_changed
+
+        max_tokens = 8192
+        if code_tokens > max_tokens or seed_tokens > max_tokens:
+            print(f"\tSkipping sample {idx}, too many tokens")
+            continue
+
+        emb_dir = embeddings_dir / task_dirname / f"sample_{idx}"
+
+        if not os.path.isdir(emb_dir):
+            os.makedirs(emb_dir, exist_ok=True)
+
+            save_embedding_response(seed_stripped, emb_dir / "seed.npy")
+            save_embedding_response(code_stripped, emb_dir / "code.npy")
 
     mean_lines_changed = total_lines_changed / len(data_list)
     means.append(mean_lines_changed)
 
-    print(f"{task} mean lines changed: {mean_lines_changed}")
+    print(f"{task_raw} mean lines changed: {mean_lines_changed}")
 
-with open(diffs_dir / "means.json", "w") as f:
-    json.dump(means, f, indent=4)
+# with open(diffs_dir / "means.json", "w") as f:
+#     json.dump(means, f, indent=4)
 
+print(f"Total tokens: {total_tokens}")
 print(f"\nTotal pairs collected across all tasks: {total_pairs}")
 
 # # Optional: Print an example from the first task that has data

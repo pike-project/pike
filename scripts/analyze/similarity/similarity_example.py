@@ -7,7 +7,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 texts = ["I love cats", "I adore felines"]
 
 # Get embeddings
-raw_responses = [client.embeddings.create(input=text, model="text-embedding-3-small") for text in texts]
+raw_responses = [client.embeddings.create(input=text, model="text-embedding-3-large") for text in texts]
 
 embeddings = []
 

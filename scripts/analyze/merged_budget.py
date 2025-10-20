@@ -32,6 +32,9 @@ output_label = "prev_agents"
 # output_label = "openevolve_noagents"
 
 
+# run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
+# output_label = "openevolve_agents_mutations"
+
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
 
@@ -224,6 +227,8 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
         final_progress_list.append(next_prog_val)
         curr_cost_max += cost_step
 
+    print(f"Final progress list len: {len(final_progress_list)}")
+
     # Pad the progress list if needed
     # final_best_for_padding = None if best_runtime == float("inf") else best_runtime
     # while len(progress_list) < target_attempt:
@@ -304,7 +309,7 @@ if __name__ == "__main__":
         # a list of `None`s, resulting in a speedup trajectory of all 1.0s.
         if eager is not None:
             if is_task_speedup_blacklisted:
-                speedup_progress = [1.0] * target_attempt
+                speedup_progress = [1.0] * total_step_count
             else:
                 speedup_progress = [max(1.0, eager / r) if r is not None and r > 0 else 1.0 for r in progress]
             all_speedups_progress.append(speedup_progress)
@@ -338,6 +343,7 @@ if __name__ == "__main__":
             df_idx.append(s * cost_step)
 
         df.index = df_idx
+        df.index.name = "cost"
         all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(all_trajectories_path)
         print(f"Speedup trajectories saved to {all_trajectories_path}")

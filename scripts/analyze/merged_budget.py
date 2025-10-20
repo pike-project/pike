@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 # --- Common Configuration ---
-use_cost_stopping_condition = True
+use_cost_stopping_condition = False
 
 target_attempt = 300
 # price in $ to stop at
@@ -33,17 +33,32 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
 
-run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-output_label = "openevolve_noagents"
+# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+# output_label = "openevolve_noagents"
 
 
 # run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
-# output_label = "openevolve_agents_mutations"
+# output_label = "openevolve_agents_mutation"
+
+# run_name = "h100_level_3-metr_openevolve_agents_mutation_aggressive_0"
+# output_label = "openevolve_agents_mutation_aggressive"
 
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
 
-target_dirname = "h100_level3-metr"
+# run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
+# output_label = "prev_agents_cheap_efa"
+
+# target_dirname = "h100_level3-metr"
+
+
+# run_name = "h100_level_5_prev_agents_trial_0"
+# output_label = "prev_agents"
+
+run_name = "h100_level_5_openevolve_agents_trial_0"
+output_label = "openevolve_agents"
+
+target_dirname = "h100_level5"
 
 plot_title = "Speedup by Attempt (Level 3-metr, H100)"
 plot_xlabel = "Attempt Number"
@@ -90,6 +105,9 @@ BLACKLIST = {
         39,
         42,
     },
+    "h100_level_3-metr_prev_agents_cheap_efa_0": {
+        41,
+    }
 }
 
 
@@ -128,7 +146,7 @@ def numeric_suffix(name: str, prefix: str) -> int:
         raise Exception(f"Numeric suffix failed: name -> {name}, prefix -> {prefix}")
 
 
-def get_llm_query_cost(res_path):
+def get_llm_query_cost(res_path, is_gemini_pro=True):
     if os.path.exists(res_path):
         with open(res_path) as f:
             res = json.load(f)
@@ -144,7 +162,11 @@ def get_llm_query_cost(res_path):
 
         res_tokens = total_tokens - prompt_tokens
 
-        return 1.25 * (prompt_tokens / 1e6) + 10 * (res_tokens / 1e6)
+        if is_gemini_pro:
+            return 1.25 * (prompt_tokens / 1e6) + 10 * (res_tokens / 1e6)
+        else:
+            # flash
+            return 0.30 * (prompt_tokens / 1e6) + 2.50 * (res_tokens / 1e6)
 
     return 0.0
 
@@ -170,11 +192,12 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
     iter_output_dir = os.path.join(output_dir, "iter_output")
     if not os.path.exists(iter_output_dir):
-        return [None] * target_attempt, None, None, None
+        return [None] * target_attempt, None, None, None, 0
     
     ideas_dir = os.path.join(output_dir, "ideas")
     if os.path.exists(ideas_dir):
         res_file = os.path.join(ideas_dir, "raw_response.json")
+
         idea_cost = get_llm_query_cost(res_file)
         task_cost += idea_cost
 
@@ -198,7 +221,11 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
                 res_file = os.path.join(attempts_dir, attempt_name, "raw_response.json")
       
-                task_cost += get_llm_query_cost(res_file)
+                is_gemini_pro = True
+                if run_name == "h100_level_3-metr_prev_agents_cheap_efa_0" and attempt_num > 0:
+                    is_gemini_pro = False
+
+                task_cost += get_llm_query_cost(res_file, is_gemini_pro)
                 cumulative_cost_list.append(task_cost)
 
                 if os.path.exists(metrics_file):

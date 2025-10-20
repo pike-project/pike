@@ -14,8 +14,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt_count = 300
 
-run_name = "h100_level_3-metr_prev_agents_trial_1"
-# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
@@ -213,49 +213,31 @@ for task_raw, data_list in task_data.items():
         code_path = sample_dir / "code.py"
         with open(code_path, "w") as f:
             f.write(code_stripped)
-        # if idx == 1:
-        #     print("\n\n=============== CODE ==============")
-        #     print(seed)
-        #     print("===================================")
-        #     print(code)
-        #     print("===================================\n\n")
         
-        # diff_added, diff_removed = diff_counts(seed_path, code_path)
-        # lines_changed = diff_added + diff_removed
-        # total_lines_changed += lines_changed
+        diff_added, diff_removed = diff_counts(seed_path, code_path)
+        lines_changed = diff_added + diff_removed
+        total_lines_changed += lines_changed
 
-        max_tokens = 8192
-        if code_tokens > max_tokens or seed_tokens > max_tokens:
-            print(f"\tSkipping sample {idx}, too many tokens")
-            continue
+        # max_tokens = 8192
+        # if code_tokens > max_tokens or seed_tokens > max_tokens:
+        #     print(f"\tSkipping sample {idx}, too many tokens")
+        #     continue
 
-        emb_dir = embeddings_dir / task_dirname / f"sample_{idx}"
+        # emb_dir = embeddings_dir / task_dirname / f"sample_{idx}"
 
-        if not os.path.isdir(emb_dir):
-            os.makedirs(emb_dir, exist_ok=True)
+        # if not os.path.isdir(emb_dir):
+        #     os.makedirs(emb_dir, exist_ok=True)
 
-            save_embedding_response(seed_stripped, emb_dir / "seed.npy")
-            save_embedding_response(code_stripped, emb_dir / "code.npy")
+        #     save_embedding_response(seed_stripped, emb_dir / "seed.npy")
+        #     save_embedding_response(code_stripped, emb_dir / "code.npy")
 
     mean_lines_changed = total_lines_changed / len(data_list)
     means.append(mean_lines_changed)
 
     print(f"{task_raw} mean lines changed: {mean_lines_changed}")
 
-# with open(diffs_dir / "means.json", "w") as f:
-#     json.dump(means, f, indent=4)
+with open(output_dir / "means.json", "w") as f:
+    json.dump(means, f, indent=4)
 
 print(f"Total tokens: {total_tokens}")
 print(f"\nTotal pairs collected across all tasks: {total_pairs}")
-
-# # Optional: Print an example from the first task that has data
-# first_task_with_data = next((task for task, data in task_data.items() if data), None)
-# if first_task_with_data:
-#     print(f"\nExample from the first iteration of '{first_task_with_data}':")
-#     example_prompt, example_kernel = task_data[first_task_with_data][0]
-    
-#     print("\n--- prompt.md (first 300 characters) ---")
-#     print(example_prompt[:300] + "..." if len(example_prompt) > 300 else example_prompt)
-    
-#     print("\n--- code.py (first 300 characters) ---")
-#     print(example_kernel[:300] + "..." if len(example_kernel) > 300 else example_kernel)

@@ -6,17 +6,19 @@ from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-data_dir = (curr_dir / "../../data/diff_means").resolve()
+diffs_dir = (curr_dir / "../../data/diffs").resolve()
+
+figs_dir = (curr_dir / "../../results/ours/h100_level3-metr/results/figs").resolve()
+
+run_name_1 = "h100_level_3-metr_prev_agents_trial_1"
+run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
+
+label1 = "PIKE-B"
+label2 = "PIKE-O"
 
 # File paths
-file1 = data_dir / 'means1.json'
-file2 = data_dir / 'means2.json'
-
-# Labels for each file (customizable)
-label_title_map = [
-    ("means1.json", "PIKE-B"),
-    ("means2.json", "PIKE-O"),
-]
+file1 = diffs_dir / run_name_1 / 'means.json'
+file2 = diffs_dir / run_name_2 / 'means.json'
 
 # --- Load JSON arrays ---
 with open(file1, 'r') as f:
@@ -34,11 +36,11 @@ diff = [a - b for a, b in zip(array1, array2)]
 print(diff)
 
 # --- Save the difference to JSON ---
-output_file = data_dir / 'difference.json'
-with open(output_file, 'w') as f:
-    json.dump(diff, f, indent=4)
+# output_file = data_dir / 'difference.json'
+# with open(output_file, 'w') as f:
+#     json.dump(diff, f, indent=4)
 
-print(f"Elementwise difference saved to {output_file}")
+# print(f"Elementwise difference saved to {output_file}")
 
 # --- Compute mean of means ---
 mean1 = np.mean(array1)
@@ -51,7 +53,7 @@ plt.hist(
     array1,
     bins=20,
     alpha=0.5,
-    label=label_title_map[0][1],
+    label=label1,
     edgecolor="black"
 )
 
@@ -59,7 +61,7 @@ plt.hist(
     array2,
     bins=20,
     alpha=0.5,
-    label=label_title_map[1][1],
+    label=label2,
     edgecolor="black"
 )
 
@@ -76,7 +78,7 @@ plt.legend()
 plt.tight_layout()
 
 # --- Save the figure ---
-hist_file = data_dir / 'hist.pdf'
+hist_file = figs_dir / 'loc_hist.pdf'
 plt.savefig(hist_file, format="pdf")
 plt.close()
 

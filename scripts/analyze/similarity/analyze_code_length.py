@@ -47,5 +47,4 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
 
 mean_of_means = np.mean(np.array(task_means))
 
-
 print(f"Code length mean of means: {mean_of_means}")

@@ -71,7 +71,19 @@ def convert(src_dir: Path, dst_dir: Path):
             key=lambda p: numeric_suffix(p.name, "phase_")
         )
 
+        output_dir = dst_dir / f"task{task_num}" / "output"
+
+        ideas_dir = output_dir / "ideas"
+
+        ideas_dir.mkdir(parents=True, exist_ok=True)
+
         for phase_path in phase_paths:
+            if os.path.exists(phase_path / "ideas.json"):
+                copy_file(phase_path / "ideas_prompt.md", ideas_dir / "ideas_prompt.md")
+                copy_file(phase_path / "ideas_result.md", ideas_dir / "ideas_result.md")
+                copy_file(phase_path / "ideas.json", ideas_dir / "ideas.json")
+                copy_file(phase_path / "ideas_result_full_llm_response.json", ideas_dir / "raw_response.json")
+
             src_agents_root = phase_path / "agents"
             if not src_agents_root.is_dir():
                 continue
@@ -95,7 +107,7 @@ def convert(src_dir: Path, dst_dir: Path):
                     continue
 
                 # Create the destination directory for this new iter's attempts
-                dst_attempts_root = dst_dir / f"task{task_num}" / "output" / "iter_output" / f"iter_{iter_num}" / "attempts"
+                dst_attempts_root = output_dir / "iter_output" / f"iter_{iter_num}" / "attempts"
                 dst_attempts_root.mkdir(parents=True, exist_ok=True)
 
                 # Each 'step' inside this agent becomes an 'attempt'

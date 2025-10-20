@@ -8,6 +8,8 @@ import pandas as pd
 
 # --- Common Configuration ---
 target_attempt = 300
+# price in $ to stop at
+target_cost = 25.0
 OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 
 # --- Structure-Specific Configurations ---
@@ -19,14 +21,15 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_name = "h100_level_3-metr_prev_noagents_trial_1"
 # output_label = "prev_noagents"
 
-# run_name = "h100_level_3-metr_prev_agents_no_iba_0"
-# output_label = "prev_agents_no_iba"
-
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
 
 run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
 output_label = "openevolve_noagents"
+
+
+# run_name = "h100_level_3-metr_prev_agents_no_iba_0"
+# output_label = "prev_agents_no_iba"
 
 target_dirname = "h100_level3-metr"
 
@@ -126,10 +129,15 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     best_code_path = None
     best_combo = None # (iter_num, attempt_num)
     progress_list = []
-    
+    total_res_tokens = 0
+    total_prompt_tokens = 0
+    task_cost = 0
+
     current_blacklist = BLACKLIST.get(run_name, set())
 
-    iter_output_dir = os.path.join(task_path, "output", "iter_output")
+    output_dir = os.path.join(task_path, "output")
+
+    iter_output_dir = os.path.join(output_dir, "iter_output")
     if not os.path.exists(iter_output_dir):
         return [None] * target_attempt, None, None, None
     
@@ -150,7 +158,28 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
             if (task_number, iter_num, attempt_num) not in current_blacklist:
                 metrics_file = os.path.join(attempts_dir, attempt_name, "metrics_artifacts.json")
                 code_file = os.path.join(attempts_dir, attempt_name, "code.py")
+
+                res_file = os.path.join(attempts_dir, attempt_name, "raw_response.json")
                 
+                if os.path.exists(res_file):
+                    with open(res_file) as f:
+                        res = json.load(f)
+                    
+                    if "usage_metadata" in res:
+                        usage = res["usage_metadata"]
+                        prompt_tokens = usage["prompt_token_count"]
+                        total_tokens = usage["total_token_count"]
+                    elif "usage" in res:
+                        usage = res["usage"]
+                        prompt_tokens = usage["prompt_tokens"]
+                        total_tokens = usage["total_tokens"]
+
+                    res_tokens = total_tokens - prompt_tokens
+                    total_res_tokens += res_tokens
+                    total_prompt_tokens += prompt_tokens
+
+                    task_cost += 1.25 * (prompt_tokens / 1e6) + 10 * (res_tokens / 1e6)
+
                 if os.path.exists(metrics_file):
                     try:
                         with open(metrics_file, "r") as f: metrics_data = json.load(f)
@@ -162,8 +191,12 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                     except Exception: pass # Ignore corrupted files or files with missing keys
             
             progress_list.append(None if best_runtime == float("inf") else best_runtime)
-            if cumulative >= target_attempt: stop_processing = True; break
+            if cumulative >= target_attempt or task_cost >= target_cost:
+                stop_processing = True
+                break
         if stop_processing: break
+
+    print(f"Task cost: ${task_cost:.2f}")
 
     # Pad the progress list if needed
     final_best_for_padding = None if best_runtime == float("inf") else best_runtime

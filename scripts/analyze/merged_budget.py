@@ -5,11 +5,15 @@ from pathlib import Path
 from scipy.stats import gmean
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 # --- Common Configuration ---
 target_attempt = 300
 # price in $ to stop at
 target_cost = 25.0
+cost_step = 0.2
+total_step_count = round(target_cost / cost_step)
+
 OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 
 # --- Structure-Specific Configurations ---
@@ -33,7 +37,7 @@ output_label = "prev_agents"
 
 target_dirname = "h100_level3-metr"
 
-plot_title = "OpenEvolve Agents Speedup by Attempt (Level 3-metr, H100)"
+plot_title = "Speedup by Attempt (Level 3-metr, H100)"
 plot_xlabel = "Attempt Number"
 
 # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
@@ -149,6 +153,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     best_code_path = None
     best_combo = None # (iter_num, attempt_num)
     progress_list = []
+    cumulative_cost_list = []
     task_cost = 0
 
     current_blacklist = BLACKLIST.get(run_name, set())
@@ -163,7 +168,6 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     if os.path.exists(ideas_dir):
         res_file = os.path.join(ideas_dir, "raw_response.json")
         idea_cost = get_llm_query_cost(res_file)
-        print(f"Idea cost: ${idea_cost}")
         task_cost += idea_cost
 
     iter_names = sorted([d for d in os.listdir(iter_output_dir) if d.startswith("iter_")], key=lambda x: numeric_suffix(x, "iter_"))
@@ -187,6 +191,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                 res_file = os.path.join(attempts_dir, attempt_name, "raw_response.json")
       
                 task_cost += get_llm_query_cost(res_file)
+                cumulative_cost_list.append(task_cost)
 
                 if os.path.exists(metrics_file):
                     try:
@@ -206,13 +211,26 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
     print(f"Task cost: ${task_cost:.2f}")
 
+    final_progress_list = []
+    curr_cost_max = cost_step
+    next_prog_val = float("inf")
+    for _ in range(total_step_count):
+        for idx, c in enumerate(cumulative_cost_list):
+            next_prog_val = progress_list[idx]
+
+            if c > curr_cost_max:
+                break
+
+        final_progress_list.append(next_prog_val)
+        curr_cost_max += cost_step
+
     # Pad the progress list if needed
-    final_best_for_padding = None if best_runtime == float("inf") else best_runtime
-    while len(progress_list) < target_attempt:
-        progress_list.append(final_best_for_padding)
+    # final_best_for_padding = None if best_runtime == float("inf") else best_runtime
+    # while len(progress_list) < target_attempt:
+    #     progress_list.append(final_best_for_padding)
     
     final_best_runtime = None if best_runtime == float("inf") else best_runtime
-    return progress_list, final_best_runtime, best_code_path, best_combo
+    return final_progress_list, final_best_runtime, best_code_path, best_combo
 
 
 # --- Main Execution Logic ---
@@ -313,21 +331,27 @@ if __name__ == "__main__":
     if all_speedups_progress and included_task_names_for_csv:
         # PATCH 4: Use the curated list of task names to ensure columns match data
         df = pd.DataFrame(dict(zip(included_task_names_for_csv, all_speedups_progress)))
-        df.index = pd.RangeIndex(start=1, stop=target_attempt + 1, name="attempt")
+        # df.index = pd.RangeIndex(start=1, stop=total_step_count + 1, name="attempt")
+
+        df_idx = []
+        for s in range(1, total_step_count + 1):
+            df_idx.append(s * cost_step)
+
+        df.index = df_idx
         all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(all_trajectories_path)
         print(f"Speedup trajectories saved to {all_trajectories_path}")
 
     # 4. Generate and save convergence plot
-    if all_speedups_progress:
-        geomean_curve = [gmean([s[i] for s in all_speedups_progress]) for i in range(target_attempt)]
+    # if all_speedups_progress:
+    #     geomean_curve = [gmean([s[i] for s in all_speedups_progress]) for i in range(target_attempt)]
         
-        plt.figure(figsize=(6, 4))
-        plt.plot(range(1, target_attempt + 1), geomean_curve)
-        plt.xlabel(plot_xlabel)
-        plt.ylabel("Speedup over PyTorch Eager (Geomean)")
-        plt.title(plot_title)
-        plt.grid(True, linestyle="--", alpha=0.6)
-        plt.tight_layout()
-        plt.savefig(plot_path)
-        print(f"Convergence plot saved to {plot_path}\n")
+    #     plt.figure(figsize=(6, 4))
+    #     plt.plot(range(1, target_attempt + 1), geomean_curve)
+    #     plt.xlabel(plot_xlabel)
+    #     plt.ylabel("Speedup over PyTorch Eager (Geomean)")
+    #     plt.title(plot_title)
+    #     plt.grid(True, linestyle="--", alpha=0.6)
+    #     plt.tight_layout()
+    #     plt.savefig(plot_path)
+    #     print(f"Convergence plot saved to {plot_path}\n")

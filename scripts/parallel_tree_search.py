@@ -191,6 +191,8 @@ class ParallelTreeSearch:
         self.curr_phase = 0
         self.curr_step = 0
 
+        self.fix_mode = False
+
         assert config.store_type == "local", "supporting local file-system based storage for now" # database integreation coming soon, need to migrate from CUDA Monkeys code
 
         for problem_id in self.problem_ids:
@@ -208,6 +210,12 @@ class ParallelTreeSearch:
         # We provide some presets in utils but you can also pass in your own, see query_server for more details
         self.inference_server = create_inference_server_from_presets(server_type=server_type,
                                                                 model_name=model_name,
+                                                                temperature=self.config.temperature,
+                                                                max_tokens=self.config.max_tokens,
+                                                                verbose=self.config.verbose)
+
+        self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                model_name="gemini-2.5-flash",
                                                                 temperature=self.config.temperature,
                                                                 max_tokens=self.config.max_tokens,
                                                                 verbose=self.config.verbose)
@@ -247,13 +255,17 @@ class ParallelTreeSearch:
         return ref_arch_src
 
     def query_llm_parallel(self, raw_queries: list[str]) -> list[str]:
+        inference_server = self.inference_server
+        if self.fix_mode:
+            inference_server = self.cheap_inference_server
+
         res = maybe_multithread_ordered(
             query_llm, 
             raw_queries,
             self.config.num_workers, 
             time_interval=self.config.api_query_interval, 
             # extra args
-            inference_server=self.inference_server
+            inference_server=inference_server
         )
 
         return res
@@ -849,12 +861,15 @@ class ParallelTreeSearch:
 
             max_fix_attempts = self.config.max_fix_attempts
 
+            self.fix_mode = False
+
             # add 1 to max_fix_attempts since we need to include the initial attempt too
             for fix_iter in range(max_fix_attempts + 1):
                 print(f"======================= phase: {phase}, fix iter: {fix_iter} =======================")
                 new_samples = self.gen_samples(queries)
                 eval_data = self.run_eval(new_samples)
                 self.save_solutions(eval_data)
+                self.fix_mode = True
                 # do not generate new queries on the last iteration
                 if fix_iter < max_fix_attempts:
                     queries = self.get_direct_fix_queries(eval_data)

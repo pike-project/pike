@@ -7,8 +7,10 @@ from pathlib import Path
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 diffs_dir = (curr_dir / "../../data/diffs").resolve()
-
 figs_dir = (curr_dir / "../../results/ours/h100_level3-metr/results/figs").resolve()
+
+# Ensure the output directory exists
+os.makedirs(figs_dir, exist_ok=True)
 
 run_name_1 = "h100_level_3-metr_prev_agents_trial_1"
 run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
@@ -35,13 +37,6 @@ if len(array1) != len(array2):
 diff = [a - b for a, b in zip(array1, array2)]
 print(diff)
 
-# --- Save the difference to JSON ---
-# output_file = data_dir / 'difference.json'
-# with open(output_file, 'w') as f:
-#     json.dump(diff, f, indent=4)
-
-# print(f"Elementwise difference saved to {output_file}")
-
 # --- Compute mean of means ---
 mean1 = np.mean(array1)
 mean2 = np.mean(array2)
@@ -49,9 +44,17 @@ mean2 = np.mean(array2)
 # --- Create histogram in the same theme ---
 plt.figure(figsize=(4, 3))
 
+# --- NEW: Compute a shared bin range for equal-width bins ---
+# 1. Combine all data to find the global min and max
+all_data = np.concatenate([array1, array2])
+# 2. Create 20 equally spaced bins between the global min and max
+#    We need 21 edges to create 20 bins.
+bin_edges = np.linspace(all_data.min(), all_data.max(), 21)
+
+# --- ADJUSTED: Use the shared bin_edges for both histograms ---
 plt.hist(
     array1,
-    bins=20,
+    bins=bin_edges,  # Use shared bin edges
     alpha=0.5,
     label=label1,
     edgecolor="black"
@@ -59,7 +62,7 @@ plt.hist(
 
 plt.hist(
     array2,
-    bins=20,
+    bins=bin_edges,  # Use shared bin edges
     alpha=0.5,
     label=label2,
     edgecolor="black"

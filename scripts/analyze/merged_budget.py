@@ -8,19 +8,24 @@ import pandas as pd
 import numpy as np
 
 # --- Common Configuration ---
+use_cost_stopping_condition = True
+
 target_attempt = 300
 # price in $ to stop at
 target_cost = 25.0
 cost_step = 0.2
-total_step_count = round(target_cost / cost_step)
+if use_cost_stopping_condition:
+    total_step_count = round(target_cost / cost_step)
+else:
+    total_step_count = target_attempt
 
 OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-run_name = "h100_level_3-metr_prev_agents_trial_1"
-output_label = "prev_agents"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# output_label = "prev_agents"
 
 # run_name = "h100_level_3-metr_prev_noagents_trial_1"
 # output_label = "prev_noagents"
@@ -28,8 +33,8 @@ output_label = "prev_agents"
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
 
-# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-# output_label = "openevolve_noagents"
+run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+output_label = "openevolve_noagents"
 
 
 # run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
@@ -207,12 +212,18 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                     except Exception: pass # Ignore corrupted files or files with missing keys
             
             progress_list.append(None if best_runtime == float("inf") else best_runtime)
-            if cumulative >= target_attempt or task_cost >= target_cost:
-                stop_processing = True
-                break
-        if stop_processing: break
+            if use_cost_stopping_condition:
+                if task_cost >= target_cost:
+                    stop_processing = True
+                    break
+            else:
+                if cumulative >= target_attempt:
+                    stop_processing = True
+                    break
+        if stop_processing:
+            break
 
-    print(f"Task cost: ${task_cost:.2f}")
+    print(f"Task cost: ${task_cost:.2f}, steps completed: {cumulative}")
 
     final_progress_list = []
     curr_cost_max = cost_step
@@ -227,15 +238,13 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
         final_progress_list.append(next_prog_val)
         curr_cost_max += cost_step
 
-    print(f"Final progress list len: {len(final_progress_list)}")
-
     # Pad the progress list if needed
     # final_best_for_padding = None if best_runtime == float("inf") else best_runtime
     # while len(progress_list) < target_attempt:
     #     progress_list.append(final_best_for_padding)
     
     final_best_runtime = None if best_runtime == float("inf") else best_runtime
-    return final_progress_list, final_best_runtime, best_code_path, best_combo
+    return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative
 
 
 # --- Main Execution Logic ---
@@ -255,15 +264,19 @@ if __name__ == "__main__":
 
     print(f"Processing run: {run_name}")
 
+    task_step_counts = []
+
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
         task_path = os.path.join(root_dir, task_name)
         
         is_task_speedup_blacklisted = task_number in current_blacklist
 
-        progress, best, best_code_path, best_combo = get_progress_iters_attempts(
+        progress, best, best_code_path, best_combo, task_step_count = get_progress_iters_attempts(
             task_path, task_number, target_attempt
         )
+
+        task_step_counts.append(task_step_count)
 
         eager = get_eager_runtime(eager_runtimes, task_number)
 
@@ -325,12 +338,15 @@ if __name__ == "__main__":
         json.dump(output_data, f, indent=4)
     print(f"\nRuntimes written to {output_path}")
 
+    mean_steps_per_task = np.mean(np.array(task_step_counts))
+    print(f"\nMean steps per task: {mean_steps_per_task}")
+
     # 2. Print geometric mean of speedups
     if speedup_list:
         speedup_list = [v if v > 1 else 1 for v in speedup_list]
 
         geo_mean = gmean(speedup_list)
-        print(f"\nGeometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
+        print(f"Geometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
 
     # 3. Generate and save the all_trajectories CSV
     if all_speedups_progress and included_task_names_for_csv:

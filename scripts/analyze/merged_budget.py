@@ -15,8 +15,8 @@ OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# output_label = "prev_agents"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+output_label = "prev_agents"
 
 # run_name = "h100_level_3-metr_prev_noagents_trial_1"
 # output_label = "prev_noagents"
@@ -24,8 +24,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
 
-run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-output_label = "openevolve_noagents"
+# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+# output_label = "openevolve_noagents"
 
 
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
@@ -116,6 +116,26 @@ def numeric_suffix(name: str, prefix: str) -> int:
         raise Exception(f"Numeric suffix failed: name -> {name}, prefix -> {prefix}")
 
 
+def get_llm_query_cost(res_path):
+    if os.path.exists(res_path):
+        with open(res_path) as f:
+            res = json.load(f)
+        
+        if "usage_metadata" in res:
+            usage = res["usage_metadata"]
+            prompt_tokens = usage["prompt_token_count"]
+            total_tokens = usage["total_token_count"]
+        elif "usage" in res:
+            usage = res["usage"]
+            prompt_tokens = usage["prompt_tokens"]
+            total_tokens = usage["total_tokens"]
+
+        res_tokens = total_tokens - prompt_tokens
+
+        return 1.25 * (prompt_tokens / 1e6) + 10 * (res_tokens / 1e6)
+
+    return 0.0
+
 # --- Directory Traversal Logic ---
 
 def get_progress_iters_attempts(task_path, task_number, target_attempt):
@@ -129,8 +149,6 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     best_code_path = None
     best_combo = None # (iter_num, attempt_num)
     progress_list = []
-    total_res_tokens = 0
-    total_prompt_tokens = 0
     task_cost = 0
 
     current_blacklist = BLACKLIST.get(run_name, set())
@@ -141,6 +159,13 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     if not os.path.exists(iter_output_dir):
         return [None] * target_attempt, None, None, None
     
+    ideas_dir = os.path.join(output_dir, "ideas")
+    if os.path.exists(ideas_dir):
+        res_file = os.path.join(ideas_dir, "raw_response.json")
+        idea_cost = get_llm_query_cost(res_file)
+        print(f"Idea cost: ${idea_cost}")
+        task_cost += idea_cost
+
     iter_names = sorted([d for d in os.listdir(iter_output_dir) if d.startswith("iter_")], key=lambda x: numeric_suffix(x, "iter_"))
     
     stop_processing = False
@@ -160,25 +185,8 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                 code_file = os.path.join(attempts_dir, attempt_name, "code.py")
 
                 res_file = os.path.join(attempts_dir, attempt_name, "raw_response.json")
-                
-                if os.path.exists(res_file):
-                    with open(res_file) as f:
-                        res = json.load(f)
-                    
-                    if "usage_metadata" in res:
-                        usage = res["usage_metadata"]
-                        prompt_tokens = usage["prompt_token_count"]
-                        total_tokens = usage["total_token_count"]
-                    elif "usage" in res:
-                        usage = res["usage"]
-                        prompt_tokens = usage["prompt_tokens"]
-                        total_tokens = usage["total_tokens"]
-
-                    res_tokens = total_tokens - prompt_tokens
-                    total_res_tokens += res_tokens
-                    total_prompt_tokens += prompt_tokens
-
-                    task_cost += 1.25 * (prompt_tokens / 1e6) + 10 * (res_tokens / 1e6)
+      
+                task_cost += get_llm_query_cost(res_file)
 
                 if os.path.exists(metrics_file):
                     try:

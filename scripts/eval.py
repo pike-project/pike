@@ -431,6 +431,8 @@ def main():
     parser.add_argument("--op_atol", type=float, default=1e-2)
     parser.add_argument("--op_rtol", type=float, default=1e-2)
     parser.add_argument("--mode", type=str, required=False, default="eager")
+    # only provide this if evaluating with a separate CUDA file
+    parser.add_argument("--cuda_path", type=str, required=False, default=None)
     parser.add_argument("--profile", action='store_true')
     args = parser.parse_args()
 
@@ -456,7 +458,11 @@ def main():
     ev = Eval(level, task, args.op_atol, args.op_rtol, gpu_locks_dir=gpu_locks_dir)
     
     ev.create_baseline_model()
-    ev.create_model("llm", llm_path)
+
+    if args.cuda_path is None:
+        ev.create_model("llm", llm_path)
+    else:
+        ev.create_model("llm", llm_path, cuda_path=args.cuda_path)
 
     ev.acquire_gpu_lock()
 

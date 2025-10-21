@@ -52,11 +52,11 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # target_dirname = "h100_level3-metr"
 
 
-# run_name = "h100_level_5_prev_agents_trial_0"
-# output_label = "prev_agents"
+run_name = "h100_level_5_prev_agents_trial_0"
+output_label = "prev_agents"
 
-run_name = "h100_level_5_openevolve_agents_trial_0"
-output_label = "openevolve_agents"
+# run_name = "h100_level_5_openevolve_agents_trial_0"
+# output_label = "openevolve_agents"
 
 target_dirname = "h100_level5"
 
@@ -192,7 +192,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
     iter_output_dir = os.path.join(output_dir, "iter_output")
     if not os.path.exists(iter_output_dir):
-        return [None] * target_attempt, None, None, None, 0
+        return [None] * target_attempt, None, None, None, 0, 0
     
     ideas_dir = os.path.join(output_dir, "ideas")
     if os.path.exists(ideas_dir):
@@ -271,7 +271,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     #     progress_list.append(final_best_for_padding)
     
     final_best_runtime = None if best_runtime == float("inf") else best_runtime
-    return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative
+    return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative, task_cost
 
 
 # --- Main Execution Logic ---
@@ -292,6 +292,7 @@ if __name__ == "__main__":
     print(f"Processing run: {run_name}")
 
     task_step_counts = []
+    task_costs = []
 
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
@@ -299,11 +300,12 @@ if __name__ == "__main__":
         
         is_task_speedup_blacklisted = task_number in current_blacklist
 
-        progress, best, best_code_path, best_combo, task_step_count = get_progress_iters_attempts(
+        progress, best, best_code_path, best_combo, task_step_count, task_cost = get_progress_iters_attempts(
             task_path, task_number, target_attempt
         )
 
         task_step_counts.append(task_step_count)
+        task_costs.append(task_cost)
 
         eager = get_eager_runtime(eager_runtimes, task_number)
 
@@ -364,6 +366,9 @@ if __name__ == "__main__":
     with open(output_path, "w") as f:
         json.dump(output_data, f, indent=4)
     print(f"\nRuntimes written to {output_path}")
+
+    mean_task_cost = np.mean(np.array(task_costs))
+    print(f"\nMean task cost: ${mean_task_cost:.2f}")
 
     mean_steps_per_task = np.mean(np.array(task_step_counts))
     print(f"\nMean steps per task: {mean_steps_per_task}")

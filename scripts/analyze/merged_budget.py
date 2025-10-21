@@ -10,6 +10,8 @@ import numpy as np
 # --- Common Configuration ---
 use_cost_stopping_condition = False
 
+write_to_disk = True
+
 target_attempt = 300
 # price in $ to stop at
 target_cost = 25.0
@@ -46,19 +48,19 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
 
-# run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
-# output_label = "prev_agents_cheap_efa"
+run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
+output_label = "prev_agents_cheap_efa"
 
-# target_dirname = "h100_level3-metr"
+target_dirname = "h100_level3-metr"
 
 
-run_name = "h100_level_5_prev_agents_trial_0"
-output_label = "prev_agents"
+# run_name = "h100_level_5_prev_agents_trial_0"
+# output_label = "prev_agents"
 
 # run_name = "h100_level_5_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
 
-target_dirname = "h100_level5"
+# target_dirname = "h100_level5"
 
 plot_title = "Speedup by Attempt (Level 3-metr, H100)"
 plot_xlabel = "Attempt Number"
@@ -278,7 +280,8 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
 if __name__ == "__main__":
     sol_dest_dir.mkdir(parents=True, exist_ok=True)
-    plot_path.parent.mkdir(parents=True, exist_ok=True)
+    if write_to_disk:
+        plot_path.parent.mkdir(parents=True, exist_ok=True)
 
     task_names = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: numeric_suffix(x, "task"))
 
@@ -363,8 +366,9 @@ if __name__ == "__main__":
 
     # 1. Write JSON runtimes
     output_data = {"title": output_label, "results": sorted(results, key=lambda x: x["problem_id"])}
-    with open(output_path, "w") as f:
-        json.dump(output_data, f, indent=4)
+    if write_to_disk:
+        with open(output_path, "w") as f:
+            json.dump(output_data, f, indent=4)
     print(f"\nRuntimes written to {output_path}")
 
     mean_task_cost = np.mean(np.array(task_costs))
@@ -392,9 +396,10 @@ if __name__ == "__main__":
 
         df.index = df_idx
         df.index.name = "cost"
-        all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(all_trajectories_path)
-        print(f"Speedup trajectories saved to {all_trajectories_path}")
+        if write_to_disk:
+            all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(all_trajectories_path)
+            print(f"Speedup trajectories saved to {all_trajectories_path}")
 
     # 4. Generate and save convergence plot
     # if all_speedups_progress:

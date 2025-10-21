@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, subprocess
 from pathlib import Path
 import json
 
@@ -24,13 +24,27 @@ results = []
 
 for task_num in task_nums:
     output_path = f"/scratch/task_{task_num}.json"
-    # TODO: execute this
-    # python scripts/eval.py --level {level_num} --task {task_num} --code_path local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/pytorch_functional.py --output_path {output_path} --cuda_path local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/kernel.cu
+    cmd = [
+        "python",
+        "scripts/eval.py",
+        "--level", str(level_num),
+        "--task", str(task_num),
+        "--code_path", f"local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/pytorch_functional.py",
+        "--output_path", output_path,
+        "--cuda_path", f"local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/kernel.cu",
+    ]
+
+    print(f"\n>>> Running command for task {task_num}: {' '.join(cmd)}")
+
+    try:
+        subprocess.run(cmd, check=False, capture_output=True, text=True)
+    except Exception as e:
+        print(f"Command failed for task {task_num}: {e}")
 
     try:
         with open(output_path) as f:
             data = json.load(f)
-        
+
         runtime = data["llm"]["runtime"]
 
         results.append({
@@ -40,13 +54,19 @@ for task_num in task_nums:
                 "eval_results": data["llm"],
             },
         })
+
+        print(f"Task {task_num} completed successfully. Runtime: {runtime}")
+
     except Exception as e:
-        print(e)
+        print(f"Failed to process output for task {task_num}: {e}")
 
 full_output = {
     "title": "Sakana",
     "results": results,
 }
 
-with open(f"/output/sakana.json") as f:
-    json.dump(full_output, f)
+os.makedirs("/output", exist_ok=True)
+with open("/output/sakana.json", "w") as f:
+    json.dump(full_output, f, indent=2)
+
+print("\nAll done. Results written to /output/sakana.json")

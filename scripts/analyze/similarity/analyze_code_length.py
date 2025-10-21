@@ -10,7 +10,8 @@ from radon.raw import analyze
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 # run_name = "h100_level_3-metr_prev_agents_trial_1"
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
 
 output_dir = (curr_dir / "../../../data/diffs" / run_name).resolve()
 samples_dir = output_dir / "samples"
@@ -44,6 +45,8 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
     task_mean = np.mean(np.array(code_lens))
 
     task_means.append(task_mean)
+
+    print(f"{task} mean SLOC: {task_mean}")
 
 mean_of_means = np.mean(np.array(task_means))
 

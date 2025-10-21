@@ -10,7 +10,7 @@ import numpy as np
 # --- Common Configuration ---
 use_cost_stopping_condition = False
 
-write_to_disk = True
+write_to_disk = False
 
 target_attempt = 300
 # price in $ to stop at
@@ -32,8 +32,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_name = "h100_level_3-metr_prev_noagents_trial_1"
 # output_label = "prev_noagents"
 
-# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-# output_label = "openevolve_agents"
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+output_label = "openevolve_agents"
 
 # run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
 # output_label = "openevolve_noagents"
@@ -48,8 +48,8 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
 
-run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
-output_label = "prev_agents_cheap_efa"
+# run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
+# output_label = "prev_agents_cheap_efa"
 
 target_dirname = "h100_level3-metr"
 
@@ -70,7 +70,7 @@ plot_xlabel = "Attempt Number"
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
-sol_dest_dir = (curr_dir / f"../../best_agent_solutions/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
+sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
 
 results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
 runtimes_dir = results_dir / "data/runtimes"

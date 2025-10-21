@@ -7,11 +7,11 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt = 300
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# output_label = "prev_agents"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+output_label = "prev_agents"
 
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-output_label = "openevolve_agents"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# output_label = "openevolve_agents"
 
 # run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
 # output_label = "openevolve_agents_mutation"
@@ -84,8 +84,8 @@ for task, counts in iter_attempt_counts.items():
     counts.clear()
     counts += counts_limited
 
-with open(error_fix_attempts_dir / f"{output_label}.json", "w") as f:
-    json.dump(iter_attempt_counts, f)
+# with open(error_fix_attempts_dir / f"{output_label}.json", "w") as f:
+#     json.dump(iter_attempt_counts, f)
 
 # Per-task totals and averages
 per_task_stats = {}

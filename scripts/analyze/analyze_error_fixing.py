@@ -7,11 +7,11 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt = 300
 
-run_name = "h100_level_3-metr_prev_agents_trial_1"
-output_label = "prev_agents"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+# output_label = "prev_agents"
 
-# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-# output_label = "openevolve_agents"
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+output_label = "openevolve_agents"
 
 # run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
 # output_label = "openevolve_agents_mutation"
@@ -20,7 +20,7 @@ output_label = "prev_agents"
 
 target_dirname = "h100_level3-metr"
 
-iter_attempt_counts = defaultdict(list)
+iter_attempt_data = defaultdict(list)
 
 # total_attempts = 0
 # total_iters = 0
@@ -58,31 +58,52 @@ for task_name in os.listdir(root_dir):
         if not os.path.isdir(iter_path):
             continue
 
-        attempts_dir = os.path.join(iter_path, "attempts")
+        attempts_dir = Path(os.path.join(iter_path, "attempts"))
         if not os.path.exists(attempts_dir):
             continue
 
-        attempt_count = sum(
-            os.path.isdir(os.path.join(attempts_dir, d)) and d.startswith("attempt_")
-            for d in os.listdir(attempts_dir)
-        )
+        attempt_dirnames = sorted(os.listdir(attempts_dir), key=lambda x: int(x.split("_")[1]))
 
-        iter_attempt_counts[task].append(attempt_count)
+        last_attempt_dirname = attempt_dirnames[-1]
 
-for task, counts in iter_attempt_counts.items():
+        last_attempt_dir = attempts_dir / last_attempt_dirname
+        error_fixing_success = False
+        try:
+            with open(last_attempt_dir / "metrics_artifacts.json") as f:
+                metrics = json.load(f)
+            
+            if "metrics" in metrics and "runtime" in metrics["metrics"]:
+                error_fixing_success = True
+        except Exception:
+            pass
+
+        attempt_count = len(attempt_dirnames)
+
+        iter_attempt_data[task].append((attempt_count, error_fixing_success))
+
+total_count = 0
+success_count = 0
+
+for task, data in iter_attempt_data.items():
     counts_limited = []
 
     task_attempts = 0
-    for c in counts:
+    for (c, success) in data:
+        total_count += 1
+        if success:
+            success_count += 1
+
         task_attempts += c
     
         if task_attempts > target_attempt:
             break
 
-        counts_limited.append(c)
+        counts_limited.append((c, success))
     
-    counts.clear()
-    counts += counts_limited
+    data.clear()
+    data += counts_limited
+
+print(f"Success count: {success_count}, total count: {total_count}, Ratio: {success_count/total_count}")
 
 # with open(error_fix_attempts_dir / f"{output_label}.json", "w") as f:
 #     json.dump(iter_attempt_counts, f)
@@ -90,7 +111,11 @@ for task, counts in iter_attempt_counts.items():
 # Per-task totals and averages
 per_task_stats = {}
 task_total_attempts_list = []  # store total attempts per task for mean across tasks
-for task, counts in iter_attempt_counts.items():
+for task, data in iter_attempt_data.items():
+    counts = []
+    for (c, _) in data:
+        counts.append(c)
+
     task_total_attempts = sum(counts)
     task_total_attempts_list.append(task_total_attempts)
 
@@ -102,13 +127,9 @@ for task, counts in iter_attempt_counts.items():
         avg, pct_6, pct_gt1 = 0, 0, 0
     per_task_stats[task] = (avg, pct_6, pct_gt1, task_total_attempts)
 
-# Mean total attempts across all tasks
-mean_attempts_across_tasks = sum(task_total_attempts_list) / len(task_total_attempts_list) if task_total_attempts_list else 0
-
 # Sort by task number
 sorted_tasks = sorted(per_task_stats.items(), key=lambda x: x[0])
 
-print(f"Mean total attempts across all tasks: {mean_attempts_across_tasks:.2f}")
 print("\nPer-task stats (sorted):")
 for task, (avg, pct_6, pct_gt1, total_attempts_task) in sorted_tasks:
     print(f"  {task}: avg={avg:.2f}, % with 6 attempts={pct_6:.2f}%, % requiring >1 attempt={pct_gt1:.2f}%, total_attempts={total_attempts_task}")

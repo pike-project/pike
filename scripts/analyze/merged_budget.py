@@ -21,7 +21,7 @@ if use_cost_stopping_condition:
 else:
     total_step_count = target_attempt
 
-OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
+OUTPUT_SOLUTIONS = True
 
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
@@ -53,25 +53,30 @@ target_dirname = "h100_level3-metr"
 # - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
 # - Integers (task_number) to set the speedup to 1.0 for an entire task.
 BLACKLIST = {
-    "h100_level_3-metr_trial_4": {
-        # (13, 229, 0), # Blacklists a specific attempt
-        13, # Sets speedup to 1.0 for a task
-    },
-    "h100_level_3-metr_trial_0": {
-        (40, 4, 297, 1), # Blacklists a specific attempt
-        # 42, # Sets speedup to 1.0 for a task
-    },
-    "h100_level_3-metr_prev_noagents_trial_0": {
-        39,
-    },
-    "h100_level_3-metr_prev_noagents_trial_1": {
-        37,
-        39,
-        42,
-    },
-    "h100_level_3-metr_prev_agents_cheap_efa_0": {
-        41,
-    }
+    # "h100_level_3-metr_trial_4": {
+    #     # (13, 229, 0), # Blacklists a specific attempt
+    #     13, # Sets speedup to 1.0 for a task
+    # },
+    # "h100_level_3-metr_trial_0": {
+    #     (40, 4, 297, 1), # Blacklists a specific attempt
+    #     # 42, # Sets speedup to 1.0 for a task
+    # },
+    # "h100_level_3-metr_prev_noagents_trial_0": {
+    #     39,
+    # },
+    # "h100_level_3-metr_prev_noagents_trial_1": {
+    #     37,
+    #     39,
+    #     42,
+    # },
+    # "h100_level_3-metr_prev_agents_cheap_efa_0": {
+    #     41,
+    # }
+}
+
+code_blacklist = {
+    "torch.cuda.CUDAGraph",
+    "torch.jit.trace",
 }
 
 
@@ -175,8 +180,17 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
                 task_cost += get_llm_query_cost(res_file, is_gemini_pro)
                 cumulative_cost_list.append(task_cost)
+                
+                code_allowed = True
+                if os.path.exists(code_file):
+                    with open(code_file) as f:
+                        code = f.read()
 
-                if os.path.exists(metrics_file):
+                    for blacklist_match in code_blacklist:
+                        if blacklist_match in code:
+                            code_allowed = False
+
+                if code_allowed and os.path.exists(metrics_file):
                     try:
                         with open(metrics_file, "r") as f: metrics_data = json.load(f)
                         runtime = metrics_data.get("metrics", {}).get("runtime")

@@ -92,7 +92,7 @@ class GenerationConfig(Config):
         # Max spend of $0.30 for a solution output with current Gemini pricing:
         # $10.00 per 1M tokens
         # 30000 * 10 / (10^6) = 0.30
-        self.max_tokens = 30000
+        self.max_tokens = 32000
         self.temperature = 0.8
         
         # Logging
@@ -869,7 +869,7 @@ class ParallelTreeSearch:
                 new_samples = self.gen_samples(queries)
                 eval_data = self.run_eval(new_samples)
                 self.save_solutions(eval_data)
-                self.fix_mode = True
+                # self.fix_mode = True
                 # do not generate new queries on the last iteration
                 if fix_iter < max_fix_attempts:
                     queries = self.get_direct_fix_queries(eval_data)

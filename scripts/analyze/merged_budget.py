@@ -8,9 +8,9 @@ import pandas as pd
 import numpy as np
 
 # --- Common Configuration ---
-use_cost_stopping_condition = False
+use_cost_stopping_condition = True
 
-write_to_disk = False
+write_to_disk = True
 
 target_attempt = 300
 # price in $ to stop at
@@ -26,30 +26,17 @@ OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-# output_label = "prev_agents"
+runs = [
+    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+    ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
 
-# run_name = "h100_level_3-metr_prev_noagents_trial_1"
-# output_label = "prev_noagents"
-
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-output_label = "openevolve_agents"
-
-# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
-# output_label = "openevolve_noagents"
-
-
-# run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
-# output_label = "openevolve_agents_mutation"
-
-# run_name = "h100_level_3-metr_openevolve_agents_mutation_aggressive_0"
-# output_label = "openevolve_agents_mutation_aggressive"
-
-# run_name = "h100_level_3-metr_prev_agents_no_iba_0"
-# output_label = "prev_agents_no_iba"
-
-# run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
-# output_label = "prev_agents_cheap_efa"
+    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+]
 
 target_dirname = "h100_level3-metr"
 
@@ -61,30 +48,6 @@ target_dirname = "h100_level3-metr"
 # output_label = "openevolve_agents"
 
 # target_dirname = "h100_level5"
-
-plot_title = "Speedup by Attempt (Level 3-metr, H100)"
-plot_xlabel = "Attempt Number"
-
-# root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
-
-root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
-# root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
-
-sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
-
-results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
-runtimes_dir = results_dir / "data/runtimes"
-convergence_dir = results_dir / "figs/convergence"
-speedup_traj_dir = results_dir / "data/tables/speedup_trajectories"
-
-os.makedirs(runtimes_dir, exist_ok=True)
-os.makedirs(convergence_dir, exist_ok=True)
-os.makedirs(speedup_traj_dir, exist_ok=True)
-
-eager_path = runtimes_dir / "eager.json"
-output_path = runtimes_dir / f"{output_label}.json"
-plot_path = convergence_dir / f"{output_label}_convergence.pdf"
-all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
 
 # PATCH 1: Updated comment to clarify behavior.
 # Blacklist format:
@@ -111,22 +74,6 @@ BLACKLIST = {
         41,
     }
 }
-
-
-# --- Load Eager Runtimes (with robust error handling) ---
-try:
-    with open(eager_path) as f:
-        eager_runtimes = json.load(f)
-except FileNotFoundError:
-    print(f"Warning: eager runtimes file not found at {eager_path}. Continuing with empty eager runtimes (speedups will be skipped).")
-    eager_runtimes = {"results": []}
-except Exception as e:
-    print(f"Warning: failed to load eager runtimes ({e}). Continuing with empty eager runtimes (speedups will be skipped).")
-    eager_runtimes = {"results": []}
-
-if not isinstance(eager_runtimes, dict) or "results" not in eager_runtimes or not isinstance(eager_runtimes["results"], list):
-    print("Warning: eager runtimes file has unexpected format. Expected JSON object with a 'results' list. Continuing with empty results.")
-    eager_runtimes = {"results": []}
 
 
 # --- Helper Functions ---
@@ -254,23 +201,26 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
     print(f"Task cost: ${task_cost:.2f}, steps completed: {cumulative}")
 
-    final_progress_list = []
-    curr_cost_max = cost_step
-    next_prog_val = float("inf")
-    for _ in range(total_step_count):
-        for idx, c in enumerate(cumulative_cost_list):
-            next_prog_val = progress_list[idx]
+    if use_cost_stopping_condition:
+        final_progress_list = []
+        curr_cost_max = cost_step
+        next_prog_val = float("inf")
+        for _ in range(total_step_count):
+            for idx, c in enumerate(cumulative_cost_list):
+                next_prog_val = progress_list[idx]
 
-            if c > curr_cost_max:
-                break
+                if c > curr_cost_max:
+                    break
 
-        final_progress_list.append(next_prog_val)
-        curr_cost_max += cost_step
+            final_progress_list.append(next_prog_val)
+            curr_cost_max += cost_step
+    else:
+        final_progress_list = progress_list
 
-    # Pad the progress list if needed
-    # final_best_for_padding = None if best_runtime == float("inf") else best_runtime
-    # while len(progress_list) < target_attempt:
-    #     progress_list.append(final_best_for_padding)
+        # Pad the progress list if needed
+        final_best_for_padding = None if best_runtime == float("inf") else best_runtime
+        while len(progress_list) < target_attempt:
+            progress_list.append(final_best_for_padding)
     
     final_best_runtime = None if best_runtime == float("inf") else best_runtime
     return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative, task_cost
@@ -278,7 +228,53 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
 # --- Main Execution Logic ---
 
-if __name__ == "__main__":
+def run(run_name, output_label):
+    plot_title = "Speedup by Attempt (Level 3-metr, H100)"
+    plot_xlabel = "Attempt Number"
+
+    if use_cost_stopping_condition:
+        runtimes_dirname = "runtimes_money_budget"
+        tables_dirname = "tables_money_budget"
+    else:
+        runtimes_dirname = "runtimes"
+        tables_dirname = "tables"
+
+    # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
+
+    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+    # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
+
+    sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
+
+    results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+    runtimes_dir = results_dir / f"data/{runtimes_dirname}"
+    convergence_dir = results_dir / "figs/convergence"
+    speedup_traj_dir = results_dir / f"data/{tables_dirname}/speedup_trajectories"
+
+    os.makedirs(runtimes_dir, exist_ok=True)
+    os.makedirs(convergence_dir, exist_ok=True)
+    os.makedirs(speedup_traj_dir, exist_ok=True)
+
+    eager_path = runtimes_dir / "eager.json"
+    output_path = runtimes_dir / f"{output_label}.json"
+    plot_path = convergence_dir / f"{output_label}_convergence.pdf"
+    all_trajectories_path = speedup_traj_dir / f"{output_label}.csv"
+
+    # --- Load Eager Runtimes (with robust error handling) ---
+    try:
+        with open(eager_path) as f:
+            eager_runtimes = json.load(f)
+    except FileNotFoundError:
+        print(f"Warning: eager runtimes file not found at {eager_path}. Continuing with empty eager runtimes (speedups will be skipped).")
+        eager_runtimes = {"results": []}
+    except Exception as e:
+        print(f"Warning: failed to load eager runtimes ({e}). Continuing with empty eager runtimes (speedups will be skipped).")
+        eager_runtimes = {"results": []}
+
+    if not isinstance(eager_runtimes, dict) or "results" not in eager_runtimes or not isinstance(eager_runtimes["results"], list):
+        print("Warning: eager runtimes file has unexpected format. Expected JSON object with a 'results' list. Continuing with empty results.")
+        eager_runtimes = {"results": []}
+
     sol_dest_dir.mkdir(parents=True, exist_ok=True)
     if write_to_disk:
         plot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -381,21 +377,25 @@ if __name__ == "__main__":
     if speedup_list:
         speedup_list = [v if v > 1 else 1 for v in speedup_list]
 
-        geo_mean = gmean(speedup_list)
-        print(f"Geometric mean speedup across {len(speedup_list)} tasks = {geo_mean:.3f}")
+        geomean = gmean(speedup_list)
+        print(f"Geometric mean speedup across {len(speedup_list)} tasks = {geomean:.3f}")
 
     # 3. Generate and save the all_trajectories CSV
     if all_speedups_progress and included_task_names_for_csv:
         # PATCH 4: Use the curated list of task names to ensure columns match data
+
         df = pd.DataFrame(dict(zip(included_task_names_for_csv, all_speedups_progress)))
-        # df.index = pd.RangeIndex(start=1, stop=total_step_count + 1, name="attempt")
 
-        df_idx = []
-        for s in range(1, total_step_count + 1):
-            df_idx.append(s * cost_step)
+        if use_cost_stopping_condition:
+            df_idx = []
+            for s in range(1, total_step_count + 1):
+                df_idx.append(s * cost_step)
 
-        df.index = df_idx
-        df.index.name = "cost"
+            df.index = df_idx
+            df.index.name = "cost"
+        else:
+            df.index = pd.RangeIndex(start=1, stop=total_step_count + 1, name="attempt")
+
         if write_to_disk:
             all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(all_trajectories_path)
@@ -414,3 +414,15 @@ if __name__ == "__main__":
     #     plt.tight_layout()
     #     plt.savefig(plot_path)
     #     print(f"Convergence plot saved to {plot_path}\n")
+
+    return geomean
+
+if __name__ == "__main__":
+    speedups = []
+
+    for (run_name, output_label) in runs:
+        geomean_np = run(run_name, output_label)
+        speedups.append(float(geomean_np))
+    
+    print("\n========= ALL SPEEDUPS =========")
+    print(json.dumps(speedups, indent=4))

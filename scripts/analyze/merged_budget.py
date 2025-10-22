@@ -26,29 +26,29 @@ OUTPUT_SOLUTIONS = False # Set to True to copy the best kernel/code files
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# runs = [
-#     ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-#     ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-#     ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-#     ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-#     ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-#     ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-#     ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
-
-#     # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-# ]
-
-# target_dirname = "h100_level3-metr"
-
-
 runs = [
-    ("h100_level_5_prev_agents_trial_0", "prev_agents"),
-    ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+    ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+
+    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
 ]
 
-target_dirname = "h100_level5"
+target_dirname = "h100_level3-metr"
 
-# PATCH 1: Updated comment to clarify behavior.
+
+# runs = [
+#     ("h100_level_5_prev_agents_trial_0", "prev_agents"),
+#     ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+# ]
+
+# target_dirname = "h100_level5"
+
+
 # Blacklist format:
 # - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
 # - Integers (task_number) to set the speedup to 1.0 for an entire task.
@@ -243,7 +243,7 @@ def run(run_name, output_label):
     root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
     # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
-    sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}_{target_attempt}/best_solutions").resolve()
+    sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()
 
     results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
     runtimes_dir = results_dir / f"data/{runtimes_dirname}"
@@ -309,8 +309,6 @@ def run(run_name, output_label):
 
         # --- Process Final Result ---
         if best is not None:
-            results.append({"problem_id": task_number, "runtime": best})
-
             if best_combo:
                 combo_str = f"iter_{best_combo[0]}/attempt_{best_combo[1]}"
             else:
@@ -318,11 +316,16 @@ def run(run_name, output_label):
 
             # PATCH 2: Calculate speedup, setting to 1.0 if blacklisted
             speedup = None
+            best_runtime_to_save = float("inf")
             if eager is not None:
                 if is_task_speedup_blacklisted:
                     speedup = 1.0
+                    best_runtime_to_save = eager
                 elif best > 0:
                     speedup = eager / best
+                    best_runtime_to_save = best
+            
+            results.append({"problem_id": task_number, "runtime": best_runtime_to_save})
 
             if speedup is not None:
                 speedup_list.append(speedup)

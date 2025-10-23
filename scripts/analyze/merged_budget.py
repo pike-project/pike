@@ -26,27 +26,27 @@ OUTPUT_SOLUTIONS = True
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# runs = [
-#     ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-#     ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-#     ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-#     ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-#     ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-#     ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-#     ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
-
-#     # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-# ]
-
-# target_dirname = "h100_level3-metr"
-
-
 runs = [
-    ("h100_level_5_prev_agents_trial_2", "prev_agents"),
-    ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
-]
+    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+    ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
 
-target_dirname = "h100_level5"
+    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+]
+target_level = "3-metr"
+
+# runs = [
+#     ("h100_level_5_prev_agents_trial_2", "prev_agents"),
+#     ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+# ]
+# target_level = "5"
+
+
+target_dirname = f"h100_level{target_level}"
 
 
 # Blacklist format:
@@ -76,8 +76,23 @@ BLACKLIST = {
 
 code_blacklist = {
     # "torch.cuda.CUDAGraph",
-    # "torch.jit.trace",
+    "torch.jit.trace",
 }
+
+task_blacklist_map = {
+    "5": set(),
+    "3-metr": {
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+    },
+}
+
+task_blacklist = task_blacklist_map.get(target_level, set())
 
 
 # --- Helper Functions ---
@@ -295,7 +310,14 @@ def run(run_name, output_label):
     if write_to_disk:
         plot_path.parent.mkdir(parents=True, exist_ok=True)
 
-    task_names = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: numeric_suffix(x, "task"))
+    task_names_unfiltered = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: numeric_suffix(x, "task"))
+
+    task_names = []
+    for task_name in task_names_unfiltered:
+        if int(task_name.split("task")[1]) in task_blacklist:
+            continue
+
+        task_names.append(task_name)
 
     results = []
     speedup_list = []
@@ -403,8 +425,8 @@ def run(run_name, output_label):
     if all_speedups_progress and included_task_names_for_csv:
         # PATCH 4: Use the curated list of task names to ensure columns match data
 
-        for speedup_progress in all_speedups_progress:
-            print(len(speedup_progress))
+        # for speedup_progress in all_speedups_progress:
+        #     print(len(speedup_progress))
 
         df = pd.DataFrame(dict(zip(included_task_names_for_csv, all_speedups_progress)))
 

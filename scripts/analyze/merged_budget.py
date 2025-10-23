@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 # --- Common Configuration ---
-use_cost_stopping_condition = False
+use_cost_stopping_condition = True
 
 write_to_disk = True
 
@@ -26,27 +26,27 @@ OUTPUT_SOLUTIONS = True
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-runs = [
-    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-    ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
-
-    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-]
-
-target_dirname = "h100_level3-metr"
-
-
 # runs = [
-#     ("h100_level_5_prev_agents_trial_0", "prev_agents"),
-#     ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+#     ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+#     ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+#     ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+#     ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+#     ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+#     ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+#     ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+
+#     # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
 # ]
 
-# target_dirname = "h100_level5"
+# target_dirname = "h100_level3-metr"
+
+
+runs = [
+    ("h100_level_5_prev_agents_trial_2", "prev_agents"),
+    ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+]
+
+target_dirname = "h100_level5"
 
 
 # Blacklist format:
@@ -75,8 +75,8 @@ BLACKLIST = {
 }
 
 code_blacklist = {
-    "torch.cuda.CUDAGraph",
-    "torch.jit.trace",
+    # "torch.cuda.CUDAGraph",
+    # "torch.jit.trace",
 }
 
 
@@ -145,6 +145,9 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
     iter_output_dir = os.path.join(output_dir, "iter_output")
     if not os.path.exists(iter_output_dir):
+        if use_cost_stopping_condition:
+            return [None] * total_step_count, None, None, None, 0, 0
+
         return [None] * target_attempt, None, None, None, 0, 0
     
     ideas_dir = os.path.join(output_dir, "ideas")
@@ -399,6 +402,9 @@ def run(run_name, output_label):
     # 3. Generate and save the all_trajectories CSV
     if all_speedups_progress and included_task_names_for_csv:
         # PATCH 4: Use the curated list of task names to ensure columns match data
+
+        for speedup_progress in all_speedups_progress:
+            print(len(speedup_progress))
 
         df = pd.DataFrame(dict(zip(included_task_names_for_csv, all_speedups_progress)))
 

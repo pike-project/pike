@@ -8,18 +8,9 @@ import pandas as pd
 import numpy as np
 
 # --- Common Configuration ---
-use_cost_stopping_condition = True
+use_cost_stopping_condition = False
 
 write_to_disk = True
-
-target_attempt = 300
-# price in $ to stop at
-target_cost = 25.0
-cost_step = 0.2
-if use_cost_stopping_condition:
-    total_step_count = round(target_cost / cost_step)
-else:
-    total_step_count = target_attempt
 
 OUTPUT_SOLUTIONS = True
 
@@ -45,6 +36,18 @@ runs = [
 ]
 target_level = "5"
 
+
+target_attempt = 300
+# price in $ to stop at
+if target_level == "3-metr":
+    target_cost = 25.0
+else:
+    target_cost = 50.0
+cost_step = 0.2
+if use_cost_stopping_condition:
+    total_step_count = round(target_cost / cost_step)
+else:
+    total_step_count = target_attempt
 
 target_dirname = f"h100_level{target_level}"
 
@@ -72,6 +75,23 @@ BLACKLIST = {
     # "h100_level_3-metr_prev_agents_cheap_efa_0": {
     #     41,
     # }
+    "h100_level_5_prev_agents_trial_2": {
+        (6, 36, 2),
+        (6, 22, 2),
+        (6, 80, 1),
+        (6, 31, 0),
+        (6, 12, 1),
+        (6, 66, 1),
+        (6, 64, 0),
+        (6, 71, 3),
+        (6, 60, 4),
+        (6, 82, 1),
+        (6, 40, 0),
+        (6, 41, 0),
+        (6, 45, 3),
+        (6, 53, 0),
+        (6, 65, 4),
+    },
 }
 
 code_blacklist = {

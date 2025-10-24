@@ -8,8 +8,25 @@ import numpy as np
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+
+target_level = "3-metr"
+
+task_blacklist_map = {
+    "5": set(),
+    "3-metr": {
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+    },
+}
+
+task_blacklist = task_blacklist_map.get(target_level, set())
 
 output_dir = (curr_dir / "../../../data/diffs" / run_name).resolve()
 samples_dir = output_dir / "samples"
@@ -18,6 +35,12 @@ embeddings_dir = output_dir / "embeddings"
 task_means = []
 
 for task in sorted(os.listdir(embeddings_dir), key=lambda x: int(x.split("_")[1])):
+    task_num = int(task.split("_")[1].split(".py")[0])
+    if task_num in task_blacklist:
+        continue
+
+    print(f"Task: {task_num}")
+
     cos_sims = []
     
     task_dir = embeddings_dir / task

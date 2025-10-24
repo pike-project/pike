@@ -29,6 +29,8 @@ with open(file1, 'r') as f:
 with open(file2, 'r') as f:
     array2 = json.load(f)
 
+print(f"Array lens: {len(array1)}, {len(array2)}")
+
 # --- Check if arrays are the same length ---
 if len(array1) != len(array2):
     raise ValueError("Arrays must be the same length to compute elementwise difference.")
@@ -76,7 +78,7 @@ plt.axvline(mean2, color='orange', linestyle='--', linewidth=1)
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.xlabel("Mean LoC Changed per Optimization Step")
 plt.ylabel("Tasks")
-plt.title("Mean Lines of Code (LoC) Changed")
+# plt.title("Mean Lines of Code (LoC) Changed")
 plt.legend()
 plt.tight_layout()
 

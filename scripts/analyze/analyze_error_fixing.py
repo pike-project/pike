@@ -18,7 +18,24 @@ output_label = "openevolve_agents"
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
 
-target_dirname = "h100_level3-metr"
+target_level = "3-metr"
+
+task_blacklist_map = {
+    "5": set(),
+    "3-metr": {
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+    },
+}
+
+task_blacklist = task_blacklist_map.get(target_level, set())
+
+target_dirname = f"h100_level{target_level}"
 
 iter_attempt_data = defaultdict(list)
 
@@ -37,6 +54,9 @@ for task_name in os.listdir(root_dir):
     if not task_name.startswith("task"):
         continue
     task = int(task_name.split("task")[1])
+
+    if task in task_blacklist:
+        continue
 
     task_path = os.path.join(root_dir, task_name)
     if not os.path.isdir(task_path):
@@ -105,8 +125,8 @@ for task, data in iter_attempt_data.items():
 
 print(f"Success count: {success_count}, total count: {total_count}, Ratio: {success_count/total_count}")
 
-# with open(error_fix_attempts_dir / f"{output_label}.json", "w") as f:
-#     json.dump(iter_attempt_counts, f)
+with open(error_fix_attempts_dir / f"{output_label}.json", "w") as f:
+    json.dump(iter_attempt_data, f)
 
 # Per-task totals and averages
 per_task_stats = {}

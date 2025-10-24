@@ -15,8 +15,25 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 target_attempt_count = 300
 
 # run_name = "h100_level_3-metr_prev_agents_trial_1"
-# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
-run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
+
+target_level = "3-metr"
+
+task_blacklist_map = {
+    "5": set(),
+    "3-metr": {
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+    },
+}
+
+task_blacklist = task_blacklist_map.get(target_level, set())
 
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
@@ -121,6 +138,10 @@ except FileNotFoundError:
 # Iterate through each sorted task directory
 for task_path in sorted_task_dirs:
     task_name = task_path.name
+    task_num = int(task_name.split("task")[1])
+    if task_num in task_blacklist:
+        continue
+
     task_data[task_name] = []
 
     iter_output_dir = task_path / "output" / "iter_output"

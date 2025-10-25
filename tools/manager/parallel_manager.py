@@ -51,7 +51,7 @@ class ParallelManager:
             worker_script_path,
             "--worker_io_dir",
             self.worker_io_dir,
-            "--gpu_count", 4,
+            "--gpu_count", 2,
             "--cpu_count", 56,
             "--max_active_tasks", 28,
             "--allocation_time", "48:00:00",

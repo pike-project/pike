@@ -8,25 +8,27 @@ import pandas as pd
 import numpy as np
 
 # --- Common Configuration ---
-use_cost_stopping_condition = True
+use_cost_stopping_condition = False
 
 write_to_disk = True
 
-OUTPUT_SOLUTIONS = True
+OUTPUT_SOLUTIONS = False
 
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 runs = [
-    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-    ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+    # ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+    # ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+    # ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+    # ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+    # ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+    # ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
 
-    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-    ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+    # ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+    ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
+    ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
 ]
 target_level = "3-metr"
 

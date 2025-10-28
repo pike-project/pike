@@ -14,9 +14,13 @@ os.makedirs(figs_dir, exist_ok=True)
 
 run_name_1 = "h100_level_3-metr_prev_agents_trial_1"
 run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
+# run_name_2 = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
 
 label1 = "PIKE-B"
 label2 = "PIKE-O"
+
+if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
+    label2 = "PIKE-O (mut, nopar, noisl)"
 
 # File paths
 file1 = diffs_dir / run_name_1 / 'means.json'
@@ -83,7 +87,12 @@ plt.legend()
 plt.tight_layout()
 
 # --- Save the figure ---
+
 hist_file = figs_dir / 'loc_hist.pdf'
+
+if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
+    hist_file = figs_dir / 'loc_hist_mut.pdf'
+
 plt.savefig(hist_file, format="pdf")
 plt.close()
 

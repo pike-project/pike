@@ -38,7 +38,7 @@ class ParallelManager:
 
         self.worker_io_dir = worker_io_dir
 
-        self.run_level = "3-metr"
+        self.run_level = "5"
         self.run_mode = "openevolve_agents"
         self.run_count = 1
 
@@ -51,7 +51,7 @@ class ParallelManager:
             worker_script_path,
             "--worker_io_dir",
             self.worker_io_dir,
-            "--gpu_count", 2,
+            "--gpu_count", 4,
             "--cpu_count", 56,
             "--max_active_tasks", 28,
             "--allocation_time", "48:00:00",

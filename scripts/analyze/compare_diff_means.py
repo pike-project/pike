@@ -48,14 +48,22 @@ mean1 = np.mean(array1)
 mean2 = np.mean(array2)
 
 # --- Create histogram in the same theme ---
-plt.figure(figsize=(4, 3))
+if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
+    plt.figure(figsize=(4, 2.25))
+else:
+    plt.figure(figsize=(4, 2))
 
 # --- NEW: Compute a shared bin range for equal-width bins ---
 # 1. Combine all data to find the global min and max
 all_data = np.concatenate([array1, array2])
 # 2. Create 20 equally spaced bins between the global min and max
 #    We need 21 edges to create 20 bins.
-bin_edges = np.linspace(all_data.min(), all_data.max(), 21)
+# bin_edges = np.linspace(all_data.min(), all_data.max(), 21)
+xlim_min = 50
+xlim_max = 330
+bin_edges = np.linspace(xlim_min, xlim_max, 26)
+
+plt.grid(axis='y', linestyle='--', alpha=0.5)
 
 # --- ADJUSTED: Use the shared bin_edges for both histograms ---
 plt.hist(
@@ -79,12 +87,31 @@ plt.axvline(mean1, color='blue', linestyle='--', linewidth=1)
 plt.axvline(mean2, color='orange', linestyle='--', linewidth=1)
 
 # --- Gridlines and labels ---
-plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.xlabel("Mean LoC Changed per Optimization Step")
 plt.ylabel("Tasks")
 # plt.title("Mean Lines of Code (LoC) Changed")
-plt.legend()
+
+if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
+    plt.legend(
+        loc='lower center',
+        bbox_to_anchor=(0.46, 1.02),
+        ncol=2,
+        frameon=True
+    )
+else:
+    plt.legend()
+
 plt.tight_layout()
+
+# plt.subplots_adjust(top=0.75)
+
+# if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
+#     plt.subplots_adjust(top=0.75)
+
+plt.xlim(xlim_min, xlim_max)
+plt.ylim(0, 9)
+
+plt.yticks([0, 2, 4, 6, 8])
 
 # --- Save the figure ---
 

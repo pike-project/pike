@@ -1,5 +1,11 @@
 # PIKE
 
+A framework for comparing multi-agent PyTorch optimization systems, along with multiple optimization strategy implementations.
+
+These components are collectively defined as PyTorch Inference Kernel Evolution (PIKE).
+
+## About
+
 This is a fork of [KernelBench](https://github.com/ScalingIntelligence/KernelBench) by Anne Ouyang, Simon Guo, and Azalia Mirhoseini. Benchmark additions and modifications are included from [KernelBenchFiltered](https://github.com/METR/KernelBenchFiltered) by METR.
 
 This repository contains:

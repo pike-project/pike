@@ -13,8 +13,8 @@ figs_dir = (curr_dir / "../../results/ours/h100_level3-metr/results/figs").resol
 os.makedirs(figs_dir, exist_ok=True)
 
 run_name_1 = "h100_level_3-metr_prev_agents_trial_1"
-run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
-# run_name_2 = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
+# run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
+run_name_2 = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
 
 label1 = "PIKE-B"
 label2 = "PIKE-O"
@@ -48,10 +48,12 @@ mean1 = np.mean(array1)
 mean2 = np.mean(array2)
 
 # --- Create histogram in the same theme ---
-if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
-    plt.figure(figsize=(4, 2.25))
-else:
-    plt.figure(figsize=(4, 2))
+# if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
+#     plt.figure(figsize=(4, 2.25))
+# else:
+#     plt.figure(figsize=(4, 2))
+
+plt.figure(figsize=(4, 2))
 
 # --- NEW: Compute a shared bin range for equal-width bins ---
 # 1. Combine all data to find the global min and max
@@ -87,21 +89,22 @@ plt.axvline(mean1, color='blue', linestyle='--', linewidth=1)
 plt.axvline(mean2, color='orange', linestyle='--', linewidth=1)
 
 # --- Gridlines and labels ---
-plt.xlabel("Mean LoC Changed per Optimization Step")
+plt.xlabel("(b) Mean LoC Changed per Optimization Step")
 plt.ylabel("Tasks")
 # plt.title("Mean Lines of Code (LoC) Changed")
 
 if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
-    plt.legend(
-        loc='lower center',
-        bbox_to_anchor=(0.46, 1.02),
-        ncol=2,
-        frameon=True
-    )
+    # plt.legend(
+    #     loc='lower center',
+    #     bbox_to_anchor=(0.46, 1.02),
+    #     ncol=2,
+    #     frameon=True
+    # )
+    pass
 else:
     plt.legend()
 
-plt.tight_layout()
+plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=0.5)
 
 # plt.subplots_adjust(top=0.75)
 

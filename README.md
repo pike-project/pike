@@ -103,6 +103,8 @@ As with PIKE-B, run the following (from within the pike-openevolve directory) on
 python examples/kernelbench/run.py --pike_dir <path/to/this-repo> --level 3-pike --task_start 1 --task_end 50 --max_fix_attempts 5 --eval_port 8000 --run_dir <path/to/output-dir>
 ```
 
+To further tune the PIKE-O system configuration, edit `examples/kernelbench/config.yaml`
+
 ## Documentation
 
 To learn more about using PIKE, see `docs/README.md`

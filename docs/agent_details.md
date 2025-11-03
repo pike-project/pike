@@ -1,12 +1,16 @@
-# Agent Framework
+# Agent Details
+
+More details about agent operation can be found here.
+
+<!-- # Agent Framework
 
 An example of running the parallel tree search is shown below:
 
 ```bash
 python -u scripts/parallel_tree_search.py data_dir=./data server_type=google model_name=gemini-2.5-pro num_workers=30 worker_input_dir=./worker_io/input worker_output_dir=./worker_io/output level=0 task_start=1 task_end=5 num_samples=10 num_phases=5 max_fix_attempts=5 dry_run=True
-```
+``` -->
 
-The following parameters are relevant:
+<!-- The following parameters are relevant:
 
 - `server` and `model_name` - which LLM model to use
     - currently supported servers are `openai`, `google`, `cborg`
@@ -16,7 +20,7 @@ The following parameters are relevant:
 - `num_samples` - How many agents to run in parallel **for each task**
 - `num_phases` - Number of search phases to complete
 - `max_fix_attempts` - Max fix attempts for the error fixing agent, before giving up and proceeding to next round
-- `dry_run` - set to `True` if you want to test the agent framework without requiring the eval worker
+- `dry_run` - set to `True` if you want to test the agent framework without requiring the eval worker -->
 
 ## Prompt Construction
 

@@ -1,8 +1,18 @@
-# KernelBench Agent Framework
+# PIKE
 
-Our KernelBench agent framework builds off of KernelBench. We chose to fork the original KernelBench repository, consolidating the agent framework implementation with the benchmark set that our framework is designed for. The agent framework could, in principle, be decoupled to operate on a more general set of tasks, but this is not currently our primary goal. Thus, we chose simplicity over modularity, ensuring that the agent framework is well-tuned to the benchmark we are optimizing for.
+This is a fork of [KernelBench](https://github.com/ScalingIntelligence/KernelBench) by Anne Ouyang, Simon Guo, and Azalia Mirhoseini. Benchmark additions and modifications are included from [KernelBenchFiltered](https://github.com/METR/KernelBenchFiltered) by METR.
 
-To read about KernelBench itself, rather than our agent framework docs, see: https://github.com/ScalingIntelligence/KernelBench
+This repository contains:
+
+- a refined set of KernelBench benchmarks
+- our evaluator setup
+- PIKE-B, a multi-agent evolutionary branching strategy for PyTorch optimization
+
+The implementation for PIKE-O can be found in the [pike-openevolve](https://github.com/pike-project/pike-openevolve) repository. PIKE-O is an OpenEvolve-based PyTorch optimization strategy. It makes use of the evaluator in this repository.
+
+<!-- # KernelBench Agent Framework
+
+We chose to fork the original KernelBench repository, consolidating the agent framework implementation with the benchmark set that our framework is designed for. The agent framework could, in principle, be decoupled to operate on a more general set of tasks, but this is not currently our primary goal. Thus, we chose simplicity over modularity, ensuring that the agent framework is well-tuned to the benchmark we are optimizing for. -->
 
 ## Setup
 
@@ -25,62 +35,55 @@ export OPENAI_API_KEY=<...>
 export GEMINI_API_KEY=<...>
 ```
 
-## Start Agent Framework
+## Running PIKE
 
-To start running the agent framework, first try a dry run (does not require the eval worker):
+Running a PIKE implementation involves 3 key components. It is recommended to start the components in the order listed below.
 
-```bash
-python -u scripts/parallel_tree_search.py data_dir=./data server_type=google model_name=gemini-2.5-pro num_workers=30 worker_input_dir=./worker_io/input worker_output_dir=./worker_io/output level=0 task_start=1 task_end=5 num_samples=10 num_phases=5 max_fix_attempts=5 dry_run=True
-```
-
-(**note:** a full reference script to run the agent framework, then do analysis aftewards, can be found in `./tools/run.sh`)
-
-If this works fine, you can switch to `dry_run=False`. Now, the agent framework will wait until the eval worker is running before it does anything.
+- Eval Worker: Runs evaluator in a container, and allows low-level, filesystem-based communication with the containerized worker
+- Eval Server: Exposes HTTP server for sending and receiving eval data, managing the low-level communication with the Eval Worker internally
+- PIKE Implementation (PIKE-B/PIKE-O): implements the LLM-based optimization strategy
 
 ## Start Eval Worker
 
 If you are working on a machine where you have root access, install Docker, along with the NVIDIA Container Toolkit (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 
-Once the agent framework is waiting for an eval worker, start the containerized eval worker in a different window, passing in the correct GPU architecture:
+Start the containerized Eval Worker like so, passing in the correct GPU architecture:
 
 ```bash
-python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper>
+python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max_active_tasks 20
 ```
 
-If you are on an HPC system, a container engine like Docker, Podman, or Apptainer is likely available. To start the eval worker in a separate job, you can reference existing worker job scripts in `tools/worker_jobs/`
+<!-- python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> -->
+
+<!-- If you are on an HPC system, a container engine like Docker, Podman, or Apptainer is likely available. To start the eval worker in a separate job, you can reference existing worker job scripts in `tools/worker_jobs/`
 
 Currently supported HPC systems:
 - NERSC Perlmutter via podman-hpc, Ampere A100: `tools/worker_jobs/perlmutter.sh`
 - LBL Lawrencium via apptainer, Hopper H100: `tools/worker_jobs/lrc.sh`
 
-As soon as the eval worker job starts, the waiting agent framework script will connect to it via NFS and start sending it eval tasks.
+As soon as the eval worker job starts, the waiting agent framework script will connect to it via NFS and start sending it eval tasks. -->
 
-## Eval-Only (No Agent Framework)
+## Start Eval Server
 
-### Single-Solution Eval
-
-How to use the eval script for a single task (without container or HPC job allocation):
+Once the Eval Worker is started, start the Eval Server. The Eval Server is an HTTP server that acts as a proxy between the Eval Worker's low-level communication channel and the PIKE implementation eval requests.
 
 ```bash
-python scripts/eval.py --level 3 --task 27 --code_path KernelBench/level3/27_RegNet.py --gpu_locks_dir worker_io/gpu_locks --compile
+python -u scripts/disk_channel_server.py --port 8000
 ```
 
-Include the `--compile` flag if you want to the eval to run with `torch.compile` enabled
+## Run PIKE-B
 
-### Multi-Solution Eval
-
-If you only want to time a particular set of solutions, without running the agent framework, you can do so like this:
+To run PIKE-B directly, first try a dry run (does not require the eval worker):
 
 ```bash
-# baseline solutions
-python scripts/solution_eval/eval_solutions.py --level 0 --solutions baseline --mode <eager/compile>
-
-# agent-generated solutions, must pass in the path to the run dir
-python scripts/solution_eval/eval_solutions.py --level 0 --solutions agent --run_dir <run_dir> --mode eager
+python -u scripts/parallel_tree_search.py server_type=google model_name=gemini-2.5-pro num_workers=10 level=3-pike task_start=1 task_end=50 num_samples=10 num_phases=30 max_fix_attempts=5 dry_run=True eval_port=8000
 ```
 
-After you run this, start the eval worker in a separate window and the eval tasks will be sent there.
+If this works fine, you can switch to `dry_run=False`. Run this only after the Eval Worker and Eval Server are running.
+
+## Run PIKE-O
+
 
 ## Documentation
 
-To learn more about using our agent framework, see `docs/README.md`
+To learn more about using PIKE, see `docs/README.md`

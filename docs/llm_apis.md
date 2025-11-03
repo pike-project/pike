@@ -12,10 +12,6 @@ export CBORG_API_KEY=<...>
 
 ## OpenAI
 
-Sign up for the LBL ChatGPT Team using the Google Form.
-
-Enter Project/Activity ID: 110260 001
-
 Sign in here to view API keys: https://platform.openai.com/settings/organization/api-keys
 
 Click on "API Keys" under the Project tab to create an API key

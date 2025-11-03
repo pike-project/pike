@@ -89,7 +89,7 @@ class SearchManager:
         run_cmd = [
             "python",
             "examples/kernelbench/run.py",
-            "--kernel_bench_dir",
+            "--pike_dir",
             str(self.root_dir),
             "--level",
             self.level,

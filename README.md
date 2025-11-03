@@ -68,7 +68,7 @@ As soon as the eval worker job starts, the waiting agent framework script will c
 Once the Eval Worker is started, start the Eval Server. The Eval Server is an HTTP server that acts as a proxy between the Eval Worker's low-level communication channel and the PIKE implementation eval requests.
 
 ```bash
-python -u scripts/disk_channel_server.py --port 8000
+python scripts/disk_channel_server.py --port 8000
 ```
 
 ## Run PIKE-B
@@ -76,13 +76,26 @@ python -u scripts/disk_channel_server.py --port 8000
 To run PIKE-B directly, first try a dry run (does not require the eval worker):
 
 ```bash
-python -u scripts/parallel_tree_search.py server_type=google model_name=gemini-2.5-pro num_workers=10 level=3-pike task_start=1 task_end=50 num_samples=10 num_phases=30 max_fix_attempts=5 dry_run=True eval_port=8000
+python scripts/parallel_tree_search.py server_type=google model_name=gemini-2.5-pro num_workers=10 level=3-pike task_start=1 task_end=50 num_samples=10 num_phases=30 max_fix_attempts=5 dry_run=True eval_port=8000 run_dir=<path/to/output-dir>
 ```
 
 If this works fine, you can switch to `dry_run=False`. Run this only after the Eval Worker and Eval Server are running.
 
 ## Run PIKE-O
 
+First, clone the following repository: [pike-openevolve](https://github.com/pike-project/pike-openevolve)
+
+In the pike-openevolve directory:
+
+```bash
+pip install -e .
+```
+
+As with PIKE-B, run the following (from within the pike-openevolve directory) only after the Eval Worker and Eval Server are running:
+
+```bash
+python examples/kernelbench/run.py --pike_dir <path/to/this-repo> --level 3-pike --task_start 1 --task_end 50 --max_fix_attempts 5 --eval_port 8000 --run_dir <path/to/output-dir>
+```
 
 ## Documentation
 

@@ -49,7 +49,7 @@ def get_baseline_runtime(data, task):
     
     return None
 
-eager_path = (curr_dir / "../../../results/ours/h100_level3-metr/results/data/runtimes/eager.json")
+eager_path = (curr_dir / "../../../results/ours/h100_level3-metr/results/data/runtimes/eager.json").resolve()
 
 with open(eager_path) as f:
     eager_runtimes = json.load(f)
@@ -58,6 +58,8 @@ samples_dir = output_dir / "samples"
 embeddings_dir = output_dir / "embeddings"
 
 task_means = []
+
+output_data = []
 
 for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
     task_num = int(task.split("_")[1].split(".py")[0])
@@ -105,16 +107,29 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
 
     print(f"{task} mean SLOC: {task_mean}")
 
-    plt.figure()
-    plt.scatter(code_lens, speedups)
-    plt.xlabel("SLOC")
-    plt.ylabel("Speedup")
+    # plt.figure()
+    # plt.scatter(code_lens, speedups)
+    # plt.xlabel("SLOC")
+    # plt.ylabel("Speedup")
 
-    figs_dir = curr_dir / "../../../results/ours/h100_level3-metr/results/figs/sloc_speedup_scatter/tasks"
+    # figs_dir = curr_dir / "../../../results/ours/h100_level3-metr/results/figs/sloc_speedup_scatter/tasks"
 
-    os.makedirs(figs_dir, exist_ok=True)
+    # os.makedirs(figs_dir, exist_ok=True)
 
-    plt.savefig(figs_dir / f"task_{task_num}.pdf")
+    # plt.savefig(figs_dir / f"task_{task_num}.pdf")
+
+    output_data.append({
+        "task": task_num,
+        "slocs": code_lens,
+        "runtimes": runtimes,
+        "speedups": speedups,
+    })
+
+if analyze_working:
+    output_data_path = (curr_dir / f"../../../results/ours/h100_level3-metr/results/data/sloc_speedup/{run_name}.json").resolve()
+
+    with open(output_data_path, "w") as f:
+        json.dump(output_data, f, indent=4)
 
 mean_of_means = np.mean(np.array(task_means))
 

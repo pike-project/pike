@@ -6,14 +6,17 @@ import subprocess
 from pathlib import Path
 import numpy as np
 from radon.raw import analyze
+import matplotlib.pyplot as plt
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
-run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
+# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
 
 target_level = "3-metr"
+
+analyze_working = True
 
 task_blacklist_map = {
     "5": set(),
@@ -30,7 +33,27 @@ task_blacklist_map = {
 
 task_blacklist = task_blacklist_map.get(target_level, set())
 
-output_dir = (curr_dir / "../../../data/diffs" / run_name).resolve()
+if analyze_working:
+    output_dir = (curr_dir / "../../../data/diffs_working" / run_name).resolve()
+else:
+    output_dir = (curr_dir / "../../../data/diffs" / run_name).resolve()
+
+
+def get_baseline_runtime(data, task):
+    for v in data["results"]:
+        if v["problem_id"] == task:
+            try:
+                return v["results"]["eval_results"]["runtime"]
+            except Exception as e:
+                return None
+    
+    return None
+
+eager_path = (curr_dir / "../../../results/ours/h100_level3-metr/results/data/runtimes/eager.json")
+
+with open(eager_path) as f:
+    eager_runtimes = json.load(f)
+
 samples_dir = output_dir / "samples"
 embeddings_dir = output_dir / "embeddings"
 
@@ -41,6 +64,10 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
     if task_num in task_blacklist:
         continue
 
+    eager_runtime = get_baseline_runtime(eager_runtimes, task_num)
+
+    speedups = []
+    runtimes = []
     code_lens = []
     
     task_dir = samples_dir / task
@@ -63,11 +90,31 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
 
         code_lens.append(code_len)
 
+        if analyze_working:
+            with open(sample_dir / "runtime.txt") as f:
+                runtime = float(f.read())
+            
+            runtimes.append(runtime)
+            speedups.append(eager_runtime / runtime)
+            
+            print(f"SLOC: {code_len}, runtime: {runtime}")
+
     task_mean = np.mean(np.array(code_lens))
 
     task_means.append(task_mean)
 
     print(f"{task} mean SLOC: {task_mean}")
+
+    plt.figure()
+    plt.scatter(code_lens, speedups)
+    plt.xlabel("SLOC")
+    plt.ylabel("Speedup")
+
+    figs_dir = curr_dir / "../../../results/ours/h100_level3-metr/results/figs/sloc_speedup_scatter/tasks"
+
+    os.makedirs(figs_dir, exist_ok=True)
+
+    plt.savefig(figs_dir / f"task_{task_num}.pdf")
 
 mean_of_means = np.mean(np.array(task_means))
 

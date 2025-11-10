@@ -10,11 +10,14 @@ target_attempt = 300
 # run_name = "h100_level_3-metr_prev_agents_trial_1"
 # output_label = "prev_agents"
 
+run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
+output_label = "prev_agents_cheap_efa"
+
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
 
-run_name = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
-output_label = "openevolve_agents_no_parallel_eval_no_islands"
+# run_name = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
+# output_label = "openevolve_agents_no_parallel_eval_no_islands"
 
 # run_name = "h100_level_3-metr_openevolve_agents_mutation_0"
 # output_label = "openevolve_agents_mutation"

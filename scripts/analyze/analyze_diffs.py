@@ -14,13 +14,15 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 target_attempt_count = 300
 
-# run_name = "h100_level_3-metr_prev_agents_trial_1"
+run_name = "h100_level_3-metr_prev_agents_trial_1"
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
 
-run_name = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
+# run_name = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
 
 target_level = "3-metr"
+
+analyze_working = True
 
 task_blacklist_map = {
     "5": set(),
@@ -39,7 +41,10 @@ task_blacklist = task_blacklist_map.get(target_level, set())
 
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 
-output_dir = (curr_dir / "../../data/diffs" / run_name).resolve()
+if analyze_working:
+    output_dir = (curr_dir / "../../data/diffs_working" / run_name).resolve()
+else:
+    output_dir = (curr_dir / "../../data/diffs" / run_name).resolve()
 samples_dir = output_dir / "samples"
 embeddings_dir = output_dir / "embeddings"
 
@@ -174,14 +179,40 @@ for task_path in sorted_task_dirs:
         if total_attempt_count > target_attempt_count:
             break
 
-        attempt_0_path = attempts_dir / "attempt_0"
+        runtime = None
 
-        # We are only interested in attempt_0 for each iteration
-        if not attempt_0_path.exists():
-            continue
+        if analyze_working:
+            attempt_nums = [int(dirname.split("_")[1]) for dirname in os.listdir(attempts_dir)]
 
-        prompt_file = attempt_0_path / "prompt.md"
-        kernel_file = attempt_0_path / "code.py"
+            if len(attempt_nums) == 0:
+                continue
+
+            attempt_nums = sorted(attempt_nums)
+
+            final_attempt_num = attempt_nums[-1]
+            final_attempt_dir = attempts_dir / f"attempt_{final_attempt_num}"
+
+            metrics_path = final_attempt_dir / "metrics_artifacts.json"
+
+            with open(metrics_path) as f:
+                metrics = json.load(f)
+
+            if "metrics" in metrics and "runtime" in metrics["metrics"]:
+                runtime = metrics["metrics"]["runtime"]
+            else:
+                continue
+
+            prompt_file = final_attempt_dir / "prompt.md"
+            kernel_file = final_attempt_dir / "code.py"
+        else:
+            attempt_0_path = attempts_dir / "attempt_0"
+
+            # We are only interested in attempt_0 for each iteration
+            if not attempt_0_path.exists():
+                continue
+
+            prompt_file = attempt_0_path / "prompt.md"
+            kernel_file = attempt_0_path / "code.py"
 
         # Check if both required files exist
         if prompt_file.exists() and kernel_file.exists():
@@ -191,10 +222,10 @@ for task_path in sorted_task_dirs:
                 kernel_content = kernel_file.read_text(encoding='utf-8')
 
                 # Save the pair of strings for this task
-                task_data[task_name].append((iter_number, prompt_content, kernel_content))
+                task_data[task_name].append((iter_number, prompt_content, kernel_content, runtime))
 
             except Exception as e:
-                print(f"  -> Error reading files in {attempt_0_path}: {e}")
+                print(f"  -> Error reading files: {e}")
 
     print(f"Processed {task_name}, total attempts: {total_attempt_count}")
 
@@ -216,7 +247,7 @@ for task_raw, data_list in task_data.items():
 
     total_lines_changed = 0
 
-    for idx, (iter_number, prompt, code) in enumerate(data_list):
+    for idx, (iter_number, prompt, code, runtime) in enumerate(data_list):
         seed = prompt.split("```python\n")[-1].split("```")[0]
         sample_dir = samples_dir / task_dirname / f"sample_{idx}"
 
@@ -238,9 +269,15 @@ for task_raw, data_list in task_data.items():
         with open(code_path, "w") as f:
             f.write(code_stripped)
         
-        diff_added, diff_removed = diff_counts(seed_path, code_path)
-        lines_changed = diff_added + diff_removed
-        total_lines_changed += lines_changed
+        if runtime is not None:
+            runtime_path = sample_dir / "runtime.txt"
+            with open(runtime_path, "w") as f:
+                f.write(str(runtime))
+        
+        if not analyze_working:
+            diff_added, diff_removed = diff_counts(seed_path, code_path)
+            lines_changed = diff_added + diff_removed
+            total_lines_changed += lines_changed
 
         # max_tokens = 8192
         # if code_tokens > max_tokens or seed_tokens > max_tokens:

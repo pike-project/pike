@@ -20,15 +20,15 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 runs = [
     ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
     ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+    # ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+    # ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+    # ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+    # ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
 
-    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-    ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
-    ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
+    # ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+    # # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+    # ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
+    # ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
 ]
 target_level = "3-metr"
 
@@ -185,7 +185,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
         if use_cost_stopping_condition:
             return [None] * total_step_count, None, None, None, 0, 0
 
-        return [None] * target_attempt, None, None, None, 0, 0
+        return [None] * target_attempt, None, None, None, 0, 0, []
     
     ideas_dir = os.path.join(output_dir, "ideas")
     if os.path.exists(ideas_dir):
@@ -195,6 +195,8 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
         task_cost += idea_cost
 
     iter_names = sorted([d for d in os.listdir(iter_output_dir) if d.startswith("iter_")], key=lambda x: numeric_suffix(x, "iter_"))
+
+    efa_costs = []
     
     stop_processing = False
     for iter_name in iter_names:
@@ -218,8 +220,12 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                 if run_name == "h100_level_3-metr_prev_agents_cheap_efa_0" and attempt_num > 0:
                     is_gemini_pro = False
 
-                task_cost += get_llm_query_cost(res_file, is_gemini_pro)
+                query_cost = get_llm_query_cost(res_file, is_gemini_pro)
+                task_cost += query_cost
                 cumulative_cost_list.append(task_cost)
+
+                if attempt_num > 0:
+                    efa_costs.append(query_cost)
                 
                 code_allowed = True
                 if os.path.exists(code_file):
@@ -276,7 +282,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
             progress_list.append(final_best_for_padding)
     
     final_best_runtime = None if best_runtime == float("inf") else best_runtime
-    return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative, task_cost
+    return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative, task_cost, efa_costs
 
 
 # --- Main Execution Logic ---
@@ -353,15 +359,19 @@ def run(run_name, output_label):
     task_step_counts = []
     task_costs = []
 
+    all_efa_costs = []
+
     for task_name in task_names:
         task_number = numeric_suffix(task_name, "task")
         task_path = os.path.join(root_dir, task_name)
         
         is_task_speedup_blacklisted = task_number in current_blacklist
 
-        progress, best, best_code_path, best_combo, task_step_count, task_cost = get_progress_iters_attempts(
+        progress, best, best_code_path, best_combo, task_step_count, task_cost, efa_costs = get_progress_iters_attempts(
             task_path, task_number, target_attempt
         )
+
+        all_efa_costs += efa_costs
 
         task_step_counts.append(task_step_count)
         task_costs.append(task_cost)
@@ -420,6 +430,8 @@ def run(run_name, output_label):
             task_id = numeric_suffix(task_name, "task")
             included_task_names_for_csv.append(f"task_{task_id}")
 
+    all_efa_costs_np = np.array(all_efa_costs)
+    efa_query_cost_mean = np.mean(all_efa_costs_np)
 
     # --- Finalize and Save Results ---
 
@@ -432,6 +444,8 @@ def run(run_name, output_label):
 
     mean_task_cost = np.mean(np.array(task_costs))
     print(f"\nMean task cost: ${mean_task_cost:.2f}")
+
+    print(f"EFA Query cost mean: ${efa_query_cost_mean:.3f}")
 
     mean_steps_per_task = np.mean(np.array(task_step_counts))
     print(f"\nMean steps per task: {mean_steps_per_task}")

@@ -38,7 +38,7 @@ class ParallelManager:
 
         self.worker_io_dir = worker_io_dir
 
-        self.run_level = "5"
+        self.run_level = "3-pike"
         self.run_mode = "openevolve_agents"
         self.run_count = 1
 

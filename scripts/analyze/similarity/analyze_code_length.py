@@ -66,6 +66,9 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
     if task_num in task_blacklist:
         continue
 
+    # if task_num != 10:
+    #     continue
+
     eager_runtime = get_baseline_runtime(eager_runtimes, task_num)
 
     speedups = []
@@ -97,9 +100,18 @@ for task in sorted(os.listdir(samples_dir), key=lambda x: int(x.split("_")[1])):
                 runtime = float(f.read())
             
             runtimes.append(runtime)
-            speedups.append(eager_runtime / runtime)
+            speedup = eager_runtime / runtime
+            speedups.append(speedup)
             
             print(f"SLOC: {code_len}, runtime: {runtime}")
+        
+        # if code_len > 470:
+        #     with open("big_code.py", "w") as f:
+        #         f.write(code)
+        
+        # if speedup > 1.2:
+        #     with open("fast_code.py", "w") as f:
+        #         f.write(code)
 
     task_mean = np.mean(np.array(code_lens))
 

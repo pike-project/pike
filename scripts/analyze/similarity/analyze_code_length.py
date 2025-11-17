@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-run_name = "h100_level_3-metr_prev_agents_trial_1"
-# run_name = "h100_level_3-metr_openevolve_agents_trial_0"
+# run_name = "h100_level_3-metr_prev_agents_trial_1"
+run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # run_name = "h100_level_3-metr_openevolve_noagents_trial_0"
 
 target_level = "3-metr"

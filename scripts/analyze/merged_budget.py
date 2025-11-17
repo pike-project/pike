@@ -58,6 +58,16 @@ else:
 
 target_dirname = f"h100_level{target_level}"
 
+results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+
+if use_cost_stopping_condition:
+    runtimes_dirname = "runtimes_money_budget"
+    tables_dirname = "tables_money_budget"
+    overall_speedups_filename = "speedups_money_budget.json"
+else:
+    runtimes_dirname = "runtimes"
+    tables_dirname = "tables"
+    overall_speedups_filename = "speedups.json"
 
 # Blacklist format:
 # - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
@@ -296,13 +306,6 @@ def run(run_name, output_label):
     plot_title = "Speedup by Attempt (Level 3-metr, H100)"
     plot_xlabel = "Attempt Number"
 
-    if use_cost_stopping_condition:
-        runtimes_dirname = "runtimes_money_budget"
-        tables_dirname = "tables_money_budget"
-    else:
-        runtimes_dirname = "runtimes"
-        tables_dirname = "tables"
-
     # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
 
     root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
@@ -310,7 +313,6 @@ def run(run_name, output_label):
 
     sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()
 
-    results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
     runtimes_dir = results_dir / f"data/{runtimes_dirname}"
     convergence_dir = results_dir / "figs/convergence"
     speedup_traj_dir = results_dir / f"data/{tables_dirname}/speedup_trajectories"
@@ -503,11 +505,19 @@ def run(run_name, output_label):
     return geomean
 
 if __name__ == "__main__":
-    speedups = []
+    # speedups = []
+    speedups = {}
 
     for (run_name, output_label) in runs:
         geomean_np = run(run_name, output_label)
-        speedups.append(float(geomean_np))
+        # speedups.append(float(geomean_np))
+        speedups[output_label] = float(geomean_np)
     
     print("\n========= ALL SPEEDUPS =========")
     print(json.dumps(speedups, indent=4))
+
+    overall_speedups_dir = results_dir / "data/overall_speedups"
+    os.makedirs(overall_speedups_dir, exist_ok=True)
+    
+    with open(overall_speedups_dir / overall_speedups_filename, "w") as f:
+        json.dump(speedups, f, indent=4)

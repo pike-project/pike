@@ -17,31 +17,31 @@ OUTPUT_SOLUTIONS = True
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-runs = [
-    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-    ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-    ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-    ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-    ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-    ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
-
-    ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-    ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
-    ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
-    ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-    ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
-]
-target_level = "3-metr"
-
 # runs = [
-#     ("h100_level_5_prev_agents_trial_2", "prev_agents"),
-#     ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
-#     ("h100_level_5_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
-#     ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-#     ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+#     ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+#     ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+#     ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+#     ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+#     ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+#     ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+
+#     ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+#     # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+#     ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
+#     ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
+#     ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+#     ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
 # ]
-# target_level = "5"
+# target_level = "3-metr"
+
+runs = [
+    ("h100_level_5_prev_agents_trial_2", "prev_agents"),
+    ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+    ("h100_level_5_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
+    ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+    ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+]
+target_level = "5"
 
 
 target_attempt = 300

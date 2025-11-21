@@ -13,14 +13,14 @@ figs_dir = (curr_dir / "../../results/ours/h100_level3-metr/results/figs").resol
 os.makedirs(figs_dir, exist_ok=True)
 
 run_name_1 = "h100_level_3-metr_prev_agents_trial_1"
-# run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
-run_name_2 = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
+run_name_2 = "h100_level_3-metr_openevolve_agents_trial_0"
+# run_name_2 = "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands"
 
 label1 = "PIKE-B"
 label2 = "PIKE-O"
 
 if run_name_2 == "h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands":
-    label2 = "PIKE-O (mut, nopar, noisl)"
+    label2 = "PIKE-O (mut,npar,1isl)"
 
 # File paths
 file1 = diffs_dir / run_name_1 / 'means.json'

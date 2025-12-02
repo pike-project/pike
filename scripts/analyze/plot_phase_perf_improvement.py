@@ -65,7 +65,7 @@ class ImprovementPlotter:
         # last file/dir in path
         run_id = run_dir.name
 
-        backup_dir = Path("/pscratch/sd/k/kir/llm/KernelBench-run-backups")
+        backup_dir = Path("/tmp")
         backup_path = backup_dir / f"{run_id}.tar.gz"
 
         if not os.path.exists(backup_path):

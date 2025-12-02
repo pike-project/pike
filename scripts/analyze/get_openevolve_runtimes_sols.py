@@ -6,14 +6,7 @@ from pathlib import Path
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# trial 0 -> prev prompts
-# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_0")
-# trial 1 -> new prompts, everything past this point has new prompts with OpenEvolve
-# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_1")
-run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_2/tasks")
-# trial 3 -> with error fixing agents, but fewer than 300 attempts for some tasks
-# trial 4 -> all 300 attempts (need to fetch solutions differently)
-# run_dir = Path("/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks")
+run_dir = (curr_dir / "../../../ropenevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_2/tasks").resolve()
 
 sol_dest_dir = (curr_dir / "../../best_agent_solutions/h100/level3-metr/openevolve_pop_10_no_agents_300/best_solutions").resolve()
 os.makedirs(sol_dest_dir, exist_ok=True)

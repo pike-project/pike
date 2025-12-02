@@ -52,7 +52,6 @@ error_fix_attempts_dir = (curr_dir / "../../results/ours/h100_level3-metr/result
 
 os.makedirs(error_fix_attempts_dir, exist_ok=True)
 
-# root_dir = "/pscratch/sd/k/kir/llm/openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks"
 # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc/h100_level_3-metr_trial_4/tasks").resolve()
 root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
 

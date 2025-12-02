@@ -108,3 +108,17 @@ To further tune the PIKE-O system configuration, edit `examples/kernelbench/conf
 ## Documentation
 
 To learn more about using PIKE, see `docs/README.md`
+
+## Citation
+
+```bibtex
+@misc{nagaitsev2025pike,
+    title={Optimizing PyTorch Inference with LLM-Based Multi-Agent Systems}, 
+    author={Kirill Nagaitsev and Luka Grbcic and Samuel Williams and Costin Iancu},
+    year={2025},
+    eprint={2511.16964},
+    archivePrefix={arXiv},
+    primaryClass={cs.MA},
+    url={https://arxiv.org/abs/2511.16964}, 
+}
+```

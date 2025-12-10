@@ -1,4 +1,6 @@
-![PIKE Banner](https://raw.githubusercontent.com/pike-project/pike/main/assets/banner-short-2.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/pike-project/pike/main/assets/logo.png" width="200">
+</p>
 
 # PIKE
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pike-project/pike/main/assets/logo.png" width="160" style="border-radius: 10px;">
+  <img src="https://raw.githubusercontent.com/pike-project/pike/main/assets/logo.png" width="160">
 </p>
 
 # PIKE

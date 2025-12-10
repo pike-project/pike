@@ -1,3 +1,5 @@
+![PIKE Banner](assets/banner.png)
+
 # PIKE
 
 A framework for comparing multi-agent PyTorch optimization systems, along with multiple optimization strategy implementations.

@@ -1,10 +1,12 @@
-![PIKE Banner](https://raw.githubusercontent.com/pike-project/pike/main/assets/banner.png)
+![PIKE Banner](https://raw.githubusercontent.com/pike-project/pike/main/assets/banner-short.png)
 
 # PIKE
 
 A framework for comparing multi-agent PyTorch optimization systems, along with multiple optimization strategy implementations.
 
 These components are collectively defined as PyTorch Inference Kernel Evolution (PIKE).
+
+See the paper preprint here: https://arxiv.org/abs/2511.16964
 
 ## About
 

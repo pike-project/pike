@@ -1,4 +1,4 @@
-![PIKE Banner](https://raw.githubusercontent.com/pike-project/pike/main/assets/banner-short.png)
+![PIKE Banner](https://raw.githubusercontent.com/pike-project/pike/main/assets/banner-short-2.png)
 
 # PIKE
 

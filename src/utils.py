@@ -260,8 +260,8 @@ def query_server(
         outputs = [choice.message.content for choice in response.choices]
     elif server_type == "openai":
         if is_reasoning_model:
-            assert "o1" in model or "o3" in model, "Only support o1 and o3 for now"
-            print(f"Using OpenAI reasoning model: {model} with reasoning effort {reasoning_effort}")
+            # assert "o1" in model or "o3" in model, "Only support o1 and o3 for now"
+            # print(f"Using OpenAI reasoning model: {model} with reasoning effort {reasoning_effort}")
             print(f"Using OpenAI reasoning model: {model} with reasoning effort {reasoning_effort}")
             response = client.chat.completions.create(
                 model=model,
@@ -269,6 +269,7 @@ def query_server(
                     {"role": "user", "content": prompt},
                 ],
                 reasoning_effort=reasoning_effort,
+                max_completion_tokens=max_tokens,
             )
         else:
             response = client.chat.completions.create(
@@ -284,6 +285,8 @@ def query_server(
                 top_p=top_p,
             )
         outputs = [choice.message.content for choice in response.choices]
+
+        full_response = response.to_dict()
     elif server_type == "cborg":
         response = client.chat.completions.create(
             model=model,

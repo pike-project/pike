@@ -328,7 +328,7 @@ class ParallelTreeSearch:
             query_results = []
             for q in queries:
                 if idea_queries:
-                    res_text = "- idea1\n- idea2\n- idea 3\n"
+                    res_text = "- idea1\n- idea2\n- idea3\n"
                 else:
                     res_text = "```exit(0)```"
                 

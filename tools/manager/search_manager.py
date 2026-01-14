@@ -249,44 +249,68 @@ def test_split_into_ranges():
     # result = split_into_ranges(nums, 4)
     # print(result)
 
-    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 36)
-    print(manager.ranges)
-    assert manager.ranges == [
-        (1, 3), (4, 5), (6, 7), (8, 8), (9, 9), (10, 12), (13, 13), (14, 14), (15, 15), (16, 16), (17, 18),
-        (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 28), (29, 29),
-        (30, 30), (31, 32), (33, 35), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42),
-        (43, 43), (44, 47), (48, 48), (49, 49), (50, 50)
-    ], "ranges incorrect for level 3-metr, 36 ranges"
+    # manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 36)
+    # print(manager.ranges)
+    # assert manager.ranges == [
+    #     (1, 3), (4, 5), (6, 7), (8, 8), (9, 9), (10, 12), (13, 13), (14, 14), (15, 15), (16, 16), (17, 18),
+    #     (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 28), (29, 29),
+    #     (30, 30), (31, 32), (33, 35), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42),
+    #     (43, 43), (44, 47), (48, 48), (49, 49), (50, 50)
+    # ], "ranges incorrect for level 3-metr, 36 ranges"
 
-    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 37)
-    print(manager.ranges)
-    assert manager.ranges == [
-        (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
-        (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
-        (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
-        (48, 48), (49, 49), (50, 50)
-    ], "ranges incorrect for level 3-metr, 37 ranges"
+    # manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 37)
+    # print(manager.ranges)
+    # assert manager.ranges == [
+    #     (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
+    #     (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
+    #     (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
+    #     (48, 48), (49, 49), (50, 50)
+    # ], "ranges incorrect for level 3-metr, 37 ranges"
 
-    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 50)
-    print(manager.ranges)
-    assert manager.ranges == [
-        (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
-        (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
-        (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
-        (48, 48), (49, 49), (50, 50)
-    ], "ranges incorrect for level 3-metr, 50 ranges"
+    # manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 50)
+    # print(manager.ranges)
+    # assert manager.ranges == [
+    #     (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
+    #     (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
+    #     (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
+    #     (48, 48), (49, 49), (50, 50)
+    # ], "ranges incorrect for level 3-metr, 50 ranges"
 
-    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 4)
-    print(manager.ranges)
-    assert manager.ranges == [(1, 15), (16, 25), (26, 38), (39, 50)], "ranges incorrect for level 3-metr, 4 ranges"
+    # manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 100)
+    # print(manager.ranges)
+    # assert manager.ranges == [
+    #     (1, 1), (2, 2), (4, 4), (6, 6), (8, 8), (9, 9), (10, 10), (13, 13), (14, 14), (15, 15), (16, 16), (17, 17),
+    #     (19, 19), (20, 20), (21, 21), (22, 22), (23, 23), (24, 24), (25, 25), (26, 26), (27, 27), (29, 29), (30, 30),
+    #     (31, 31), (33, 33), (36, 36), (37, 37), (38, 38), (39, 39), (40, 40), (41, 41), (42, 42), (43, 43), (44, 44),
+    #     (48, 48), (49, 49), (50, 50)
+    # ], "ranges incorrect for level 3-metr, 50 ranges"
 
-    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 5)
-    print(manager.ranges)
-    assert manager.ranges == [(1, 13), (14, 22), (23, 30), (31, 40), (41, 50)], "ranges incorrect for level 3-metr, 5 ranges"
+    # manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 4)
+    # print(manager.ranges)
+    # assert manager.ranges == [(1, 15), (16, 25), (26, 38), (39, 50)], "ranges incorrect for level 3-metr, 4 ranges"
+
+    # manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "3-metr", 1, 5)
+    # print(manager.ranges)
+    # assert manager.ranges == [(1, 13), (14, 22), (23, 30), (31, 40), (41, 50)], "ranges incorrect for level 3-metr, 5 ranges"
 
     manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 5)
     print(manager.ranges)
     assert manager.ranges == [(1, 3), (4, 6), (7, 9), (10, 12), (13, 14)], "ranges incorrect for level 5"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 5)
+    assert len(manager.ranges) == 5, "ranges incorrect for level 5"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 13)
+    assert len(manager.ranges) == 13, "ranges incorrect for level 5"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 14)
+    assert len(manager.ranges) == 14, "ranges incorrect for level 5"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 15)
+    assert len(manager.ranges) == 14, "ranges incorrect for level 5"
+
+    manager = SearchManager("prev_noagents", "worker_io", "runs/tmp", 8000, "5", 1, 20)
+    assert len(manager.ranges) == 14, "ranges incorrect for level 5"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

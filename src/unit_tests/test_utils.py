@@ -57,7 +57,7 @@ def test_extract_first_code():
     # Test with no code block
     text = "Some code here"
     code = extract_first_code(text, ["python", "cpp"]) 
-    check_code_assertions(code, "")
+    check_code_assertions(code, "Some code here")
 
     # Test with empty code block
     text = "```python\n```"

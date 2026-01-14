@@ -20,7 +20,8 @@ You may replace multiple operators with custom implementations, consider operato
 """
 
 INIT_INSTRUCTION = """
-Optimize the architecture named Model with custom CUDA operators. Name your optimized output architecture ModelNew. Output the new code in codeblocks.
+Optimize the architecture named Model with custom CUDA operators.
+Name your optimized output architecture ModelNew. Output the new code in codeblocks.
 Generate real code, NOT pseudocode. Just output the new model code, no other text.
 Try to make changes which will significantly improve performance over the given architecture.
 You should try to make sure the code compiles and is fully functional, but we will attempt to fix errors and correctness issues if it does not.
@@ -28,6 +29,7 @@ You should try to make sure the code compiles and is fully functional, but we wi
 
 IMPROVE_INSTRUCTION = """
 Try to make changes which will significantly improve performance by modifying your previous solution.
+Name your optimized output architecture ModelNew. Output the new code in codeblocks.
 Generate real code, NOT pseudocode. Just output the new model code, no other text.
 You should try to make sure the code compiles and is fully functional, but we will attempt to fix errors and correctness issues if it does not.
 """

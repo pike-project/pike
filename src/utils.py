@@ -530,7 +530,8 @@ def extract_first_code(output_string: str, code_language_types: list[str]) -> st
 
         return code
 
-    return None
+    return trimmed
+    # return None
 
 
 def extract_idea_list(output_string: str) -> list[str]:

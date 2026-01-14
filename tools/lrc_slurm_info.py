@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 
 # Nodes of interest
-target_nodes = {"n0069.es1", "n0070.es1", "n0071.es1", "n0072.es1"}
+target_nodes = {"n0069.es2", "n0070.es2", "n0071.es2", "n0072.es2"}
 
 def run_cmd(cmd):
     return subprocess.check_output(cmd, shell=True, text=True)

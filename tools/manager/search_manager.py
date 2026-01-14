@@ -137,7 +137,7 @@ class SearchManager:
 
         # configs
         num_samples = 10
-        num_phases = 30
+        num_phases = 2
         dry_run = False
         server_type = "google"
         model_name = "gemini-2.5-pro"

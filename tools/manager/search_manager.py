@@ -137,7 +137,7 @@ class SearchManager:
 
         # configs
         num_samples = 10
-        num_phases = 2
+        num_phases = 30
         dry_run = False
         server_type = "google"
         model_name = "gemini-2.5-pro"
@@ -242,7 +242,7 @@ class SearchManager:
 
         tasks = sorted(tasks)
 
-        tasks = tasks[:1]
+        tasks = [17]
         print(f"Running these tasks: {tasks}")
 
         return split_into_ranges(tasks, range_count)

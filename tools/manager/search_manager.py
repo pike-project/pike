@@ -242,7 +242,7 @@ class SearchManager:
 
         tasks = sorted(tasks)
 
-        tasks = [13, 25, 31, 49]
+        tasks = [43]
         print(f"Running these tasks: {tasks}")
 
         return split_into_ranges(tasks, range_count)

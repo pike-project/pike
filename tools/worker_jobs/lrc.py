@@ -96,7 +96,7 @@ def main():
         "-t", args.allocation_time,
         "--partition=es2",
         "--qos=es2_normal",
-        f"--gres=gpu:H100:{args.gpu_count}",
+        f"--gres=gpu:H200:{args.gpu_count}",
         f"--cpus-per-task={args.cpu_count}",
         # "--pty",
         "python", "-u",

@@ -1,5 +1,4 @@
 import os, sys
-import torch
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -38,8 +37,6 @@ Assume 1 sample per problem here
 """
 
 REPO_TOP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-torch.set_printoptions(precision=4, threshold=10)
 
 class EvalState(Enum):
     CORRECT = "correct"

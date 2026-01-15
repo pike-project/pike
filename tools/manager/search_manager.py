@@ -144,19 +144,21 @@ class SearchManager:
 
         run_cmd = [
             "python", "-u", "scripts/parallel_tree_search.py",
-            f"run_dir={run_dir}",
-            f"server_type={server_type}",
-            f"model_name={model_name}",
-            "num_workers=10",
-            f"level={self.level}",
-            f"task_start={task_start}",
-            f"task_end={task_end}",
-            f"num_samples={num_samples}",
-            f"num_phases={num_phases}",
-            f"max_fix_attempts={self.max_fix_attempts}",
-            f"dry_run={str(dry_run)}",
-            f"eval_port={self.port}",
+            f"--run_dir={run_dir}",
+            f"--server_type={server_type}",
+            f"--model_name={model_name}",
+            "--num_workers=10",
+            f"--level={self.level}",
+            f"--task_start={task_start}",
+            f"--task_end={task_end}",
+            f"--num_samples={num_samples}",
+            f"--num_phases={num_phases}",
+            f"--max_fix_attempts={self.max_fix_attempts}",
+            f"--eval_port={self.port}",
         ]
+
+        if dry_run:
+            run_cmd.append("--dry_run")
 
         log_path = log_dir / f"logs_{self.curr_partition_id}.log"
         self.curr_partition_id += 1

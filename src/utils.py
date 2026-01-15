@@ -18,7 +18,6 @@ import anthropic
 import time
 import concurrent
 from functools import cache
-from transformers import AutoTokenizer
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -40,6 +39,8 @@ CBORG_API_KEY = os.environ.get("CBORG_API_KEY")
 
 @cache
 def load_deepseek_tokenizer():
+    from transformers import AutoTokenizer
+
     # TODO: Should we update this for new deepseek? Same tokenizer?
     # return AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-Coder-V2-Instruct-0724")
     return AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-V2", trust_remote_code=True)

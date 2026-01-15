@@ -1,5 +1,3 @@
-import pydra
-from pydra import REQUIRED, Config
 import os, sys
 import torch
 import json
@@ -13,6 +11,7 @@ import random
 import time
 from enum import Enum
 import requests
+import argparse
 
 
 from datasets import load_dataset
@@ -67,28 +66,58 @@ class EnumEncoder(json.JSONEncoder):
             return obj.value
         return super().default(obj)
 
-class GenerationConfig(Config):
-    def __init__(self):
-        # Problem Specification
-        self.level = REQUIRED
+class GenerationConfig:
+    def __init__(
+        self,
+        run_dir,
+        server_type,
+        model_name,
+        num_workers,
+        level,
+        task_start,
+        task_end,
+        num_samples,
+        num_phases,
+        max_fix_attempts,
+        eval_port,
+        dry_run,
+    ):
+        self.run_dir = run_dir
+        self.server_type = server_type
+        self.model_name = model_name
+        self.num_workers = num_workers
 
-        self.task_start = REQUIRED
-        self.task_end = REQUIRED
+        self.level = level
+        self.task_start = task_start
+        self.task_end = task_end
+        self.num_samples = num_samples
+        self.num_phases = num_phases
+        self.max_fix_attempts = max_fix_attempts
+        self.eval_port = eval_port
+        self.dry_run = dry_run
+
+        print(f"run_dir={run_dir}")
+        print(f"server_type={server_type}")
+        print(f"model_name={model_name}")
+        print(f"num_workers={num_workers}")
+
+        print(f"level={level}")
+        print(f"task_start={task_start}")
+        print(f"task_end={task_end}")
+        print(f"num_samples={num_samples}")
+        print(f"num_phases={num_phases}")
+        print(f"max_fix_attempts={max_fix_attempts}")
+        print(f"eval_port={eval_port}")
+
+        print(f"dry_run={dry_run}")
         
         # subset of problems to generate, otherwise generate on all problems in the level
         # both sides are inclusive
         # (None, None) -> full range
         # self.subset = (self.task, self.task) # range of problems to generate samples for
 
-        self.run_dir = None
-
-        # num of thread pool to call inference server in parallel
-        self.num_workers = 1
         self.api_query_interval = 0.0
 
-        # Inference config
-        self.server_type = "deepseek"
-        self.model_name = "deepseek-coder"
         # Max spend of $0.30 for a solution output with current Gemini pricing:
         # $10.00 per 1M tokens
         # 30000 * 10 / (10^6) = 0.30
@@ -101,29 +130,13 @@ class GenerationConfig(Config):
         self.data_dir = ""
         # Top Directory to Store Runs
         # self.runs_dir = os.path.join(REPO_TOP_DIR, "runs")
-
-        # TODO: maybe add dry_run_eval and dry_run_queries
-        self.dry_run = False
     
         self.verbose = False
         self.store_type = "local"
 
-        # Future support
-        # Migrate Monkeys code base to KernelBench
-        self.num_samples = REQUIRED # for sampling multiple samples per problem
-
-        self.num_phases = REQUIRED
-        # note: this does not include the initial attempt
-        self.max_fix_attempts = REQUIRED
-
-        self.eval_port = REQUIRED
-
     def greedy(self):
         # For greedy decoding, epsecially baseline eval
         self.greedy_sample = True
-
-    def __repr__(self):
-        return f"EvalConfig({self.to_dict()})"
     
 
 @dataclass
@@ -179,7 +192,7 @@ class ParallelTreeSearch:
         os.makedirs(self.run_dir, exist_ok=True)
 
         with open(self.run_dir / "config.json", "w") as f:
-            json.dump(config.to_dict(), f, indent=4)
+            json.dump({}, f, indent=4)
 
         self.all_solutions = {}
         self.phase_solutions_by_branch = {}
@@ -904,13 +917,42 @@ class ParallelTreeSearch:
             self.curr_step = 0
 
 
-@pydra.main(base=GenerationConfig)
-def main(config: GenerationConfig):
+def main():
     """
     Batch Generate Samples for Particular Level
     Store generated kernels in the specified run directory
     """
-    print(f"Starting Batch Generation with config: {config}")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run_dir", type=str, required=False, default=None)
+    parser.add_argument("--server_type", type=str, required=True)
+    parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--num_workers", type=int, required=True)
+    parser.add_argument("--level", type=str, required=True)
+    parser.add_argument("--task_start", type=int, required=True)
+    parser.add_argument("--task_end", type=int, required=True)
+    parser.add_argument("--num_samples", type=int, required=True)
+    parser.add_argument("--num_phases", type=int, required=True)
+    parser.add_argument("--max_fix_attempts", type=int, required=True)
+    parser.add_argument("--eval_port", type=int, required=True)
+    parser.add_argument("--dry_run", action='store_true', default=False, required=False)
+    args = parser.parse_args()
+
+    config = GenerationConfig(
+        args.run_dir,
+        args.server_type,
+        args.model_name,
+        args.num_workers,
+        args.level,
+        args.task_start,
+        args.task_end,
+        args.num_samples,
+        args.num_phases,
+        args.max_fix_attempts,
+        args.eval_port,
+        args.dry_run,
+    )
+
+    # print(f"Starting Batch Generation with config: {config}")
 
     tree_search = ParallelTreeSearch(config)
     asyncio.run(tree_search.init())

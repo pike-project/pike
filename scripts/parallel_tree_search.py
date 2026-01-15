@@ -208,8 +208,15 @@ class ParallelTreeSearch:
 
         # Create inference function with config parameters
         # We provide some presets in utils but you can also pass in your own, see query_server for more details
-        self.inference_server = create_inference_server_from_presets(server_type="openai",
-                                                                model_name="o3-mini",
+        # self.inference_server = create_inference_server_from_presets(server_type="openai",
+        #                                                         model_name="o3-mini",
+        #                                                         max_tokens=self.config.max_tokens,
+        #                                                         verbose=self.config.verbose,
+        #                                                         is_reasoning_model=True,
+        #                                                         reasoning_effort="high")
+
+        self.inference_server = create_inference_server_from_presets(server_type="cborg",
+                                                                model_name="openai/o3-mini",
                                                                 max_tokens=self.config.max_tokens,
                                                                 verbose=self.config.verbose,
                                                                 is_reasoning_model=True,

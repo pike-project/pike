@@ -297,7 +297,7 @@ class ParallelTreeSearch:
     def get_task_dir(self, problem_id):
         level = self.config.level
 
-        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}_{task_dir_id}"
+        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}_{self.task_dir_id}"
 
         return task_dir
 

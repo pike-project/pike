@@ -256,7 +256,13 @@ class SearchManager:
         ]
         print(f"Running these tasks: {tasks}")
 
-        return split_into_ranges(tasks, range_count)
+        # return split_into_ranges(tasks, range_count)
+
+        ranges = []
+        for t in tasks:
+            ranges.append((t, t))
+        
+        return ranges
 
 def test_split_into_ranges():
     # nums = [1, 5, 14, 16, 17, 26, 28, 33, 34, 42, 50]

@@ -152,6 +152,8 @@ def query_llm(query: str, inference_server: callable):
 class ParallelTreeSearch:
     def __init__(self, config):
         self.config = config
+
+        self.task_dir_id = str(uuid.uuid4())
         
         curr_level_dataset = construct_kernelbench_dataset(KERNEL_BENCH_PATH, config.level)
         self.curr_level_dataset = curr_level_dataset
@@ -221,26 +223,26 @@ class ParallelTreeSearch:
         #                                                         is_reasoning_model=True,
         #                                                         reasoning_effort="high")
 
-        self.inference_server = create_inference_server_from_presets(server_type="cborg",
-                                                                model_name="openai/o3-mini",
+        # self.inference_server = create_inference_server_from_presets(server_type="cborg",
+        #                                                         model_name="openai/o3-mini",
+        #                                                         max_tokens=self.config.max_tokens,
+        #                                                         verbose=self.config.verbose,
+        #                                                         is_reasoning_model=True,
+        #                                                         reasoning_effort="high")
+
+        # self.cheap_inference_server = self.inference_server
+
+        self.inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                model_name=model_name,
+                                                                temperature=self.config.temperature,
                                                                 max_tokens=self.config.max_tokens,
-                                                                verbose=self.config.verbose,
-                                                                is_reasoning_model=True,
-                                                                reasoning_effort="high")
+                                                                verbose=self.config.verbose)
 
-        self.cheap_inference_server = self.inference_server
-
-        # self.inference_server = create_inference_server_from_presets(server_type=server_type,
-        #                                                         model_name=model_name,
-        #                                                         temperature=self.config.temperature,
-        #                                                         max_tokens=self.config.max_tokens,
-        #                                                         verbose=self.config.verbose)
-
-        # self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
-        #                                                         model_name="gemini-2.5-flash",
-        #                                                         temperature=self.config.temperature,
-        #                                                         max_tokens=self.config.max_tokens,
-        #                                                         verbose=self.config.verbose)
+        self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                model_name="gemini-2.5-flash",
+                                                                temperature=self.config.temperature,
+                                                                max_tokens=self.config.max_tokens,
+                                                                verbose=self.config.verbose)
 
     async def init(self):
         print("Starting handshake with worker...")
@@ -295,7 +297,7 @@ class ParallelTreeSearch:
     def get_task_dir(self, problem_id):
         level = self.config.level
 
-        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}"
+        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}_{task_dir_id}"
 
         return task_dir
 

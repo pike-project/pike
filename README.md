@@ -88,10 +88,10 @@ python scripts/disk_channel_server.py --port 8000
 To run PIKE-B directly, first try a dry run (does not require the eval worker):
 
 ```bash
-python scripts/parallel_tree_search.py server_type=google model_name=gemini-2.5-pro num_workers=10 level=3-pike task_start=1 task_end=50 num_samples=10 num_phases=30 max_fix_attempts=5 dry_run=True eval_port=8000 run_dir=<path/to/output-dir>
+python scripts/parallel_tree_search.py --server-type google --model-name gemini-2.5-pro --level 3-pike --task-start 1 --task-end 50 --num-samples 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --dry-run --run-dir <path/to/output-dir>
 ```
 
-If this works fine, you can switch to `dry_run=False`. Run this only after the Eval Worker and Eval Server are running.
+If this works fine, you can remove `--dry-run`. Run this only after the Eval Worker and Eval Server are running.
 
 ## Run PIKE-O
 

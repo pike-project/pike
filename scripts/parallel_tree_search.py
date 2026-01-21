@@ -936,7 +936,7 @@ def main():
     parser.add_argument("--run-dir", type=str, required=False, default=None, help="Directory for run results output")
     parser.add_argument("--server-type", type=str, required=True, help="LLM server type")
     parser.add_argument("--model-name", type=str, required=True, help="LLM model name")
-    parser.add_argument("--num-workers", type=int, required=True, help="Number of workers for making LLM queries in parallel")
+    parser.add_argument("--num-workers", type=int, default=10, required=False, help="Number of workers for making LLM queries in parallel")
     parser.add_argument("--level", type=str, required=True, help="KernelBench level")
     parser.add_argument("--task-start", type=int, required=True, help="Task range start, inclusive")
     parser.add_argument("--task-end", type=int, required=True, help="Task range end, inclusive")

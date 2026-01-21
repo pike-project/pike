@@ -13,12 +13,12 @@ def clean_whitespace(s):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--engine", type=str, required=False, default="docker", help="Container engine to use.")
-    parser.add_argument("--sif-path", type=str, required=False, help="Path to the .sif file, required for Apptainer.")
+    parser.add_argument("--engine", type=str, required=False, default="docker", help="Container engine to use")
+    parser.add_argument("--sif-path", type=str, required=False, help="Path to the .sif file, required for Apptainer")
     parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
     parser.add_argument("--bash", action='store_true', help="Run bash inside of the container instead of the worker")
     parser.add_argument("--pull-image", action='store_true', help="Pull the image from Dockerhub if using docker or podman-hpc")
-    parser.add_argument("--worker-io-dir", type=str, required=False, default="worker_io")
+    parser.add_argument("--worker-io-dir", type=str, required=False, default="worker_io", help="Scratch directory for communicating with the worker via filesystem")
     parser.add_argument("--max-active-tasks", type=int, required=False, default=20, help="Max active worker tasks")
 
     args = parser.parse_args()

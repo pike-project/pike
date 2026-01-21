@@ -889,6 +889,14 @@ class ParallelTreeSearch:
 
             if len(queries) == 0:
                 print(f"All tasks have reached max budget, exiting")
+
+                if self.config.dry_run:
+                    print(f"\n---------------------------------------------------")
+                    print("dry run completed successfully, search is working")
+                    print("NOTE: dry run does not test functionality of eval worker")
+                    print("components, it ONLY tests functionality of this script")
+                    print(f"---------------------------------------------------")
+
                 break
 
             # IMPORTANT: clear this right after the call to get_next_queries, since these phase solutions

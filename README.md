@@ -28,16 +28,18 @@ We chose to fork the original KernelBench repository, consolidating the agent fr
 
 ## Setup
 
+We recommend setting up your environment using `uv` ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+
 Clone this repository, then do the following:
 
 ```
-conda create --name kernel-bench python=3.12
-conda activate kernel-bench
-pip install -r requirements.txt
-pip install -e .
+uv venv --python 3.12 --seed
+source .venv/bin/activate
+uv pip install -r requirements.txt
+uv pip install -e .
 
 # additional data analysis
-pip install matplotlib pandas scipy
+uv pip install matplotlib pandas scipy
 ```
 
 Save the following API key environment variables to `~/.bashrc`:
@@ -45,6 +47,12 @@ Save the following API key environment variables to `~/.bashrc`:
 ```bash
 export OPENAI_API_KEY=<...>
 export GEMINI_API_KEY=<...>
+```
+
+Then source the changes via:
+
+```bash
+source ~/.bashrc
 ```
 
 ## Running PIKE
@@ -88,7 +96,7 @@ python scripts/disk_channel_server.py --port 8000
 To run PIKE-B directly, first try a dry run (does not require the eval worker):
 
 ```bash
-python scripts/parallel_tree_search.py --server-type google --model-name gemini-2.5-pro --level 3-pike --task-start 1 --task-end 50 --num-samples 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --dry-run --run-dir <path/to/output-dir>
+python scripts/parallel_tree_search.py --server-type google --model-name gemini-2.5-pro --level 3-pike --task-start 1 --task-end 50 --num-branches 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --dry-run --run-dir <path/to/output-dir>
 ```
 
 If this works fine, you can remove `--dry-run`. Run this only after the Eval Worker and Eval Server are running.

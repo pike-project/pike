@@ -136,8 +136,7 @@ class SearchManager:
         os.makedirs(run_dir, exist_ok=True)
 
         # configs
-        num_samples = 10
-        num_phases = 30
+        num_branches = 10
         dry_run = False
         server_type = "google"
         model_name = "gemini-2.5-pro"
@@ -151,8 +150,7 @@ class SearchManager:
             f"--level={self.level}",
             f"--task-start={task_start}",
             f"--task-end={task_end}",
-            f"--num-samples={num_samples}",
-            f"--num-phases={num_phases}",
+            f"--num-branches={num_branches}",
             f"--max-fix-attempts={self.max_fix_attempts}",
             f"--eval-port={self.port}",
         ]

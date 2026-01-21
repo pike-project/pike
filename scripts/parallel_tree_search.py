@@ -70,7 +70,7 @@ class GenerationConfig:
         level,
         task_start,
         task_end,
-        num_samples,
+        num_branches,
         max_fix_attempts,
         eval_port,
         dry_run,
@@ -84,7 +84,7 @@ class GenerationConfig:
         self.level = level
         self.task_start = task_start
         self.task_end = task_end
-        self.num_samples = num_samples
+        self.num_branches = num_branches
         self.max_fix_attempts = max_fix_attempts
         self.eval_port = eval_port
         self.dry_run = dry_run
@@ -98,7 +98,7 @@ class GenerationConfig:
         print(f"level={level}")
         print(f"task_start={task_start}")
         print(f"task_end={task_end}")
-        print(f"num_samples={num_samples}")
+        print(f"num_branches={num_branches}")
         print(f"max_fix_attempts={max_fix_attempts}")
         print(f"eval_port={eval_port}")
 
@@ -171,7 +171,7 @@ class ParallelTreeSearch:
                 self.problem_ids.append(problem_id)
                 self.problem_id_to_path[problem_id] = problem_path
 
-        print(f"Generating {config.num_samples} samples each for level {config.level} problems: {self.problem_ids}")
+        print(f"Generating {config.num_branches} samples each for level {config.level} problems: {self.problem_ids}")
 
         if config.run_dir is None and config.data_dir is None:
             raise Exception("Either run_dir or data_dir must be set in config")
@@ -450,7 +450,6 @@ class ParallelTreeSearch:
 
         start_time = time.time()
 
-        num_samples = len(samples)
         for (eval_id, sample) in eval_id_to_sample.items():
             if self.config.dry_run:
                 # skip a sample result with random probability on dry run
@@ -754,11 +753,11 @@ class ParallelTreeSearch:
     def get_init_queries(self, ideas) -> list[Query]:
         queries = []
 
-        num_samples = self.config.num_samples
+        num_branches = self.config.num_branches
 
         curr_sample_id = 0
         for problem_id in self.problem_ids:
-            self.inc_budget(problem_id, num_samples)
+            self.inc_budget(problem_id, num_branches)
 
             problem_code = self.get_problem_code(problem_id)
             problem_ideas = ideas[problem_id]
@@ -810,13 +809,13 @@ class ParallelTreeSearch:
 
         return queries
 
-    # here we use all of the existing solutions for each problem, and try to divide the available num_samples in a way that
+    # here we use all of the existing solutions for each problem, and try to divide the available num_branches in a way that
     # focuses mostly on the most promising solutions
     # we could employ a number of strategies here
     def get_next_queries(self):
         queries = []
 
-        num_samples = self.config.num_samples
+        num_branches = self.config.num_branches
 
         curr_sample_id = 0
 
@@ -824,13 +823,13 @@ class ParallelTreeSearch:
         sols_by_problem = self.gather_best_solutions_by_branch()
 
         for problem_id, solutions in sols_by_problem.items():
-            if not self.inc_budget(problem_id, num_samples):
+            if not self.inc_budget(problem_id, num_branches):
                 continue
 
             sorted_sols = sorted(solutions, key=lambda x: x["runtime"])
 
             problem_code = self.get_problem_code(problem_id)
-            strat_queries = query_strategies.simple_branching_strategy(sorted_sols, num_samples, problem_code, num_branches=4)
+            strat_queries = query_strategies.simple_branching_strategy(sorted_sols, num_branches, problem_code, num_branches=4)
 
             if len(strat_queries) == 0:
                 print(f"WARNING: No queries generated for task {problem_id}")
@@ -865,7 +864,7 @@ class ParallelTreeSearch:
             self.write_sample_data(qr.problem_id, None, "ideas.json", json.dumps(l, indent=4))
 
             # if there are less or more than 10 ideas, need to trim or duplicate accordingly
-            l = query_util.resize_list(l, self.config.num_samples)
+            l = query_util.resize_list(l, self.config.num_branches)
         
             ideas[qr.problem_id] = l
         
@@ -877,7 +876,7 @@ class ParallelTreeSearch:
         idea_queries = self.get_idea_queries()
         ideas = self.gen_and_extract_ideas(idea_queries)
 
-        num_phases = ceil(self.config.query_budget / self.config.num_samples)
+        num_phases = ceil(self.config.query_budget / self.config.num_branches)
 
         print(f"Running at most {num_phases} phases")
 
@@ -940,7 +939,7 @@ def main():
     parser.add_argument("--level", type=str, required=True, help="KernelBench level")
     parser.add_argument("--task-start", type=int, required=True, help="Task range start, inclusive")
     parser.add_argument("--task-end", type=int, required=True, help="Task range end, inclusive")
-    parser.add_argument("--num-samples", type=int, required=True, help="Number of parallel branches in parallel tree search")
+    parser.add_argument("--num-branches", type=int, required=True, help="Number of parallel branches in parallel tree search")
     parser.add_argument("--max-fix-attempts", type=int, required=True, help="Error Fixing Agent max attempts allowed")
     parser.add_argument("--eval-port", type=int, default=8000, required=False, help="Port where evaluation server is running")
     parser.add_argument("--dry-run", action='store_true', default=False, required=False, help="Dry run without LLM queries or worker communication")
@@ -955,7 +954,7 @@ def main():
         args.level,
         args.task_start,
         args.task_end,
-        args.num_samples,
+        args.num_branches,
         args.max_fix_attempts,
         args.eval_port,
         args.dry_run,

@@ -74,6 +74,7 @@ class GenerationConfig:
         max_fix_attempts,
         eval_port,
         dry_run,
+        query_budget,
     ):
         self.run_dir = run_dir
         self.server_type = server_type
@@ -88,6 +89,7 @@ class GenerationConfig:
         self.max_fix_attempts = max_fix_attempts
         self.eval_port = eval_port
         self.dry_run = dry_run
+        self.query_budget = query_budget
 
         print(f"run_dir={run_dir}")
         print(f"server_type={server_type}")
@@ -103,6 +105,7 @@ class GenerationConfig:
         print(f"eval_port={eval_port}")
 
         print(f"dry_run={dry_run}")
+        print(f"query_budget={query_budget}")
         
         # subset of problems to generate, otherwise generate on all problems in the level
         # both sides are inclusive
@@ -193,7 +196,7 @@ class ParallelTreeSearch:
         self.phase_solutions_by_branch = {}
         self.phase_solutions = {}
 
-        self.query_budget = 300
+        self.query_budget = self.config.query_budget
         self.budget_used = {}
 
         self.curr_phase = 0
@@ -938,8 +941,9 @@ def main():
     parser.add_argument("--num_samples", type=int, required=True)
     parser.add_argument("--num_phases", type=int, required=True)
     parser.add_argument("--max_fix_attempts", type=int, required=True)
-    parser.add_argument("--eval_port", type=int, required=True)
+    parser.add_argument("--eval_port", type=int, default=8000, required=False)
     parser.add_argument("--dry_run", action='store_true', default=False, required=False)
+    parser.add_argument("--query_budget", type=int, default=300, required=False)
     args = parser.parse_args()
 
     config = GenerationConfig(
@@ -955,6 +959,7 @@ def main():
         args.max_fix_attempts,
         args.eval_port,
         args.dry_run,
+        args.query_budget,
     )
 
     # print(f"Starting Batch Generation with config: {config}")

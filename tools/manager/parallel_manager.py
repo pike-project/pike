@@ -63,9 +63,9 @@ class ParallelManager:
             worker_script_path,
             "--worker-io-dir",
             self.worker_io_dir,
-            "--gpu-count", 2,
-            "--cpu-count", 56,
-            "--max-active-tasks", 28,
+            "--gpu-count", 1,
+            "--cpu-count", 20,
+            "--max-active-tasks", 10,
             "--allocation-time", "24:00:00",
         ]
         cmd = [str(x) for x in cmd]

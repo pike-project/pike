@@ -36,9 +36,11 @@ def convert(src_dir: Path, dst_dir: Path):
 
     # 1. Find and sort all 'task' directories in the source
     try:
+        target_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.startswith("task")]
+
         src_task_dirs = sorted(
-            [d for d in src_dir.iterdir() if d.is_dir() and d.name.startswith("task")],
-            key=lambda p: numeric_suffix(p.name, "task")
+            target_dirs,
+            key=lambda p: int(p.name.split("_")[1])
         )
     except FileNotFoundError:
         print(f"Error: Source directory '{src_dir}' not found.")
@@ -51,7 +53,13 @@ def convert(src_dir: Path, dst_dir: Path):
     # 2. Process each task directory
     for src_task_path in src_task_dirs:
         task_name = src_task_path.name
-        task_num = int(task_name.split("_")[1])
+        name_split = task_name.split("_")
+        task_num = int(name_split[1])
+
+        task_output_dirname = f"task{task_num}"
+        if len(name_split) > 2:
+            task_suffix = name_split[2]
+            task_output_dirname = f"task{task_num}_{task_suffix}"
 
         print(f"Processing {task_name}...")
 
@@ -71,7 +79,7 @@ def convert(src_dir: Path, dst_dir: Path):
             key=lambda p: numeric_suffix(p.name, "phase_")
         )
 
-        output_dir = dst_dir / f"task{task_num}" / "output"
+        output_dir = dst_dir / task_output_dirname / "output"
 
         ideas_dir = output_dir / "ideas"
 

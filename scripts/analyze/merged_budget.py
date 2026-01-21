@@ -17,31 +17,42 @@ OUTPUT_SOLUTIONS = True
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-# runs = [
-#     ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-#     ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-#     ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-#     ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-#     ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-#     ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
-
-#     ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-#     # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-#     ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
-#     ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
-#     ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-#     ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
-# ]
-# target_level = "3-metr"
-
 runs = [
-    ("h100_level_5_prev_agents_trial_2", "prev_agents"),
-    ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
-    ("h100_level_5_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
-    ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-    ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+    # ("h100_level_3-metr_prev_agents_trial_1", "prev_agents_no_precision_reduction"),
+    ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
+    # ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
+    # ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
+    # ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
+    # ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
+    # ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+
+    # ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
+    # # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
+    # ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
+    # ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
+    # ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+    # ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+
+    # ("h100_level_3-pike_prev_agents_o3-mini_task_17", "test1"),
+    # ("h100_level_3-pike_prev_agents_o3-mini_task_13_49_51_25", "test1"),
+    # ("h100_level_3-pike_prev_agents_o3-mini_task_43", "test1"),
+    # ("h100_level_3-pike_prev_agents_o3-mini_task_rest", "test1"),
+    # ("h100_level_3-metr_prev_agents_variability_13_27_30_31_48", "test2"),
 ]
-target_level = "5"
+# runs = [
+#     ("2026_01_13_22_08_45", "test1"),
+# ]
+
+target_level = "3-metr"
+
+# runs = [
+#     ("h100_level_5_prev_agents_trial_2", "prev_agents"),
+#     # ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
+#     # ("h100_level_5_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
+#     # ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+#     # ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+# ]
+# target_level = "5"
 
 
 target_attempt = 300
@@ -114,6 +125,8 @@ BLACKLIST = {
 code_blacklist = {
     # "torch.cuda.CUDAGraph",
     "torch.jit.trace",
+    # "float16",
+    # "half"
 }
 
 task_blacklist_map = {
@@ -302,13 +315,13 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
 # --- Main Execution Logic ---
 
-def run(run_name, output_label):
+def run(run_name, output_label, run_num=0):
     plot_title = "Speedup by Attempt (Level 3-metr, H100)"
     plot_xlabel = "Attempt Number"
 
     # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
 
-    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run/tasks").resolve()
+    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
     # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
     sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()
@@ -345,11 +358,11 @@ def run(run_name, output_label):
     if write_to_disk:
         plot_path.parent.mkdir(parents=True, exist_ok=True)
 
-    task_names_unfiltered = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: numeric_suffix(x, "task"))
+    task_names_unfiltered = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: int(x.split("task")[1].split("_")[0]))
 
     task_names = []
     for task_name in task_names_unfiltered:
-        if int(task_name.split("task")[1]) in task_blacklist:
+        if int(task_name.split("task")[1].split("_")[0]) in task_blacklist:
             continue
 
         task_names.append(task_name)
@@ -369,7 +382,7 @@ def run(run_name, output_label):
     all_efa_costs = []
 
     for task_name in task_names:
-        task_number = numeric_suffix(task_name, "task")
+        task_number = int(task_name.split("task")[1].split("_")[0])
         task_path = os.path.join(root_dir, task_name)
         
         is_task_speedup_blacklisted = task_number in current_blacklist
@@ -432,9 +445,10 @@ def run(run_name, output_label):
             if is_task_speedup_blacklisted:
                 speedup_progress = [1.0] * total_step_count
             else:
+                # clamping
                 speedup_progress = [max(1.0, eager / r) if r is not None and r > 0 else 1.0 for r in progress]
             all_speedups_progress.append(speedup_progress)
-            task_id = numeric_suffix(task_name, "task")
+            task_id = int(task_name.split("task")[1].split("_")[0])
             included_task_names_for_csv.append(f"task_{task_id}")
 
     all_efa_costs_np = np.array(all_efa_costs)
@@ -459,7 +473,12 @@ def run(run_name, output_label):
 
     # 2. Print geometric mean of speedups
     if speedup_list:
+        # clamping
+        # print(speedup_list)
+        speedup_lt1 = [v for v in speedup_list if v < 1]
+        print(f"Task count where best speedup is < 1: {len(speedup_lt1)}")
         speedup_list = [v if v > 1 else 1 for v in speedup_list]
+        print(speedup_list) 
 
         geomean = gmean(speedup_list)
         print(f"Geometric mean speedup across {len(speedup_list)} tasks = {geomean:.3f}")

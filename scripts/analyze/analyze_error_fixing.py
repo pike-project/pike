@@ -10,8 +10,8 @@ target_attempt = 300
 # run_name = "h100_level_3-metr_prev_agents_trial_1"
 # output_label = "prev_agents"
 
-run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
-output_label = "prev_agents_cheap_efa"
+# run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
+# output_label = "prev_agents_cheap_efa"
 
 # run_name = "h100_level_3-metr_openevolve_agents_trial_0"
 # output_label = "openevolve_agents"
@@ -24,7 +24,13 @@ output_label = "prev_agents_cheap_efa"
 # run_name = "h100_level_3-metr_prev_agents_no_iba_0"
 # output_label = "prev_agents_no_iba"
 
-target_level = "3-metr"
+# target_level = "3-metr"
+
+
+run_name = "h100_level_5_prev_agents_trial_2"
+output_label = "prev_agents_level5"
+
+target_level = "5"
 
 task_blacklist_map = {
     "5": set(),

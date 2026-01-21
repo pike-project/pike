@@ -9,7 +9,6 @@ import json
 from tqdm import tqdm
 
 # API clients
-from together import Together
 from openai import OpenAI
 from google import genai
 import anthropic
@@ -142,6 +141,7 @@ def query_server(
             client = genai.Client(api_key=GEMINI_KEY)
             model = model_name
         case "together":
+            from together import Together
             client = Together(api_key=TOGETHER_KEY)
             model = model_name
         case "sambanova":

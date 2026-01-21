@@ -223,26 +223,28 @@ class ParallelTreeSearch:
         #                                                         is_reasoning_model=True,
         #                                                         reasoning_effort="high")
 
-        self.inference_server = create_inference_server_from_presets(server_type="cborg",
-                                                                model_name="openai/o3-mini",
+        # TODO: get reasoning models to work with CLI options
+
+        # self.inference_server = create_inference_server_from_presets(server_type="cborg",
+        #                                                         model_name="openai/o3-mini",
+        #                                                         max_tokens=self.config.max_tokens,
+        #                                                         verbose=self.config.verbose,
+        #                                                         is_reasoning_model=True,
+        #                                                         reasoning_effort="high")
+
+        # self.cheap_inference_server = self.inference_server
+
+        self.inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                model_name=model_name,
+                                                                temperature=self.config.temperature,
                                                                 max_tokens=self.config.max_tokens,
-                                                                verbose=self.config.verbose,
-                                                                is_reasoning_model=True,
-                                                                reasoning_effort="high")
+                                                                verbose=self.config.verbose)
 
-        self.cheap_inference_server = self.inference_server
-
-        # self.inference_server = create_inference_server_from_presets(server_type=server_type,
-        #                                                         model_name=model_name,
-        #                                                         temperature=self.config.temperature,
-        #                                                         max_tokens=self.config.max_tokens,
-        #                                                         verbose=self.config.verbose)
-
-        # self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
-        #                                                         model_name="gemini-2.5-flash",
-        #                                                         temperature=self.config.temperature,
-        #                                                         max_tokens=self.config.max_tokens,
-        #                                                         verbose=self.config.verbose)
+        self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                model_name="gemini-2.5-flash",
+                                                                temperature=self.config.temperature,
+                                                                max_tokens=self.config.max_tokens,
+                                                                verbose=self.config.verbose)
 
     async def init(self):
         print("Starting handshake with worker...")
@@ -261,6 +263,13 @@ class ParallelTreeSearch:
                     continue
 
         print("Worker handshake complete.")
+
+    def budget_limit_reached(self, problem_id):
+        if problem_id in self.budget_used:
+            if self.budget_used[problem_id] >= self.query_budget:
+                return True
+
+        return False
 
     def inc_budget(self, problem_id, count):
         if problem_id in self.budget_used:
@@ -297,7 +306,8 @@ class ParallelTreeSearch:
     def get_task_dir(self, problem_id):
         level = self.config.level
 
-        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}_{self.task_dir_id}"
+        # task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}_{self.task_dir_id}"
+        task_dir = self.run_dir / f"levels/level_{level}/task_{problem_id}"
 
         return task_dir
 
@@ -664,7 +674,7 @@ class ParallelTreeSearch:
             all_sols = sorted(best_problem_solutions, key=lambda x: x["runtime"])
             all_sols += sorted(remaining_solutions, key=lambda x: x["runtime"])
 
-            if len(all_sols) == 0:
+            if len(all_sols) == 0 and not self.budget_limit_reached(problem_id):
                 print(f"WARNING: all_sols length is 0 for task {problem_id}, ground truth solution will be used")
 
             problem_code = self.get_problem_code(problem_id)

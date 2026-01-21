@@ -32,7 +32,7 @@ We recommend setting up your environment using `uv` ([installation guide](https:
 
 Clone this repository, then do the following:
 
-```
+```bash
 uv venv --python 3.12 --seed
 source .venv/bin/activate
 uv pip install -r requirements.txt

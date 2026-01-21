@@ -51,8 +51,8 @@ class ParallelManager:
         self.model_name = "lbl/gpt-oss-120b-high"
 
         # If tasks list is empty, all tasks will be run
-        # self.tasks = []
-        self.tasks = [13]
+        # self.tasks = [13]
+        self.tasks = []
 
     # blocks until the worker is ready
     def start_eval_worker(self):
@@ -63,14 +63,14 @@ class ParallelManager:
             worker_script_path,
             "--worker-io-dir",
             self.worker_io_dir,
-            "--gpu-count", 1,
-            "--cpu-count", 20,
-            "--max-active-tasks", 10,
-            "--allocation-time", "24:00:00",
-            # "--gpu-count", 4,
-            # "--cpu-count", 56,
-            # "--max-active-tasks", 28,
-            # "--allocation-time", "48:00:00",
+            # "--gpu-count", 1,
+            # "--cpu-count", 20,
+            # "--max-active-tasks", 10,
+            # "--allocation-time", "24:00:00",
+            "--gpu-count", 4,
+            "--cpu-count", 56,
+            "--max-active-tasks", 28,
+            "--allocation-time", "48:00:00",
         ]
         cmd = [str(x) for x in cmd]
 

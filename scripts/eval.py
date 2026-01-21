@@ -425,14 +425,14 @@ def main():
     # NOTE: must be str because we could pass in variations of a level number like "3-metr"
     parser.add_argument("--level", type=str)
     parser.add_argument("--task", type=int)
-    parser.add_argument("--code_path", type=str)
-    parser.add_argument("--output_path", type=str, required=False)
-    parser.add_argument("--gpu_locks_dir", type=str, required=False)
-    parser.add_argument("--op_atol", type=float, default=1e-2)
-    parser.add_argument("--op_rtol", type=float, default=1e-2)
+    parser.add_argument("--code-path", type=str)
+    parser.add_argument("--output-path", type=str, required=False)
+    parser.add_argument("--gpu-locks-dir", type=str, required=False)
+    parser.add_argument("--op-atol", type=float, default=1e-2)
+    parser.add_argument("--op-rtol", type=float, default=1e-2)
     parser.add_argument("--mode", type=str, required=False, default="eager")
     # only provide this if evaluating with a separate CUDA file
-    parser.add_argument("--cuda_path", type=str, required=False, default=None)
+    parser.add_argument("--cuda-path", type=str, required=False, default=None)
     parser.add_argument("--profile", action='store_true')
     args = parser.parse_args()
 

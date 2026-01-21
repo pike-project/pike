@@ -68,8 +68,8 @@ def main(baseline_path, comp_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--baseline_path", type=str, required=True)
-    parser.add_argument("--comp_path", type=str, required=True)
+    parser.add_argument("--baseline-path", type=str, required=True)
+    parser.add_argument("--comp-path", type=str, required=True)
     args = parser.parse_args()
 
     main(Path(args.baseline_path), Path(args.comp_path))

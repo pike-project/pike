@@ -176,9 +176,9 @@ class EvalWorker:
                 "python", str(self.eval_script_path),
                 "--level", str(level),
                 "--task", str(task),
-                "--code_path", str(code_path),
-                "--output_path", str(eval_output_path),
-                "--gpu_locks_dir", str(self.gpu_locks_dir)]
+                "--code-path", str(code_path),
+                "--output-path", str(eval_output_path),
+                "--gpu-locks-dir", str(self.gpu_locks_dir)]
 
             cmd += ["--mode", mode]
 
@@ -276,11 +276,11 @@ class EvalWorker:
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, default="/input")
-    parser.add_argument("--output_dir", type=str, default="/output")
-    parser.add_argument("--scratch_dir", type=str, default="/scratch")
+    parser.add_argument("--input-dir", type=str, default="/input")
+    parser.add_argument("--output-dir", type=str, default="/output")
+    parser.add_argument("--scratch-dir", type=str, default="/scratch")
     parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
-    parser.add_argument("--max_active_tasks", type=int, required=True, help="Max active worker tasks")
+    parser.add_argument("--max-active-tasks", type=int, required=True, help="Max active worker tasks")
     args = parser.parse_args()
 
     tx_dir = Path(args.output_dir)

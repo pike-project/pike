@@ -89,19 +89,19 @@ class SearchManager:
         run_cmd = [
             "python",
             "examples/kernelbench/run.py",
-            "--pike_dir",
+            "--pike-dir",
             str(self.root_dir),
             "--level",
             self.level,
-            "--task_start",
+            "--task-start",
             str(task_start),
-            "--task_end",
+            "--task-end",
             str(task_end),
-            "--eval_port",
+            "--eval-port",
             str(self.port),
-            "--run_dir",
+            "--run-dir",
             str(run_dir),
-            "--max_fix_attempts",
+            "--max-fix-attempts",
             str(self.max_fix_attempts)
         ]
 
@@ -144,21 +144,21 @@ class SearchManager:
 
         run_cmd = [
             "python", "-u", "scripts/parallel_tree_search.py",
-            f"--run_dir={run_dir}",
-            f"--server_type={server_type}",
-            f"--model_name={model_name}",
-            "--num_workers=10",
+            f"--run-dir={run_dir}",
+            f"--server-type={server_type}",
+            f"--model-name={model_name}",
+            "--num-workers=10",
             f"--level={self.level}",
-            f"--task_start={task_start}",
-            f"--task_end={task_end}",
-            f"--num_samples={num_samples}",
-            f"--num_phases={num_phases}",
-            f"--max_fix_attempts={self.max_fix_attempts}",
-            f"--eval_port={self.port}",
+            f"--task-start={task_start}",
+            f"--task-end={task_end}",
+            f"--num-samples={num_samples}",
+            f"--num-phases={num_phases}",
+            f"--max-fix-attempts={self.max_fix_attempts}",
+            f"--eval-port={self.port}",
         ]
 
         if dry_run:
-            run_cmd.append("--dry_run")
+            run_cmd.append("--dry-run")
 
         log_path = log_dir / f"logs_{self.curr_partition_id}.log"
         self.curr_partition_id += 1
@@ -188,7 +188,7 @@ class SearchManager:
         server_cmd = [
             "python", "scripts/disk_channel_server.py",
             "--port", str(self.port),
-            "--worker_io_dir", str(self.worker_io_dir),
+            "--worker-io-dir", str(self.worker_io_dir),
         ]
 
         # with open(self.parent_run_dir / "disk_channel_server.log", "w") as f:
@@ -338,9 +338,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--level", type=str, required=False, default="3-metr")
     parser.add_argument("--mode", type=str, required=True)
-    parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
-    parser.add_argument("--run_dir", type=str, required=False, default=None)
-    parser.add_argument("--run_count", type=int, required=False, default=1)
+    parser.add_argument("--worker-io-dir", type=str, required=False, default="worker_io")
+    parser.add_argument("--run-dir", type=str, required=False, default=None)
+    parser.add_argument("--run-count", type=int, required=False, default=1)
     parser.add_argument("--ranges", type=int, required=False, default=50)
     parser.add_argument("--port", type=int, required=False, default=8000)
     parser.add_argument("--test", action='store_true')

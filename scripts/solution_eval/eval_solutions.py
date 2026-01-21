@@ -323,13 +323,13 @@ async def main():
     parser.add_argument("--level", type=str)
     parser.add_argument("--solutions", type=str, default="baseline")
     parser.add_argument("--mode", type=str, default="eager")
-    parser.add_argument("--run_dir", type=str, required=False)
-    parser.add_argument("--output_name", type=str, required=False)
-    parser.add_argument("--output_dir", type=str, required=False)
-    parser.add_argument("--worker_input_dir", type=str, required=False)
-    parser.add_argument("--worker_output_dir", type=str, required=False)
-    parser.add_argument("--dry_run", action='store_true')
-    parser.add_argument("--close_worker", action='store_true')
+    parser.add_argument("--run-dir", type=str, required=False)
+    parser.add_argument("--output-name", type=str, required=False)
+    parser.add_argument("--output-dir", type=str, required=False)
+    parser.add_argument("--worker-input-dir", type=str, required=False)
+    parser.add_argument("--worker-output-dir", type=str, required=False)
+    parser.add_argument("--dry-run", action='store_true')
+    parser.add_argument("--close-worker", action='store_true')
     parser.add_argument("--sequential", action='store_true')
     args = parser.parse_args()
 
@@ -377,7 +377,7 @@ async def main():
         run_dir = Path(args.run_dir)
 
     if solutions_name == "agent" and run_dir is None:
-        raise Exception("Evaluating agent solutions requires passing in a --run_dir argument to show where the agent run was")
+        raise Exception("Evaluating agent solutions requires passing in a --run-dir argument to show where the agent run was")
 
     if solutions_name == "metr" or solutions_name == "good_kernels":
         subprocess.run(["bash", str(root_dir / "tools/fetch_eval_deps.sh")], check=True, cwd=root_dir)

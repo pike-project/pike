@@ -15,31 +15,31 @@ def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Launch worker container job")
     parser.add_argument(
-        "--worker_io_dir",
+        "--worker-io-dir",
         type=str,
         default=None,
         help="Directory for worker I/O (default: worker_io relative to script)"
     )
     parser.add_argument(
-        "--gpu_count",
+        "--gpu-count",
         type=int,
         default=8,
         help="Number of GPUs to request (default: 8)"
     )
     parser.add_argument(
-        "--cpu_count",
+        "--cpu-count",
         type=int,
         default=112,
         help="Number of CPUs per task (default: 112)"
     )
     parser.add_argument(
-        "--max_active_tasks",
+        "--max-active-tasks",
         type=int,
         default=56,
         help="Maximum number of active tasks (default: 56)"
     )
     parser.add_argument(
-        "--allocation_time",
+        "--allocation-time",
         type=str,
         default="72:00:00",
         help="Allocation time in Slurm format (default: 72:00:00)"
@@ -102,10 +102,10 @@ def main():
         "python", "-u",
         str(root_dir / "sandbox/tools/start_worker_container.py"),
         "--engine", "apptainer",
-        "--sif_path", str(image_path),
-        "--worker_io_dir", str(worker_io_dir),
+        "--sif-path", str(image_path),
+        "--worker-io-dir", str(worker_io_dir),
         "--arch", "Hopper",
-        "--max_active_tasks", str(args.max_active_tasks),
+        "--max-active-tasks", str(args.max_active_tasks),
     ]
 
     proc = subprocess.Popen(cmd)

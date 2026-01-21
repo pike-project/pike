@@ -49,12 +49,12 @@ class ParallelManager:
         cmd = [
             "python",
             worker_script_path,
-            "--worker_io_dir",
+            "--worker-io-dir",
             self.worker_io_dir,
-            "--gpu_count", 2,
-            "--cpu_count", 56,
-            "--max_active_tasks", 28,
-            "--allocation_time", "24:00:00",
+            "--gpu-count", 2,
+            "--cpu-count", 56,
+            "--max-active-tasks", 28,
+            "--allocation-time", "24:00:00",
         ]
         cmd = [str(x) for x in cmd]
 
@@ -92,12 +92,12 @@ class ParallelManager:
             "python",
             "-u",
             str(search_manager_path),
-            "--worker_io_dir",
+            "--worker-io-dir",
             str(self.worker_io_dir),
             "--mode", self.run_mode,
-            "--run_dir", str(self.run_dir),
+            "--run-dir", str(self.run_dir),
             "--level", self.run_level,
-            "--run_count", str(self.run_count),
+            "--run-count", str(self.run_count),
         ]
 
         with open(self.run_dir / "search.log", "w") as f:

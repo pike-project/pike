@@ -427,7 +427,7 @@ class ImprovementPlotter:
 
 def main():
     parser = argparse.ArgumentParser(description="Plot improvement across multiple tasks from a run directory.")
-    parser.add_argument("--run_dir", type=str, required=True, help="Path to the specific run directory.")
+    parser.add_argument("--run-dir", type=str, required=True, help="Path to the specific run directory.")
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
@@ -440,6 +440,4 @@ def main():
     plotter.plot()
 
 if __name__ == "__main__":
-    # Example usage from command line:
-    # python your_script_name.py --run_dir /path/to/your/run/directory
     main()

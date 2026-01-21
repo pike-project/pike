@@ -32,10 +32,10 @@ You are allowed to print information in the code at intermediate steps, as the s
 
 However, if correctness is achieved, a final pass should be made to remove this debugging stuff.
 
-## Old Tool Notes (Likely Obsolete)
+<!-- ## Old Tool Notes (Likely Obsolete)
 
 ```bash
-python -u scripts/start_eval_worker.py --input_dir ./data/worker_io/input --output_dir ./data/worker_io/output --scratch_dir ./data/worker_io/scratch --arch <Ampere/Hopper>
+python -u scripts/start_eval_worker.py --input-dir ./data/worker_io/input --output-dir ./data/worker_io/output --scratch-dir ./data/worker_io/scratch --arch <Ampere/Hopper>
 ```
 
 How to generate samples:
@@ -64,4 +64,4 @@ This should be run within the Docker container:
 
 ```bash
 python3 scripts/eval_from_generations.py data_dir=/data run_name=test1 dataset_src=local level=1 num_gpu_devices=4 timeout=300
-```
+``` -->

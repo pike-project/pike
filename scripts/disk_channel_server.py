@@ -137,7 +137,7 @@ class CustomHandler(BaseHTTPRequestHandler):
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=False, default=8000)
-    parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
+    parser.add_argument("--worker-io-dir", type=str, required=False, default="worker_io")
     args = parser.parse_args()
 
     tx_dir = Path(args.worker_io_dir) / "input"

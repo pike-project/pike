@@ -5,7 +5,7 @@
 How to use the eval script for a single task (without container or HPC job allocation):
 
 ```bash
-python scripts/eval.py --level 3 --task 27 --code_path KernelBench/level3/27_RegNet.py --gpu_locks_dir worker_io/gpu_locks --compile
+python scripts/eval.py --level 3 --task 27 --code-path KernelBench/level3/27_RegNet.py --gpu-locks-dir worker_io/gpu_locks --compile
 ```
 
 Include the `--compile` flag if you want to the eval to run with `torch.compile` enabled
@@ -19,7 +19,7 @@ If you only want to time a particular set of solutions, without running the agen
 python scripts/solution_eval/eval_solutions.py --level 0 --solutions baseline --mode <eager/compile>
 
 # agent-generated solutions, must pass in the path to the run dir
-python scripts/solution_eval/eval_solutions.py --level 0 --solutions agent --run_dir <run_dir> --mode eager
+python scripts/solution_eval/eval_solutions.py --level 0 --solutions agent --run-dir <run_dir> --mode eager
 ```
 
 After you run this, start the eval worker in a separate window and the eval tasks will be sent there.

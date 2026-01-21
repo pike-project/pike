@@ -14,12 +14,12 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--engine", type=str, required=False, default="docker", help="Container engine to use.")
-    parser.add_argument("--sif_path", type=str, required=False, help="Path to the .sif file, required for Apptainer.")
+    parser.add_argument("--sif-path", type=str, required=False, help="Path to the .sif file, required for Apptainer.")
     parser.add_argument("--arch", type=str, required=True, help="NVIDIA GPU Architecture")
     parser.add_argument("--bash", action='store_true', help="Run bash inside of the container instead of the worker")
-    parser.add_argument("--pull_image", action='store_true', help="Pull the image from Dockerhub if using docker or podman-hpc")
-    parser.add_argument("--worker_io_dir", type=str, required=False, default="worker_io")
-    parser.add_argument("--max_active_tasks", type=int, required=False, default=20, help="Max active worker tasks")
+    parser.add_argument("--pull-image", action='store_true', help="Pull the image from Dockerhub if using docker or podman-hpc")
+    parser.add_argument("--worker-io-dir", type=str, required=False, default="worker_io")
+    parser.add_argument("--max-active-tasks", type=int, required=False, default=20, help="Max active worker tasks")
 
     args = parser.parse_args()
 
@@ -33,7 +33,7 @@ def main():
         raise Exception(f"Invalid engine provided: {args.engine}, Valid engines: {valid_engines}")
 
     if args.engine == "apptainer" and args.sif_path is None:
-        raise Exception("--sif_path argument must be provided if engine is 'apptainer'")
+        raise Exception("--sif-path argument must be provided if engine is 'apptainer'")
     
     valid_archs = [
         "Ampere", # A100
@@ -64,7 +64,7 @@ def main():
         run_cmd = ["bash"]
     else:
         eval_worker_path = app_bind_dir / "scripts/start_eval_worker.py"
-        run_cmd = ["python", str(eval_worker_path), "--arch", args.arch, "--max_active_tasks", str(args.max_active_tasks)]
+        run_cmd = ["python", str(eval_worker_path), "--arch", args.arch, "--max-active-tasks", str(args.max_active_tasks)]
 
     # TODO: can use $SLURM_PROCID env var for this, if it exists
     worker_id = str(0)

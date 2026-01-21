@@ -29,9 +29,9 @@ for task_num in task_nums:
         "scripts/eval.py",
         "--level", str(level_num),
         "--task", str(task_num),
-        "--code_path", f"local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/pytorch_functional.py",
-        "--output_path", output_path,
-        "--cuda_path", f"local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/kernel.cu",
+        "--code-path", f"local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/pytorch_functional.py",
+        "--output-path", output_path,
+        "--cuda-path", f"local/deps/KernelBench-analysis/best/level_{level_num}/task_{task_num}/kernel.cu",
     ]
 
     print(f"\n>>> Running command for task {task_num}: {' '.join(cmd)}")

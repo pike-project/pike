@@ -62,7 +62,7 @@ If you are working on a machine where you have root access, install Docker, alon
 Start the containerized Eval Worker like so, passing in the correct GPU architecture:
 
 ```bash
-python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max_active_tasks 20
+python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 20
 ```
 
 <!-- python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> -->
@@ -106,7 +106,7 @@ pip install -e .
 As with PIKE-B, run the following (from within the pike-openevolve directory) only after the Eval Worker and Eval Server are running:
 
 ```bash
-python examples/kernelbench/run.py --pike_dir <path/to/this-repo> --level 3-pike --task_start 1 --task_end 50 --max_fix_attempts 5 --eval_port 8000 --run_dir <path/to/output-dir>
+python examples/kernelbench/run.py --pike-dir <path/to/this-repo> --level 3-pike --task-start 1 --task-end 50 --max-fix-attempts 5 --eval-port 8000 --run-dir <path/to/output-dir>
 ```
 
 To further tune the PIKE-O system configuration, edit `examples/kernelbench/config.yaml`

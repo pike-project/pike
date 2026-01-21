@@ -24,4 +24,4 @@ fi
 # CPU_COUNT=112
 # MAX_ACTIVE_TASKS=56
 
-# srun -A ac_binocular -t 72:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:$GPU_COUNT --cpus-per-task=$CPU_COUNT --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif_path $IMAGE_PATH --worker_io_dir $WORKER_IO_DIR --arch Hopper --max_active_tasks $MAX_ACTIVE_TASKS
+# srun -A ac_binocular -t 72:00:00 --partition=es1 --qos=es_normal --gres=gpu:H100:$GPU_COUNT --cpus-per-task=$CPU_COUNT --pty python -u sandbox/tools/start_worker_container.py --engine apptainer --sif-path $IMAGE_PATH --worker-io-dir $WORKER_IO_DIR --arch Hopper --max-active-tasks $MAX_ACTIVE_TASKS

@@ -1,1 +1,1 @@
-python scripts/start_eval_worker.py --input_dir worker_io/input --output_dir worker_io/output --scratch_dir worker_io/scratch
+python scripts/start_eval_worker.py --input-dir worker_io/input --output-dir worker_io/output --scratch-dir worker_io/scratch

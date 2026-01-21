@@ -67,6 +67,10 @@ class ParallelManager:
             "--cpu-count", 20,
             "--max-active-tasks", 10,
             "--allocation-time", "24:00:00",
+            # "--gpu-count", 4,
+            # "--cpu-count", 56,
+            # "--max-active-tasks", 28,
+            # "--allocation-time", "48:00:00",
         ]
         cmd = [str(x) for x in cmd]
 
@@ -115,7 +119,11 @@ class ParallelManager:
         ]
 
         if len(self.tasks) > 0:
-            tasks_str = ",".join(self.tasks)
+            tasks_str_list = []
+            for t in self.tasks:
+                tasks_str_list.append(str(t))
+
+            tasks_str = ",".join(tasks_str_list)
             cmd += ["--tasks", tasks_str]
 
         with open(self.run_dir / "search.log", "w") as f:

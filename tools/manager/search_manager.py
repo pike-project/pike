@@ -38,7 +38,7 @@ def split_into_ranges(nums, n_ranges):
 
 
 class SearchManager:
-    def __init__(self, mode, worker_io_dir, run_dir, port, level, run_count, range_count):
+    def __init__(self, mode, worker_io_dir, run_dir, port, level, run_count, range_count, server_type, model_name, tasks):
         self.mode = mode
         self.use_agents = mode.split("_")[1] == "agents"
 
@@ -55,6 +55,11 @@ class SearchManager:
         self.curr_partition_id = 0
 
         self.range_count = range_count
+
+        self.server_type = server_type
+        self.model_name = model_name
+
+        self.target_tasks = tasks
 
         if run_dir is None:
             data_dir = (self.root_dir / "data").resolve()
@@ -138,8 +143,8 @@ class SearchManager:
         # configs
         num_branches = 10
         dry_run = False
-        server_type = "google"
-        model_name = "gemini-2.5-pro"
+        server_type = self.server_type
+        model_name = self.model_name
 
         run_cmd = [
             "python", "-u", "scripts/parallel_tree_search.py",
@@ -253,10 +258,15 @@ class SearchManager:
         #     48, 48, 48, 48, 48,
         # ]
 
-        tasks = [13, 26]
-        print(f"Running these tasks: {tasks}")
-
         # return split_into_ranges(tasks, range_count)
+
+        # tasks = [13, 26]
+        # print(f"Running these tasks: {tasks}")
+
+        if self.target_tasks is not None:
+            tasks = self.target_tasks
+
+        print(f"Running these tasks: {tasks}")
 
         ranges = []
         for t in tasks:
@@ -341,6 +351,9 @@ if __name__ == "__main__":
     parser.add_argument("--run-count", type=int, required=False, default=1)
     parser.add_argument("--ranges", type=int, required=False, default=50)
     parser.add_argument("--port", type=int, required=False, default=8000)
+    parser.add_argument("--server-type", type=str, required=True)
+    parser.add_argument("--model-name", type=str, required=True)
+    parser.add_argument("--tasks", type=str, required=False, default=None)
     parser.add_argument("--test", action='store_true')
     args = parser.parse_args()
 
@@ -358,12 +371,20 @@ if __name__ == "__main__":
     if args.mode not in valid_modes:
         raise Exception("Provided mode not in valid modes: {args.mode}, valid modes are: {valid_modes}")
 
+    tasks = None
+
+    if args.tasks is not None:
+        task_nums_str = args.tasks.split(",")
+        tasks = []
+        for t in task_nums_str:
+            tasks.append(int(t))
+
     mode = args.mode
 
     worker_io_dir = Path(args.worker_io_dir)
 
     run_ranges = args.ranges
 
-    manager = SearchManager(mode, worker_io_dir, args.run_dir, args.port, args.level, args.run_count, run_ranges)
+    manager = SearchManager(mode, worker_io_dir, args.run_dir, args.port, args.level, args.run_count, run_ranges, args.server_type, args.model_name, tasks)
 
     manager.run()

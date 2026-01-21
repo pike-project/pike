@@ -42,6 +42,18 @@ class ParallelManager:
         self.run_mode = "prev_agents"
         self.run_count = 1
 
+        # NOTE: setting server type only currently works with PIKE-B,
+        # PIKE-O server type and model name must be set in openevolve config.yaml
+
+        # self.server_type = "google"
+        # self.model_name = "gemini-2.5-pro"
+        self.server_type = "cborg"
+        self.model_name = "lbl/gpt-oss-120b-high"
+
+        # If tasks list is empty, all tasks will be run
+        # self.tasks = []
+        self.tasks = [13]
+
     # blocks until the worker is ready
     def start_eval_worker(self):
         worker_script_path = (curr_dir / "../worker_jobs/lrc.py").resolve()
@@ -98,7 +110,13 @@ class ParallelManager:
             "--run-dir", str(self.run_dir),
             "--level", self.run_level,
             "--run-count", str(self.run_count),
+            "--server-type", self.server_type,
+            "--model-name", self.model_name,
         ]
+
+        if len(self.tasks) > 0:
+            tasks_str = ",".join(self.tasks)
+            cmd += ["--tasks", tasks_str]
 
         with open(self.run_dir / "search.log", "w") as f:
             search_proc = subprocess.Popen(

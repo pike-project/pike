@@ -11,6 +11,7 @@ import time
 from enum import Enum
 import requests
 import argparse
+from math import ceil
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -70,7 +71,6 @@ class GenerationConfig:
         task_start,
         task_end,
         num_samples,
-        num_phases,
         max_fix_attempts,
         eval_port,
         dry_run,
@@ -85,7 +85,6 @@ class GenerationConfig:
         self.task_start = task_start
         self.task_end = task_end
         self.num_samples = num_samples
-        self.num_phases = num_phases
         self.max_fix_attempts = max_fix_attempts
         self.eval_port = eval_port
         self.dry_run = dry_run
@@ -100,7 +99,6 @@ class GenerationConfig:
         print(f"task_start={task_start}")
         print(f"task_end={task_end}")
         print(f"num_samples={num_samples}")
-        print(f"num_phases={num_phases}")
         print(f"max_fix_attempts={max_fix_attempts}")
         print(f"eval_port={eval_port}")
 
@@ -879,7 +877,11 @@ class ParallelTreeSearch:
         idea_queries = self.get_idea_queries()
         ideas = self.gen_and_extract_ideas(idea_queries)
 
-        for phase in range(self.config.num_phases):
+        num_phases = ceil(self.config.query_budget / self.config.num_samples)
+
+        print(f"Running at most {num_phases} phases")
+
+        for phase in range(num_phases):
             if phase == 0:
                 queries = self.get_init_queries(ideas)
             else:
@@ -939,7 +941,6 @@ def main():
     parser.add_argument("--task_start", type=int, required=True)
     parser.add_argument("--task_end", type=int, required=True)
     parser.add_argument("--num_samples", type=int, required=True)
-    parser.add_argument("--num_phases", type=int, required=True)
     parser.add_argument("--max_fix_attempts", type=int, required=True)
     parser.add_argument("--eval_port", type=int, default=8000, required=False)
     parser.add_argument("--dry_run", action='store_true', default=False, required=False)
@@ -955,7 +956,6 @@ def main():
         args.task_start,
         args.task_end,
         args.num_samples,
-        args.num_phases,
         args.max_fix_attempts,
         args.eval_port,
         args.dry_run,

@@ -99,7 +99,7 @@ To run PIKE-B directly, first try a dry run (does not require the eval worker):
 python scripts/parallel_tree_search.py --server-type google --model-name gemini-2.5-pro --level 3-pike --task-start 1 --task-end 50 --num-branches 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --dry-run --run-dir <path/to/output-dir>
 ```
 
-If this works fine, you can remove `--dry-run`. Run this only after the Eval Worker and Eval Server are running.
+The dry run simulates a series of phases in which some evals fail, and others succeed with random runtime values. If this works fine, you can remove `--dry-run`. Do a real run only after the Eval Worker and Eval Server are running.
 
 ## Run PIKE-O
 

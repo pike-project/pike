@@ -9,7 +9,7 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 target_attempt = 300
 
 # run_name = "h100_level_3-metr_prev_agents_cheap_efa_0"
-run_name = "2026_01_13_20_22_23"
+run_name = "level_3-pike_prev_agents_o3-mini_task_17_fail_0"
 
 target_level = "3-metr"
 

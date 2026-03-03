@@ -18,44 +18,41 @@ OUTPUT_SOLUTIONS = True
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
 runs = [
-    # ("h100_level_3-metr_prev_agents_trial_1", "prev_agents"),
-    # ("h100_level_3-metr_prev_agents_cheap_efa_0", "prev_agents_cheap_efa"),
-    # ("h100_level_3-metr_prev_noagents_trial_1", "prev_noagents"),
-    # ("h100_level_3-metr_prev_agents_no_iba_0", "prev_agents_no_iba"),
-    # ("h100_level_3-metr_openevolve_agents_trial_0", "openevolve_agents"),
-    # ("h100_level_3-metr_openevolve_noagents_trial_0", "openevolve_noagents"),
+    # ("h100_level_3-pike_pike-b", "prev_agents"),
+    # ("h100_level_3-pike_pike-b_cheap-efa", "prev_agents_cheap_efa"),
+    # ("h100_level_3-pike_pike-b_no-efa", "prev_noagents"),
+    # ("h100_level_3-pike_pike-b_no-iba", "prev_agents_no_iba"),
+    # ("h100_level_3-pike_pike-o", "openevolve_agents"),
+    # ("h100_level_3-pike_pike-o_no-efa", "openevolve_noagents"),
 
-    # ("h100_level_3-metr_openevolve_agents_mutation_0", "openevolve_agents_mutation"),
-    # ("h100_level_3-metr_openevolve_agents_mutation_aggressive_0", "openevolve_agents_mutation_aggressive"),
-    # ("h100_level_3-metr_openevolve_agents_no_parallel_eval", "openevolve_agents_no_parallel_eval"),
-    # ("h100_level_3-metr_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
-    # ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-    # ("h100_level_3-metr_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+    # ("h100_level_3-pike_pike-o_mut", "openevolve_agents_mutation"),
+    # ("h100_level_3-pike_pike-o_mut-npar", "openevolve_agents_no_parallel_eval"),
+    # ("h100_level_3-pike_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
+    # ("h100_level_3-pike_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+    # ("h100_level_3-pike_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
 
-    # ("h100_level_3-pike_prev_agents_o3-mini_task_17", "test1"),
-    # ("h100_level_3-pike_prev_agents_o3-mini_task_13_49_51_25", "test1"),
-    # ("h100_level_3-pike_prev_agents_o3-mini_task_43", "test1"),
-    # ("h100_level_3-pike_prev_agents_o3-mini_task_rest", "test1"),
-    # ("h100_level_3-metr_prev_agents_variability_13_27_30_31_48", "test2"),
+    ("h100_level_3-pike_pike-b_o3-mini-high", "test1"),
+    
+    # ("h100_level_3-pike_pike-b_variability", "test2"),
 
-    ("oss-120b", "oss120b"),
+    # ("h100_level_3-pike_pike-b_oss-120b", "oss120b"),
 ]
 
-target_level = "3-metr"
+target_level = "3-pike"
 
 # runs = [
-#     ("h100_level_5_prev_agents_trial_2", "prev_agents"),
-#     # ("h100_level_5_openevolve_agents_trial_0", "openevolve_agents"),
-#     # ("h100_level_5_openevolve_agents_no_parallel_eval_no_islands", "openevolve_agents_no_parallel_eval_no_islands"),
-#     # ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-#     # ("h100_level_5_openevolve_agents_mut_nopar_noisl_exploitonly_shortlib", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+#     ("h100_level_5_pike-b", "prev_agents"),
+#     ("h100_level_5_pike-o", "openevolve_agents"),
+#     ("h100_level_5_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
+#     ("h100_level_5_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+#     ("h100_level_5_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
 # ]
 # target_level = "5"
 
 
 target_attempt = 300
 # price in $ to stop at
-if target_level == "3-metr":
+if target_level == "3-pike":
     target_cost = 25.0
 else:
     target_cost = 50.0
@@ -66,6 +63,7 @@ else:
     total_step_count = target_attempt
 
 target_dirname = f"h100_level{target_level}"
+
 
 results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
 
@@ -129,7 +127,7 @@ code_blacklist = {
 
 task_blacklist_map = {
     "5": set(),
-    "3-metr": {
+    "3-pike": {
         36,
         37,
         38,
@@ -243,7 +241,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                 res_file = os.path.join(attempts_dir, attempt_name, "raw_response.json")
       
                 is_gemini_pro = True
-                if run_name == "h100_level_3-metr_prev_agents_cheap_efa_0" and attempt_num > 0:
+                if run_name == "h100_level_3-pike_pike-b_cheap-efa" and attempt_num > 0:
                     is_gemini_pro = False
 
                 query_cost = get_llm_query_cost(res_file, is_gemini_pro)
@@ -314,12 +312,9 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 # --- Main Execution Logic ---
 
 def run(run_name, output_label, run_num=0):
-    plot_title = "Speedup by Attempt (Level 3-metr, H100)"
-    plot_xlabel = "Attempt Number"
-
     # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
 
-    root_dir = (curr_dir / "../../data/parallel_runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
+    root_dir = (curr_dir / "../../data/pike-data/full-pike-runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
     # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
     sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()

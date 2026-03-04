@@ -446,20 +446,9 @@ def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
     return geomean
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input-dir", type=str, required=True, help="Path to input data directory (contains full-pike-runs, best-pike-kernels)")
-    parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
-    parser.add_argument("--level", type=str, required=True, choices=["3-pike", "5"], help="Level to process")
-    parser.add_argument("--use-cost-stopping", action="store_true", help="Use cost-based stopping condition instead of attempt count")
-    parser.add_argument("--output-solutions", action="store_true", help="Copy best solutions to sol_dest_dir")
-    args = parser.parse_args()
-
-    input_dir = Path(args.input_dir).resolve()
-    output_dir = Path(args.output_dir).resolve()
-    level = args.level
-    use_cost_stopping_condition = args.use_cost_stopping
-    output_solutions = args.output_solutions
+def run_level(input_dir: Path, output_dir: Path, level: str,
+              use_cost_stopping: bool = False, output_solutions: bool = False):
+    use_cost_stopping_condition = use_cost_stopping
 
     target_attempt = 300
     if level == "3-pike":
@@ -508,6 +497,24 @@ def main():
 
     with open(overall_speedups_dir / overall_speedups_filename, "w") as f:
         json.dump(speedups, f, indent=4)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-dir", type=str, required=True, help="Path to input data directory (contains full-pike-runs, best-pike-kernels)")
+    parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
+    parser.add_argument("--level", type=str, required=True, choices=["3-pike", "5"], help="Level to process")
+    parser.add_argument("--use-cost-stopping", action="store_true", help="Use cost-based stopping condition instead of attempt count")
+    parser.add_argument("--output-solutions", action="store_true", help="Copy best solutions to sol_dest_dir")
+    args = parser.parse_args()
+
+    run_level(
+        Path(args.input_dir).resolve(),
+        Path(args.output_dir).resolve(),
+        args.level,
+        use_cost_stopping=args.use_cost_stopping,
+        output_solutions=args.output_solutions,
+    )
 
 
 if __name__ == "__main__":

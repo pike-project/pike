@@ -1,8 +1,12 @@
 import argparse
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scripts.analyze.merged_budget import run_level as merged_budget_run_level
+from scripts.results.plot_trajectories import main as plot_trajectories
+from scripts.results.plot_overall_speedup import main as plot_overall_speedup
 
 
 def copy_all_files(src_dir: Path, dst_dir: Path) -> None:
@@ -58,23 +62,10 @@ def main() -> None:
 
         # merged_budget: run twice (with and without cost stopping)
         for use_cost in [False, True]:
-            cmd = [sys.executable, "scripts/analyze/merged_budget.py",
-                   "--input-dir", str(input_dir),
-                   "--output-dir", str(output_dir),
-                   "--level", level]
-            if use_cost:
-                cmd.append("--use-cost-stopping")
-            subprocess.run(cmd, check=True)
+            merged_budget_run_level(input_dir, output_dir, level, use_cost_stopping=use_cost)
 
-        # plot_trajectories
-        subprocess.run([sys.executable, "scripts/results/plot_trajectories.py",
-                        "--output-dir", str(output_dir),
-                        "--level", level], check=True)
-
-        # plot_overall_speedup
-        subprocess.run([sys.executable, "scripts/results/plot_overall_speedup.py",
-                        "--output-dir", str(output_dir),
-                        "--level", level], check=True)
+        plot_trajectories(output_dir, level)
+        plot_overall_speedup(output_dir, level)
 
 
 if __name__ == "__main__":

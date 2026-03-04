@@ -54,6 +54,10 @@ def main() -> None:
     for level in ["3-pike", "5"]:
         copy_level_baseline_runtimes(input_dir, output_dir, level)
 
+        # TODO: run scripts/analyze/merged_budget.py for both levels, and both with/without use_cost_stopping_condition
+        # Then, run scripts/results/plot_trajectories.py (should take in level as input, and should be plotted both with and without money budget)
+        # Followed by scripts/results/plot_overall_speedup.py (should take in level as input)
+        # And scripts/results/gen_breakdown_table.py (should take in level as input)
 
 if __name__ == "__main__":
     main()

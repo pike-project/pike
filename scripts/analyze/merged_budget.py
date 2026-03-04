@@ -60,10 +60,10 @@ if use_cost_stopping_condition:
 else:
     total_step_count = target_attempt
 
-target_dirname = f"h100_level{target_level}"
+target_dirname = f"h100_level_{target_level}"
 
 
-results_dir = (curr_dir / f"../../results/data/pike-data-out").resolve()
+results_dir = (curr_dir / f"../../data/pike-data-out/{target_dirname}/results").resolve()
 
 if use_cost_stopping_condition:
     runtimes_dirname = "runtimes_money_budget"

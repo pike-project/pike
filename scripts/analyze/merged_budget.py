@@ -17,37 +17,35 @@ OUTPUT_SOLUTIONS = True
 # --- Structure-Specific Configurations ---
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-runs = [
-    # ("h100_level_3-pike_pike-b", "prev_agents"),
-    # ("h100_level_3-pike_pike-b_cheap-efa", "prev_agents_cheap_efa"),
-    # ("h100_level_3-pike_pike-b_no-efa", "prev_noagents"),
-    # ("h100_level_3-pike_pike-b_no-iba", "prev_agents_no_iba"),
-    # ("h100_level_3-pike_pike-o", "openevolve_agents"),
-    # ("h100_level_3-pike_pike-o_no-efa", "openevolve_noagents"),
-
-    # ("h100_level_3-pike_pike-o_mut", "openevolve_agents_mutation"),
-    # ("h100_level_3-pike_pike-o_mut-npar", "openevolve_agents_no_parallel_eval"),
-    # ("h100_level_3-pike_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
-    # ("h100_level_3-pike_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-    # ("h100_level_3-pike_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
-
-    ("h100_level_3-pike_pike-b_o3-mini-high", "test1"),
-    
-    # ("h100_level_3-pike_pike-b_variability", "test2"),
-
-    # ("h100_level_3-pike_pike-b_oss-120b", "oss120b"),
-]
-
-target_level = "3-pike"
-
 # runs = [
-#     ("h100_level_5_pike-b", "prev_agents"),
-#     ("h100_level_5_pike-o", "openevolve_agents"),
-#     ("h100_level_5_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
-#     ("h100_level_5_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-#     ("h100_level_5_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+#     ("h100_level_3-pike_pike-b", "prev_agents"),
+#     ("h100_level_3-pike_pike-b_cheap-efa", "prev_agents_cheap_efa"),
+#     ("h100_level_3-pike_pike-b_no-efa", "prev_noagents"),
+#     ("h100_level_3-pike_pike-b_no-iba", "prev_agents_no_iba"),
+#     ("h100_level_3-pike_pike-o", "openevolve_agents"),
+#     ("h100_level_3-pike_pike-o_no-efa", "openevolve_noagents"),
+
+#     ("h100_level_3-pike_pike-o_mut", "openevolve_agents_mutation"),
+#     ("h100_level_3-pike_pike-o_mut-npar", "openevolve_agents_no_parallel_eval"),
+#     ("h100_level_3-pike_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
+#     ("h100_level_3-pike_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+#     ("h100_level_3-pike_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+
+#     ("h100_level_3-pike_pike-b_o3-mini-high", "o3-mini-high"),
+
+#     ("h100_level_3-pike_pike-b_oss-120b", "oss-120b"),
 # ]
-# target_level = "5"
+
+# target_level = "3-pike"
+
+runs = [
+    ("h100_level_5_pike-b", "prev_agents"),
+    ("h100_level_5_pike-o", "openevolve_agents"),
+    ("h100_level_5_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
+    ("h100_level_5_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+    ("h100_level_5_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+]
+target_level = "5"
 
 
 target_attempt = 300
@@ -65,7 +63,7 @@ else:
 target_dirname = f"h100_level{target_level}"
 
 
-results_dir = (curr_dir / f"../../results/ours/{target_dirname}/results").resolve()
+results_dir = (curr_dir / f"../../results/data/pike-data-out").resolve()
 
 if use_cost_stopping_condition:
     runtimes_dirname = "runtimes_money_budget"
@@ -317,7 +315,8 @@ def run(run_name, output_label, run_num=0):
     root_dir = (curr_dir / "../../data/pike-data/full-pike-runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
     # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
 
-    sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()
+    # sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()
+    sol_dest_dir = (curr_dir / f"../../data/pike-data/best-pike-kernels/{run_name}").resolve()
 
     runtimes_dir = results_dir / f"data/{runtimes_dirname}"
     convergence_dir = results_dir / "figs/convergence"

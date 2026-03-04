@@ -1,43 +1,39 @@
+import argparse
 import os
 import json
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
+baseline_speedups_map = {
+    "3-pike": {"metr": 1.40, "torch.compile": 1.64, "tensorrt": 1.41},
+    "5": {"metr": 1.50, "torch.compile": 1.29, "tensorrt": 1.25},
+}
 
-# target_dirname = "h100_level3-metr"
-target_dirname = "h100_level5"
 
-results_dir = (curr_dir / f"{target_dirname}/results").resolve()
-data_dir = results_dir / "data"
-figs_dir = results_dir / "figs"
+def main(output_dir: Path, level: str):
+    target_dirname = f"h100_level_{level}"
+    results_dir = (output_dir / target_dirname / "results").resolve()
+    data_dir = results_dir / "data"
+    figs_dir = results_dir / "figs"
 
-overall_speedups_dir = data_dir / "overall_speedups"
+    overall_speedups_dir = data_dir / "overall_speedups"
 
-speedups_filename = "speedups.json"
-speedups_money_budget_filename = "speedups_money_budget.json"
+    speedups_filename = "speedups.json"
+    speedups_money_budget_filename = "speedups_money_budget.json"
 
-with open(overall_speedups_dir / speedups_filename) as f:
-    speedups = json.load(f)
+    with open(overall_speedups_dir / speedups_filename) as f:
+        speedups = json.load(f)
 
-with open(overall_speedups_dir / speedups_money_budget_filename) as f:
-    speedups_money_budget = json.load(f)
+    with open(overall_speedups_dir / speedups_money_budget_filename) as f:
+        speedups_money_budget = json.load(f)
 
-if target_dirname == "h100_level3-metr":
-    speedups["metr"] = 1.40
-    speedups["torch.compile"] = 1.64
-    speedups["tensorrt"] = 1.41
-else:
-    speedups["metr"] = 1.50
-    speedups["torch.compile"] = 1.29
-    speedups["tensorrt"] = 1.25
+    baseline_speedups = baseline_speedups_map.get(level, {})
+    speedups.update(baseline_speedups)
 
-def main():
-    if target_dirname == "h100_level3-metr":
+    if level == "3-pike":
         f, ax = plt.subplots(1, figsize=(4.7, 3))
     else:
         f, ax = plt.subplots(1, figsize=(3.5, 1.9))
-    # f, ax = plt.subplots(1, figsize=(6, 4.5))
 
     # EFA = Error Fixing Agent
     # IBA = Initial Brainstorming Agent
@@ -76,7 +72,6 @@ def main():
             else:
                 checkpoint_values.append(None)
 
-    # plt.title("3-metr Speedups (Eager)")
     plt.ylabel('Speedup')
 
     bars = plt.bar(titles, values, color=col, linewidth=1, edgecolor='black')
@@ -124,7 +119,7 @@ def main():
             alpha=0.6,
         )
 
-    if target_dirname == "h100_level3-metr":
+    if level == "3-pike":
         plt.xticks(rotation=45, ha='right')
     else:
         plt.xticks(rotation=25, ha='right')
@@ -132,11 +127,9 @@ def main():
     plt.gca().set_axisbelow(True)
 
     # --- Layout adjustments ---
-    if target_dirname == "h100_level3-metr":
+    if level == "3-pike":
         plt.subplots_adjust(left=0.13, bottom=0.54, top=0.98, right=0.99)
     else:
-        # plt.subplots_adjust(left=0.14, bottom=0.52, top=0.98, right=0.99)
-
         plt.tight_layout(pad=0.1)
 
     x_div = (len(values) - 3) - 0.5
@@ -148,6 +141,14 @@ def main():
     speedup_figs_dir = Path.resolve(figs_dir / "overall_speedup")
     os.makedirs(speedup_figs_dir, exist_ok=True)
     plt.savefig(speedup_figs_dir / "overall_speedup.pdf")
+    print(f"✅ Plot saved to: {speedup_figs_dir / 'overall_speedup.pdf'}")
+
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-dir", type=str, help="Path to input directory (unused, for interface consistency)")
+    parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
+    parser.add_argument("--level", type=str, required=True, choices=["3-pike", "5"], help="Level to process")
+    args = parser.parse_args()
+
+    main(Path(args.output_dir).resolve(), args.level)

@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import shutil
@@ -7,94 +8,26 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-# --- Common Configuration ---
-use_cost_stopping_condition = False
+# --- Constants ---
 
-write_to_disk = True
-
-OUTPUT_SOLUTIONS = True
-
-# --- Structure-Specific Configurations ---
-curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
-
-# runs = [
-#     ("h100_level_3-pike_pike-b", "prev_agents"),
-#     ("h100_level_3-pike_pike-b_cheap-efa", "prev_agents_cheap_efa"),
-#     ("h100_level_3-pike_pike-b_no-efa", "prev_noagents"),
-#     ("h100_level_3-pike_pike-b_no-iba", "prev_agents_no_iba"),
-#     ("h100_level_3-pike_pike-o", "openevolve_agents"),
-#     ("h100_level_3-pike_pike-o_no-efa", "openevolve_noagents"),
-
-#     ("h100_level_3-pike_pike-o_mut", "openevolve_agents_mutation"),
-#     ("h100_level_3-pike_pike-o_mut-npar", "openevolve_agents_no_parallel_eval"),
-#     ("h100_level_3-pike_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
-#     ("h100_level_3-pike_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-#     ("h100_level_3-pike_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
-
-#     ("h100_level_3-pike_pike-b_o3-mini-high", "o3-mini-high"),
-
-#     ("h100_level_3-pike_pike-b_oss-120b", "oss-120b"),
-# ]
-
-# target_level = "3-pike"
-
-runs = [
-    ("h100_level_5_pike-b", "prev_agents"),
-    ("h100_level_5_pike-o", "openevolve_agents"),
-    ("h100_level_5_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
-    ("h100_level_5_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
-    ("h100_level_5_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
-]
-target_level = "5"
-
-
-target_attempt = 300
-# price in $ to stop at
-if target_level == "3-pike":
-    target_cost = 25.0
-else:
-    target_cost = 50.0
-cost_step = 0.2
-if use_cost_stopping_condition:
-    total_step_count = round(target_cost / cost_step)
-else:
-    total_step_count = target_attempt
-
-target_dirname = f"h100_level_{target_level}"
-
-
-results_dir = (curr_dir / f"../../data/pike-data-out/{target_dirname}/results").resolve()
-
-if use_cost_stopping_condition:
-    runtimes_dirname = "runtimes_money_budget"
-    tables_dirname = "tables_money_budget"
-    overall_speedups_filename = "speedups_money_budget.json"
-else:
-    runtimes_dirname = "runtimes"
-    tables_dirname = "tables"
-    overall_speedups_filename = "speedups.json"
-
-# Blacklist format:
-# - Tuples (task_number, iter_num, attempt_num) to blacklist a specific attempt.
-# - Integers (task_number) to set the speedup to 1.0 for an entire task.
 BLACKLIST = {
-    # "h100_level_3-metr_trial_4": {
+    # "h100_level_3-pike_trial_4": {
     #     # (13, 229, 0), # Blacklists a specific attempt
     #     13, # Sets speedup to 1.0 for a task
     # },
-    # "h100_level_3-metr_trial_0": {
+    # "h100_level_3-pike_trial_0": {
     #     (40, 4, 297, 1), # Blacklists a specific attempt
     #     # 42, # Sets speedup to 1.0 for a task
     # },
-    # "h100_level_3-metr_prev_noagents_trial_0": {
+    # "h100_level_3-pike_prev_noagents_trial_0": {
     #     39,
     # },
-    # "h100_level_3-metr_prev_noagents_trial_1": {
+    # "h100_level_3-pike_prev_noagents_trial_1": {
     #     37,
     #     39,
     #     42,
     # },
-    # "h100_level_3-metr_prev_agents_cheap_efa_0": {
+    # "h100_level_3-pike_prev_agents_cheap_efa_0": {
     #     41,
     # }
     "h100_level_5_prev_agents_trial_2": {
@@ -136,7 +69,33 @@ task_blacklist_map = {
     },
 }
 
-task_blacklist = task_blacklist_map.get(target_level, set())
+runs_map = {
+    "3-pike": [
+        ("h100_level_3-pike_pike-b", "prev_agents"),
+        ("h100_level_3-pike_pike-b_cheap-efa", "prev_agents_cheap_efa"),
+        ("h100_level_3-pike_pike-b_no-efa", "prev_noagents"),
+        ("h100_level_3-pike_pike-b_no-iba", "prev_agents_no_iba"),
+        ("h100_level_3-pike_pike-o", "openevolve_agents"),
+        ("h100_level_3-pike_pike-o_no-efa", "openevolve_noagents"),
+
+        ("h100_level_3-pike_pike-o_mut", "openevolve_agents_mutation"),
+        ("h100_level_3-pike_pike-o_mut-npar", "openevolve_agents_no_parallel_eval"),
+        ("h100_level_3-pike_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
+        ("h100_level_3-pike_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+        ("h100_level_3-pike_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+
+        ("h100_level_3-pike_pike-b_o3-mini-high", "o3-mini-high"),
+
+        ("h100_level_3-pike_pike-b_oss-120b", "oss-120b"),
+    ],
+    "5": [
+        ("h100_level_5_pike-b", "prev_agents"),
+        ("h100_level_5_pike-o", "openevolve_agents"),
+        ("h100_level_5_pike-o_mut-npar-1isl", "openevolve_agents_no_parallel_eval_no_islands"),
+        ("h100_level_5_pike-o_mut-npar-1isl-eo", "openevolve_agents_mut_nopar_noisl_exploitonly"),
+        ("h100_level_5_pike-o_mut-npar-1isl-eo-sl", "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib"),
+    ],
+}
 
 
 # --- Helper Functions ---
@@ -162,7 +121,7 @@ def get_llm_query_cost(res_path, is_gemini_pro=True):
     if os.path.exists(res_path):
         with open(res_path) as f:
             res = json.load(f)
-        
+
         if "usage_metadata" in res:
             usage = res["usage_metadata"]
             prompt_tokens = usage["prompt_token_count"]
@@ -182,9 +141,12 @@ def get_llm_query_cost(res_path, is_gemini_pro=True):
 
     return 0.0
 
+
 # --- Directory Traversal Logic ---
 
-def get_progress_iters_attempts(task_path, task_number, target_attempt):
+def get_progress_iters_attempts(task_path, task_number, target_attempt, run_name,
+                                 use_cost_stopping_condition, total_step_count,
+                                 target_cost, cost_step):
     """
     Traversal logic for the OpenEvolve structure: iter_output/iter/attempts.
     Walks attempts in sorted numeric order, tracking best runtime.
@@ -208,7 +170,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
             return [None] * total_step_count, None, None, None, 0, 0, []
 
         return [None] * target_attempt, None, None, None, 0, 0, []
-    
+
     ideas_dir = os.path.join(output_dir, "ideas")
     if os.path.exists(ideas_dir):
         res_file = os.path.join(ideas_dir, "raw_response.json")
@@ -219,7 +181,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
     iter_names = sorted([d for d in os.listdir(iter_output_dir) if d.startswith("iter_")], key=lambda x: numeric_suffix(x, "iter_"))
 
     efa_costs = []
-    
+
     stop_processing = False
     for iter_name in iter_names:
         iter_num = numeric_suffix(iter_name, "iter_")
@@ -227,17 +189,17 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
         if not os.path.exists(attempts_dir): continue
 
         attempt_names = sorted([d for d in os.listdir(attempts_dir) if d.startswith("attempt_")], key=lambda x: numeric_suffix(x, "attempt_"))
-        
+
         for attempt_name in attempt_names:
             attempt_num = numeric_suffix(attempt_name, "attempt_")
             cumulative += 1
-            
+
             if (task_number, iter_num, attempt_num) not in current_blacklist:
                 metrics_file = os.path.join(attempts_dir, attempt_name, "metrics_artifacts.json")
                 code_file = os.path.join(attempts_dir, attempt_name, "code.py")
 
                 res_file = os.path.join(attempts_dir, attempt_name, "raw_response.json")
-      
+
                 is_gemini_pro = True
                 if run_name == "h100_level_3-pike_pike-b_cheap-efa" and attempt_num > 0:
                     is_gemini_pro = False
@@ -248,7 +210,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
 
                 if attempt_num > 0:
                     efa_costs.append(query_cost)
-                
+
                 code_allowed = True
                 if os.path.exists(code_file):
                     with open(code_file) as f:
@@ -267,7 +229,7 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
                             best_code_path = code_file if os.path.exists(code_file) else None
                             best_combo = (iter_num, attempt_num)
                     except Exception: pass # Ignore corrupted files or files with missing keys
-            
+
             progress_list.append(None if best_runtime == float("inf") else best_runtime)
             if use_cost_stopping_condition:
                 if task_cost >= target_cost:
@@ -302,21 +264,19 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt):
         final_best_for_padding = None if best_runtime == float("inf") else best_runtime
         while len(progress_list) < target_attempt:
             progress_list.append(final_best_for_padding)
-    
+
     final_best_runtime = None if best_runtime == float("inf") else best_runtime
     return final_progress_list, final_best_runtime, best_code_path, best_combo, cumulative, task_cost, efa_costs
 
 
 # --- Main Execution Logic ---
 
-def run(run_name, output_label, run_num=0):
-    # root_dir = (curr_dir / "../../../openevolve/examples/kernelbench/openevolve_output_lrc" / run_name / "tasks").resolve()
+def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
+        runtimes_dirname, tables_dirname, task_blacklist, target_attempt,
+        total_step_count, use_cost_stopping_condition, output_solutions,
+        target_cost, cost_step):
 
-    root_dir = (curr_dir / "../../data/pike-data/full-pike-runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
-    # root_dir = (curr_dir / "../../data/parallel_runs" / run_name / "runs/runs/run_0/run_openevolve/tasks").resolve()
-
-    # sol_dest_dir = (curr_dir / f"../../best_agent_solutions_new/h100/{target_dirname}/{output_label}/best_solutions").resolve()
-    sol_dest_dir = (curr_dir / f"../../data/pike-data/best-pike-kernels/{run_name}").resolve()
+    root_dir = (input_dir / "full-pike-runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
 
     runtimes_dir = results_dir / f"data/{runtimes_dirname}"
     convergence_dir = results_dir / "figs/convergence"
@@ -347,8 +307,7 @@ def run(run_name, output_label, run_num=0):
         eager_runtimes = {"results": []}
 
     sol_dest_dir.mkdir(parents=True, exist_ok=True)
-    if write_to_disk:
-        plot_path.parent.mkdir(parents=True, exist_ok=True)
+    plot_path.parent.mkdir(parents=True, exist_ok=True)
 
     task_names_unfiltered = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: int(x.split("task")[1].split("_")[0]))
 
@@ -363,7 +322,7 @@ def run(run_name, output_label, run_num=0):
     speedup_list = []
     all_speedups_progress = []
     included_task_names_for_csv = []
-    
+
     current_blacklist = BLACKLIST.get(run_name, set())
 
     print(f"Processing run: {run_name}")
@@ -376,11 +335,12 @@ def run(run_name, output_label, run_num=0):
     for task_name in task_names:
         task_number = int(task_name.split("task")[1].split("_")[0])
         task_path = os.path.join(root_dir, task_name)
-        
+
         is_task_speedup_blacklisted = task_number in current_blacklist
 
         progress, best, best_code_path, best_combo, task_step_count, task_cost, efa_costs = get_progress_iters_attempts(
-            task_path, task_number, target_attempt
+            task_path, task_number, target_attempt, run_name,
+            use_cost_stopping_condition, total_step_count, target_cost, cost_step,
         )
 
         all_efa_costs += efa_costs
@@ -397,7 +357,6 @@ def run(run_name, output_label, run_num=0):
             else:
                 combo_str = "N/A"
 
-            # PATCH 2: Calculate speedup, setting to 1.0 if blacklisted
             speedup = None
             best_runtime_to_save = float("inf")
             if eager is not None:
@@ -407,7 +366,7 @@ def run(run_name, output_label, run_num=0):
                 elif best > 0:
                     speedup = eager / best
                     best_runtime_to_save = best
-            
+
             results.append({"problem_id": task_number, "runtime": best_runtime_to_save})
 
             if speedup is not None:
@@ -419,25 +378,18 @@ def run(run_name, output_label, run_num=0):
             else:
                 print(f"{task_name} (id={task_number}): best={best:.6f}, eager=N/A, speedup=N/A, at {combo_str}")
 
-            if OUTPUT_SOLUTIONS and best_code_path:
+            if output_solutions and best_code_path:
                 dest_file = sol_dest_dir / f"task_{task_number}.py"
                 shutil.copy(best_code_path, dest_file)
         else:
-            # MODIFICATION: Handle cases where the runtime is completely missing.
-            # Set the final speedup to 1.0 for the geomean calculation.
             print(f"{task_name} (id={task_number}): missing runtime, speedup set to 1.0")
             if eager is not None:
                 speedup_list.append(1.0)
 
-        # --- Process Progress Data (for convergence plot and CSV) ---
-        # PATCH 3: Create speedup trajectory, setting to 1.0 if blacklisted
-        # This also correctly handles the missing runtime case: `progress` will be
-        # a list of `None`s, resulting in a speedup trajectory of all 1.0s.
         if eager is not None:
             if is_task_speedup_blacklisted:
                 speedup_progress = [1.0] * total_step_count
             else:
-                # clamping
                 speedup_progress = [max(1.0, eager / r) if r is not None and r > 0 else 1.0 for r in progress]
             all_speedups_progress.append(speedup_progress)
             task_id = int(task_name.split("task")[1].split("_")[0])
@@ -450,9 +402,8 @@ def run(run_name, output_label, run_num=0):
 
     # 1. Write JSON runtimes
     output_data = {"title": output_label, "results": sorted(results, key=lambda x: x["problem_id"])}
-    if write_to_disk:
-        with open(output_path, "w") as f:
-            json.dump(output_data, f, indent=4)
+    with open(output_path, "w") as f:
+        json.dump(output_data, f, indent=4)
     print(f"\nRuntimes written to {output_path}")
 
     mean_task_cost = np.mean(np.array(task_costs))
@@ -464,24 +415,18 @@ def run(run_name, output_label, run_num=0):
     print(f"\nMean steps per task: {mean_steps_per_task}")
 
     # 2. Print geometric mean of speedups
+    geomean = None
     if speedup_list:
-        # clamping
-        # print(speedup_list)
         speedup_lt1 = [v for v in speedup_list if v < 1]
         print(f"Task count where best speedup is < 1: {len(speedup_lt1)}")
         speedup_list = [v if v > 1 else 1 for v in speedup_list]
-        print(speedup_list) 
+        print(speedup_list)
 
         geomean = gmean(speedup_list)
         print(f"Geometric mean speedup across {len(speedup_list)} tasks = {geomean:.3f}")
 
     # 3. Generate and save the all_trajectories CSV
     if all_speedups_progress and included_task_names_for_csv:
-        # PATCH 4: Use the curated list of task names to ensure columns match data
-
-        # for speedup_progress in all_speedups_progress:
-        #     print(len(speedup_progress))
-
         df = pd.DataFrame(dict(zip(included_task_names_for_csv, all_speedups_progress)))
 
         if use_cost_stopping_condition:
@@ -494,41 +439,76 @@ def run(run_name, output_label, run_num=0):
         else:
             df.index = pd.RangeIndex(start=1, stop=total_step_count + 1, name="attempt")
 
-        if write_to_disk:
-            all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
-            df.to_csv(all_trajectories_path)
-            print(f"Speedup trajectories saved to {all_trajectories_path}")
-
-    # 4. Generate and save convergence plot
-    # if all_speedups_progress:
-    #     geomean_curve = [gmean([s[i] for s in all_speedups_progress]) for i in range(target_attempt)]
-        
-    #     plt.figure(figsize=(6, 4))
-    #     plt.plot(range(1, target_attempt + 1), geomean_curve)
-    #     plt.xlabel(plot_xlabel)
-    #     plt.ylabel("Speedup over PyTorch Eager (Geomean)")
-    #     plt.title(plot_title)
-    #     plt.grid(True, linestyle="--", alpha=0.6)
-    #     plt.tight_layout()
-    #     plt.savefig(plot_path)
-    #     print(f"Convergence plot saved to {plot_path}\n")
+        all_trajectories_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(all_trajectories_path)
+        print(f"Speedup trajectories saved to {all_trajectories_path}")
 
     return geomean
 
-if __name__ == "__main__":
-    # speedups = []
-    speedups = {}
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-dir", type=str, required=True, help="Path to input data directory (contains full-pike-runs, best-pike-kernels)")
+    parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
+    parser.add_argument("--level", type=str, required=True, choices=["3-pike", "5"], help="Level to process")
+    parser.add_argument("--use-cost-stopping", action="store_true", help="Use cost-based stopping condition instead of attempt count")
+    parser.add_argument("--output-solutions", action="store_true", help="Copy best solutions to sol_dest_dir")
+    args = parser.parse_args()
+
+    input_dir = Path(args.input_dir).resolve()
+    output_dir = Path(args.output_dir).resolve()
+    level = args.level
+    use_cost_stopping_condition = args.use_cost_stopping
+    output_solutions = args.output_solutions
+
+    target_attempt = 300
+    if level == "3-pike":
+        target_cost = 25.0
+    else:
+        target_cost = 50.0
+    cost_step = 0.2
+    if use_cost_stopping_condition:
+        total_step_count = round(target_cost / cost_step)
+    else:
+        total_step_count = target_attempt
+
+    target_dirname = f"h100_level_{level}"
+    results_dir = (output_dir / target_dirname / "results").resolve()
+
+    if use_cost_stopping_condition:
+        runtimes_dirname = "runtimes_money_budget"
+        tables_dirname = "tables_money_budget"
+        overall_speedups_filename = "speedups_money_budget.json"
+    else:
+        runtimes_dirname = "runtimes"
+        tables_dirname = "tables"
+        overall_speedups_filename = "speedups.json"
+
+    task_blacklist = task_blacklist_map.get(level, set())
+    runs = runs_map[level]
+
+    speedups = {}
     for (run_name, output_label) in runs:
-        geomean_np = run(run_name, output_label)
-        # speedups.append(float(geomean_np))
-        speedups[output_label] = float(geomean_np)
-    
+        sol_dest_dir = (input_dir / "best-pike-kernels" / run_name).resolve()
+        geomean_np = run(
+            run_name, output_label, 0,
+            input_dir, results_dir, sol_dest_dir,
+            runtimes_dirname, tables_dirname, task_blacklist,
+            target_attempt, total_step_count, use_cost_stopping_condition,
+            output_solutions, target_cost, cost_step,
+        )
+        if geomean_np is not None:
+            speedups[output_label] = float(geomean_np)
+
     print("\n========= ALL SPEEDUPS =========")
     print(json.dumps(speedups, indent=4))
 
     overall_speedups_dir = results_dir / "data/overall_speedups"
     os.makedirs(overall_speedups_dir, exist_ok=True)
-    
+
     with open(overall_speedups_dir / overall_speedups_filename, "w") as f:
         json.dump(speedups, f, indent=4)
+
+
+if __name__ == "__main__":
+    main()

@@ -102,6 +102,16 @@ For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-op
 
 For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
 
+### Generate Figures
+
+After the search completes, generate figures from the collected data:
+
+```bash
+python scripts/generate_figs.py --input-dir data/pike-data --output-dir output/figs
+```
+
+This expects baseline runtimes to be present under `data/pike-data/baseline-runtimes/`. Collect them first with `scripts/eval_baselines.py` if you haven't already (see [`docs/eval_only.md`](docs/eval_only.md)).
+
 ## Documentation
 
 Additional documentation is available in the [`docs/`](docs/) directory, covering the eval worker, containers, HPC cluster setup, LLM API setup, profiling, and troubleshooting.

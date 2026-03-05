@@ -28,7 +28,12 @@ We chose to fork the original KernelBench repository, consolidating the agent fr
 
 ## Setup
 
-We recommend setting up your environment using `uv` ([uv installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+The simplest PIKE setup involves two components:
+
+- A containerized evaluator which runs kernels on the target GPU
+- A search script on the host machine which makes LLM queries and communicates with the evaluator via filesystem
+
+We recommend setting up your host environment using `uv` ([uv installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
 Clone this repository, then do the following:
 
@@ -52,9 +57,11 @@ Then source the changes via:
 source ~/.bashrc
 ```
 
+**To run the Eval Worker:** install Docker and the NVIDIA Container Toolkit ([installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
+
 ## Running PIKE
 
-Running a PIKE search requires two components running simultaneously:
+As noted above, running a PIKE search requires two components running simultaneously:
 
 - **Eval Worker** — runs the evaluator in a container
 - **Search process** — the PIKE-B or PIKE-O LLM optimization strategy
@@ -63,7 +70,7 @@ Start the Eval Worker first, then run the search in a second terminal.
 
 ### Start Eval Worker
 
-Install Docker and the NVIDIA Container Toolkit ([installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)), then start the containerized Eval Worker:
+Ensure Docker and NVIDIA Container Toolkit are installed, then start the containerized Eval Worker (this script will fetch the container from online if not yet installed):
 
 ```bash
 python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 20
@@ -89,7 +96,7 @@ python scripts/run_search.py \
 
 The dry run simulates eval responses without hitting the worker. Once satisfied, run without `--dry-run` (Eval Worker must be running).
 
-For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically.
+For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically. This strategy does not currently have a dry run mode.
 
 For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
 

@@ -91,12 +91,14 @@ python scripts/run_search.py \
     --level 3-pike \
     --server-type google \
     --model-name gemini-2.5-pro \
-    --run-name h100_level_3-pike_pike-b \
+    --run-name <run_name> \
     --task-start 1 --task-end 50 \
     --dry-run
 ```
 
-The dry run simulates eval responses without hitting the worker. Once satisfied, run without `--dry-run` (Eval Worker must be running).
+You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
+
+The dry run simulates eval responses without hitting the worker. The dry run will still generate a run dir, but it can be safely removed since it just generates bogus data. Once satisfied, run without `--dry-run` (Eval Worker must be running).
 
 For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically. This strategy does not currently have a dry run mode.
 
@@ -119,6 +121,8 @@ python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
 ### Generate Figures
 
 After the search completes, run this script to analyze the data and generate figures from the collected data:
+
+(TODO: this will need to take in an optional `--run-name <run_name>`, which corresponds to the run name selected for the search earlier. It will also need to take in an optional `--level` to know what level scripts are being generated for. If one of these options is provided, the other MUST ALSO be provided. the `generate_figs` script and subsequent scripts that it invokes will need to adjust for this, so that they only analyze and generate for the requested run and level. If these options are not passed in, then the scripts should retain their original behavior of assuming a bunch of specific runs are present)
 
 ```bash
 python scripts/generate_figs.py --input-dir data/pike-data --output-dir data/pike-out

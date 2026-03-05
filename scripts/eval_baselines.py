@@ -120,10 +120,11 @@ async def run_all_baselines(args):
     baseline_dir = output_dir / "baseline-runtimes" / f"h100_level_{level}"
     baseline_dir.mkdir(parents=True, exist_ok=True)
 
-    fetch_metr_deps()
+    if not dry_run:
+        fetch_metr_deps()
 
     server_proc = None
-    if not args.no_eval_server:
+    if not args.no_eval_server and not dry_run:
         server_proc = start_eval_server(args.port, worker_io_dir)
 
     try:

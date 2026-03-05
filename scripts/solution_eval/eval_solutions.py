@@ -23,7 +23,10 @@ class EvalSolutions:
 
         print(tx_dir, rx_dir)
 
-        self.disk_channel = DiskChannel(tx_dir, rx_dir)
+        if not dry_run:
+            self.disk_channel = DiskChannel(tx_dir, rx_dir)
+        else:
+            self.disk_channel = None
 
         self.run_dir = run_dir
 
@@ -39,6 +42,11 @@ class EvalSolutions:
         self.dry_run = dry_run
         self.sequential = sequential
     
+    def dry_run_metr_samples(self):
+        """Generate placeholder samples using ground-truth task IDs (no METR repo needed)."""
+        gt_samples = self.ground_truth_solutions()
+        return [{"code": "# dry-run placeholder", "problem_id": s["problem_id"]} for s in gt_samples]
+
     def metr_solutions(self):
         kernel_bench_dir = (deps_dir / "KernelBenchFiltered").resolve()
 
@@ -144,7 +152,10 @@ class EvalSolutions:
         elif self.solutions_name == "agent":
             samples = self.agent_solutions()
         elif self.solutions_name == "metr":
-            samples = self.metr_solutions()
+            if self.dry_run:
+                samples = self.dry_run_metr_samples()
+            else:
+                samples = self.metr_solutions()
         elif self.solutions_name == "good_kernels":
             samples = self.good_kernels_blog_solutions()
         else:
@@ -168,14 +179,15 @@ class EvalSolutions:
 
             eval_id_to_sample[eval_id] = sample
 
-            await self.disk_channel.send({
-                "id": eval_id,
-                "type": "eval",
-                "level": self.level,
-                "task": problem_id,
-                "code": code,
-                "mode": self.mode
-            })
+            if not self.dry_run:
+                await self.disk_channel.send({
+                    "id": eval_id,
+                    "type": "eval",
+                    "level": self.level,
+                    "task": problem_id,
+                    "code": code,
+                    "mode": self.mode
+                })
 
         all_results = []
 
@@ -246,18 +258,31 @@ class EvalSolutions:
 
             eval_id_to_sample[eval_id] = sample
 
-            await self.disk_channel.send({
-                "id": eval_id,
-                "type": "eval",
-                "level": self.level,
-                "task": problem_id,
-                "code": code,
-                "mode": self.mode
-            })
-
-            # TODO: add dry_run functionality here
-
-            res = await self.disk_channel.recv()
+            if self.dry_run:
+                res = {
+                    "id": eval_id,
+                    "results": {
+                        "stdout": "this is dry_run stdout",
+                        "stderr": "this is dry_run stderr",
+                        "timed_out": False,
+                        "eval_results": {
+                            "loaded": True,
+                            "correct": True,
+                            "runtime": random.random() * 10,
+                            "max_diff": [0.0001],
+                        }
+                    },
+                }
+            else:
+                await self.disk_channel.send({
+                    "id": eval_id,
+                    "type": "eval",
+                    "level": self.level,
+                    "task": problem_id,
+                    "code": code,
+                    "mode": self.mode
+                })
+                res = await self.disk_channel.recv()
             eval_id = res["id"]
             results = res["results"]
             sample = eval_id_to_sample[eval_id]

@@ -144,9 +144,6 @@ def run_pike_o(args, run_dir: Path):
         "--task-end", str(args.task_end),
         "--eval-port", str(args.port),
     ]
-    if args.dry_run:
-        cmd.append("--dry-run")
-
     print(f"Running PIKE-O: {' '.join(cmd)}")
     subprocess.run(cmd, check=True, cwd=root_dir)
 
@@ -216,6 +213,9 @@ def main():
         help="Dry run: skip LLM queries and eval worker communication",
     )
     args = parser.parse_args()
+
+    if args.strategy == "pike-o" and args.dry_run:
+        parser.error("--dry-run is not supported for pike-o")
 
     output_dir = Path(args.output_dir)
     worker_io_dir = Path(args.worker_io_dir)

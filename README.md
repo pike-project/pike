@@ -78,7 +78,7 @@ python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere
 
 ### Run the Search
 
-`scripts/run_search.py` is a unified entry point for PIKE-B and PIKE-O. It automatically manages the eval HTTP server internally, so no separate server setup is needed. The `--port` flag selects which local port the internal server listens on — any available port works.
+`scripts/run_search.py` is a simple, unified entry point for PIKE-B and PIKE-O. It automatically manages multiple components, including an eval HTTP server that is for internal use only. The default port for this internal server is 8000, but this can be adjusted with the `--port` flag (any available port should work fine).
 
 Try a dry run first (does not require the Eval Worker to be running):
 
@@ -97,6 +97,8 @@ python scripts/run_search.py \
 The dry run simulates eval responses without hitting the worker. Once satisfied, run without `--dry-run` (Eval Worker must be running).
 
 For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically. This strategy does not currently have a dry run mode.
+
+**Note:** by default, the container and search will communicate via the top-level `worker_io` dir in this repository. You can change this I/O directory by passing a different `--worker-io-dir` to both the worker script and the search script.
 
 For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
 

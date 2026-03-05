@@ -30,8 +30,10 @@ We chose to fork the original KernelBench repository, consolidating the agent fr
 
 The simplest PIKE setup involves two components:
 
-- A containerized evaluator which runs kernels on the target GPU
-- A search script on the host machine which makes LLM queries and communicates with the evaluator via filesystem
+- A containerized evaluator which runs PyTorch/kernel code on the target GPU
+- A script running on the host which sends code for evaluation to the evaluator via filesystem. This is either:
+    - An LLM-driven search script
+    - A baseline script to evaluate pre-existing baseline PyTorch/kernel code
 
 We recommend setting up your host environment using `uv` ([uv installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
@@ -64,7 +66,7 @@ source ~/.bashrc
 As noted above, running a PIKE search requires two components running simultaneously:
 
 - **Eval Worker** — runs the evaluator in a container
-- **Search process** — the PIKE-B or PIKE-O LLM optimization strategy
+- **Search/Baseline process** — The optimization search process, or baseline manager script
 
 Start the Eval Worker first, then run the search in a second terminal.
 
@@ -102,12 +104,24 @@ For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-op
 
 For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
 
-### Generate Figures
+### Evaluate Baselines
 
-After the search completes, generate figures from the collected data:
+Keep the Eval Worker running for this. It submits PyTorch/kernel code to the evaluator, just like the search process does.
+
+**Important:** use the same `--output-dir` here as you used for the search, so that `generate_figs.py` can find both the search results and the baseline runtimes in one place.
+
+This step can be run before or after the search, but both steps MUST happen before generating figures, as this step collects runtimes for the original PyTorch code, allowing calculation of speedups.
 
 ```bash
-python scripts/generate_figs.py --input-dir data/pike-data --output-dir output/figs
+python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
+```
+
+### Generate Figures
+
+After the search completes, run this script to analyze the data and generate figures from the collected data:
+
+```bash
+python scripts/generate_figs.py --input-dir data/pike-data --output-dir data/pike-out
 ```
 
 This expects baseline runtimes to be present under `data/pike-data/baseline-runtimes/`. Collect them first with `scripts/eval_baselines.py` if you haven't already (see [`docs/eval_only.md`](docs/eval_only.md)).

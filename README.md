@@ -28,7 +28,7 @@ We chose to fork the original KernelBench repository, consolidating the agent fr
 
 ## Setup
 
-We recommend setting up your environment using `uv` ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+We recommend setting up your environment using `uv` ([uv installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
 Clone this repository, then do the following:
 

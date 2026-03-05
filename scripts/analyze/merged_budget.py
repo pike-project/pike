@@ -447,7 +447,8 @@ def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
 
 
 def run_level(input_dir: Path, output_dir: Path, level: str,
-              use_cost_stopping: bool = False, output_solutions: bool = False):
+              use_cost_stopping: bool = False, output_solutions: bool = False,
+              run_name: str = None):
     use_cost_stopping_condition = use_cost_stopping
 
     target_attempt = 300
@@ -474,7 +475,14 @@ def run_level(input_dir: Path, output_dir: Path, level: str,
         overall_speedups_filename = "speedups.json"
 
     task_blacklist = task_blacklist_map.get(level, set())
-    runs = runs_map[level]
+
+    if run_name is not None:
+        # Find the output label from runs_map, falling back to the run name itself
+        label_map = dict(runs_map.get(level, []))
+        output_label = label_map.get(run_name, run_name)
+        runs = [(run_name, output_label)]
+    else:
+        runs = runs_map[level]
 
     speedups = {}
     for (run_name, output_label) in runs:

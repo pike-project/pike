@@ -50,19 +50,31 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", type=str, required=True, help="Path to input directory")
     parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
+    parser.add_argument("--run-name", type=str, default=None,
+                        help="Process only this run. Must be used together with --level.")
+    parser.add_argument("--level", type=str, default=None, choices=["3-pike", "5"],
+                        help="Process only this level. Must be used together with --run-name.")
     args = parser.parse_args()
+
+    if (args.run_name is None) != (args.level is None):
+        parser.error("--run-name and --level must be provided together")
 
     input_dir = Path(args.input_dir).resolve()
     output_dir = Path(args.output_dir).resolve()
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for level in ["3-pike", "5"]:
+    levels = [args.level] if args.level else ["3-pike", "5"]
+    single_run_name = args.run_name
+
+    for level in levels:
         copy_level_baseline_runtimes(input_dir, output_dir, level)
 
         # merged_budget: run twice (with and without cost stopping)
         for use_cost in [False, True]:
-            merged_budget_run_level(input_dir, output_dir, level, use_cost_stopping=use_cost)
+            merged_budget_run_level(input_dir, output_dir, level,
+                                    use_cost_stopping=use_cost,
+                                    run_name=single_run_name)
 
         plot_trajectories(output_dir, level)
         plot_overall_speedup(output_dir, level)

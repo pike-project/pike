@@ -120,13 +120,17 @@ python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
 
 ### Generate Figures
 
-After the search completes, run this script to analyze the data and generate figures from the collected data:
-
-(TODO: this will need to take in an optional `--run-name <run_name>`, which corresponds to the run name selected for the search earlier. It will also need to take in an optional `--level` to know what level scripts are being generated for. If one of these options is provided, the other MUST ALSO be provided. the `generate_figs` script and subsequent scripts that it invokes will need to adjust for this, so that they only analyze and generate for the requested run and level. If these options are not passed in, then the scripts should retain their original behavior of assuming a bunch of specific runs are present)
+After the search completes, generate figures for your run using `--run-name` and `--level`:
 
 ```bash
-python scripts/generate_figs.py --input-dir data/pike-data --output-dir data/pike-out
+python scripts/generate_figs.py \
+    --input-dir data/pike-data \
+    --output-dir data/pike-out \
+    --run-name h100_level_3-pike_pike-b \
+    --level 3-pike
 ```
+
+This processes only the specified run. Omit `--run-name` and `--level` to process all known runs across both levels (the original behavior).
 
 This expects baseline runtimes to be present under `data/pike-data/baseline-runtimes/`. Collect them first with `scripts/eval_baselines.py` if you haven't already (see [`docs/eval_only.md`](docs/eval_only.md)).
 

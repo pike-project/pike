@@ -37,9 +37,6 @@ uv venv --python 3.12 --seed
 source .venv/bin/activate
 uv pip install -r requirements.txt
 uv pip install -e .
-
-# additional data analysis
-uv pip install matplotlib pandas scipy
 ```
 
 Save the following API key environment variables to `~/.bashrc`:
@@ -98,7 +95,7 @@ For advanced setups (running components separately, remote eval server), see [`d
 
 ## Documentation
 
-To learn more about using PIKE, see `docs/README.md`
+Additional documentation is available in the [`docs/`](docs/) directory, covering the eval worker, containers, HPC cluster setup, LLM API setup, profiling, and troubleshooting.
 
 ## Citation
 

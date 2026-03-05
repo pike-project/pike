@@ -10,16 +10,24 @@ python scripts/eval.py --level 3 --task 27 --code-path KernelBench/level3/27_Reg
 
 Include the `--compile` flag if you want to the eval to run with `torch.compile` enabled
 
-### Multi-Solution Eval
+### Baseline Evals
 
-If you only want to time a particular set of solutions, without running the agent framework, you can do so like this:
+To collect all baseline runtimes (eager, compile, tensorrt, metr) in the pike-data format consumed by `scripts/generate_figs.py`, use `scripts/eval_baselines.py` (starts the eval HTTP server automatically):
+
+```bash
+python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
+```
+
+This writes `eager.json`, `compile.json`, `tensorrt.json`, and `metr.json` to `data/pike-data/baseline-runtimes/h100_level_3-pike/`.
+
+### Lower-Level Multi-Solution Eval
+
+For finer control, `scripts/solution_eval/eval_solutions.py` can be used directly. The Eval Worker and Eval HTTP Server must both be running first (see [`advanced_setup.md`](advanced_setup.md)).
 
 ```bash
 # baseline solutions
-python scripts/solution_eval/eval_solutions.py --level 0 --solutions baseline --mode <eager/compile>
+python scripts/solution_eval/eval_solutions.py --level 3-pike --solutions baseline --mode <eager/compile/tensorrt>
 
 # agent-generated solutions, must pass in the path to the run dir
-python scripts/solution_eval/eval_solutions.py --level 0 --solutions agent --run-dir <run_dir> --mode eager
+python scripts/solution_eval/eval_solutions.py --level 3-pike --solutions agent --run-dir <run_dir> --mode eager
 ```
-
-After you run this, start the eval worker in a separate window and the eval tasks will be sent there.

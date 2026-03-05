@@ -12,10 +12,19 @@ Then source the changes via:
 source ~/.bashrc
 ```
 
-**First, set up the Eval Worker and Eval Server as described in the top-level README**
+First, start the Eval Worker as described in the top-level README.
 
-Now, try with a free CBORG model:
+Then run a search with a free CBORG model using `scripts/run_search.py` (which manages the eval HTTP server automatically):
 
 ```bash
-python scripts/parallel_tree_search.py --server-type cborg --model-name lbl/gpt-oss-120b-high --level 3-pike --task-start 1 --task-end 50 --num-branches 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --run-dir <path/to/output-dir>
+python scripts/run_search.py \
+    --output-dir data/pike-data \
+    --strategy pike-b \
+    --level 3-pike \
+    --server-type cborg \
+    --model-name lbl/gpt-oss-120b-high \
+    --run-name h100_level_3-pike_pike-b \
+    --task-start 1 --task-end 50
 ```
+
+If you prefer to run components separately (e.g. to manage the eval HTTP server yourself), see [`advanced_setup.md`](advanced_setup.md). In that case, pass `--server-type cborg --model-name lbl/gpt-oss-120b-high` to `scripts/parallel_tree_search.py`.

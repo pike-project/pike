@@ -4,7 +4,7 @@ More details about agent operation can be found here.
 
 ## Prompt Construction
 
-Prompt construction is done in `src/prompt_construction.py`
+Prompt construction is done in `src/prompt_constructor.py`
 
 There are a few key prompts that are used by the agent:
 

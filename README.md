@@ -57,67 +57,44 @@ source ~/.bashrc
 
 ## Running PIKE
 
-Running a PIKE implementation involves 3 key components. It is recommended to start the components in the order listed below.
+Running a PIKE search requires two components running simultaneously:
 
-- Eval Worker: Runs evaluator in a container, and allows low-level, filesystem-based communication with the containerized worker
-- Eval Server: Exposes HTTP server for sending and receiving eval data, managing the low-level communication with the Eval Worker internally
-- PIKE Implementation (PIKE-B/PIKE-O): implements the LLM-based optimization strategy
+- **Eval Worker** — runs the evaluator in a container
+- **Search process** — the PIKE-B or PIKE-O LLM optimization strategy
 
-## Start Eval Worker
+Start the Eval Worker first, then run the search in a second terminal.
 
-If you are working on a machine where you have root access, install Docker, along with the NVIDIA Container Toolkit (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+### Start Eval Worker
 
-Start the containerized Eval Worker like so, passing in the correct GPU architecture:
+Install Docker and the NVIDIA Container Toolkit ([installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)), then start the containerized Eval Worker:
 
 ```bash
 python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 20
 ```
 
-<!-- python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> -->
+### Run the Search
 
-<!-- If you are on an HPC system, a container engine like Docker, Podman, or Apptainer is likely available. To start the eval worker in a separate job, you can reference existing worker job scripts in `tools/worker_jobs/`
+`scripts/run_search.py` is a unified entry point for PIKE-B and PIKE-O. It automatically manages the eval HTTP server internally, so no separate server setup is needed. The `--port` flag selects which local port the internal server listens on — any available port works.
 
-Currently supported HPC systems:
-- NERSC Perlmutter via podman-hpc, Ampere A100: `tools/worker_jobs/perlmutter.sh`
-- LBL Lawrencium via apptainer, Hopper H100: `tools/worker_jobs/lrc.sh`
-
-As soon as the eval worker job starts, the waiting agent framework script will connect to it via NFS and start sending it eval tasks. -->
-
-## Start Eval Server
-
-Once the Eval Worker is started, start the Eval Server. The Eval Server is an HTTP server that acts as a proxy between the Eval Worker's low-level communication channel and the PIKE implementation eval requests.
+Try a dry run first (does not require the Eval Worker to be running):
 
 ```bash
-python scripts/disk_channel_server.py --port 8000
+python scripts/run_search.py \
+    --output-dir data/pike-data \
+    --strategy pike-b \
+    --level 3-pike \
+    --server-type google \
+    --model-name gemini-2.5-pro \
+    --run-name h100_level_3-pike_pike-b \
+    --task-start 1 --task-end 50 \
+    --dry-run
 ```
 
-## Run PIKE-B
+The dry run simulates eval responses without hitting the worker. Once satisfied, run without `--dry-run` (Eval Worker must be running).
 
-To run PIKE-B directly, first try a dry run (does not require the eval worker):
+For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically.
 
-```bash
-python scripts/parallel_tree_search.py --server-type google --model-name gemini-2.5-pro --level 3-pike --task-start 1 --task-end 50 --num-branches 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --dry-run --run-dir <path/to/output-dir>
-```
-
-The dry run simulates a series of phases in which some evals fail, and others succeed with random runtime values. If this works fine, you can remove `--dry-run`. Do a real run only after the Eval Worker and Eval Server are running.
-
-## Run PIKE-O
-
-First, clone the following repository: [pike-openevolve](https://github.com/pike-project/pike-openevolve)
-
-In the pike-openevolve directory:
-
-```bash
-pip install -e .
-```
-
-As with PIKE-B, run the following (from within the pike-openevolve directory) only after the Eval Worker and Eval Server are running:
-
-```bash
-python examples/kernelbench/run.py --pike-dir <path/to/this-repo> --level 3-pike --task-start 1 --task-end 50 --max-fix-attempts 5 --eval-port 8000 --run-dir <path/to/output-dir>
-```
-
-To further tune the PIKE-O system configuration, edit `examples/kernelbench/config.yaml`
+For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
 
 ## Documentation
 

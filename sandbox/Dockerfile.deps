@@ -3,7 +3,7 @@ FROM nvidia/cuda:12.9.0-cudnn-devel-ubuntu24.04
 WORKDIR /deps
 
 COPY requirements.txt /deps/
-COPY requirements_level5.txt /deps/
+COPY requirements_eval_worker.txt /deps/
 
 # Update and install Python and pip
 RUN apt-get update && apt-get install -y \
@@ -20,6 +20,6 @@ ENV PATH="$VENV_PATH/bin:$PATH"
 
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt
-RUN pip install -r requirements_level5.txt
+RUN pip install -r requirements_eval_worker.txt
 
 WORKDIR /app

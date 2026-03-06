@@ -15,7 +15,7 @@ def geometric_mean(series):
         return np.nan
     return np.exp(np.log(valid).mean())
 
-def main(output_dir: Path, level: str):
+def main(output_dir: Path, level: str, paper: bool = False):
     target_dirname = f"h100_level_{level}"
 
     output_filename = "all_trajectories_side_by_side"
@@ -44,6 +44,9 @@ def main(output_dir: Path, level: str):
             ("prev_agents", "PIKE-B", "#2E94C7", "-"),
         ]
 
+    extra_handles = []
+    extras = []
+
     # Loop to generate each plot
     for ax, money_budget in zip(axes, money_budget_options):
         # Configure settings based on whether we're using a money budget
@@ -58,20 +61,21 @@ def main(output_dir: Path, level: str):
 
         data_dir = (output_dir / target_dirname / "results/data" / table_dirname / "speedup_trajectories").resolve()
 
-        if level == "3-pike":
-            extra_color = "#902ebd"
-            ax.axhline(y=1.64, color=extra_color, linestyle='--', linewidth=1.5)
-            extras = [
-                "torch.compile",
-            ]
-            extra_handles = [Line2D([0], [0], color=extra_color, label=t, linestyle='--', linewidth=1.5) for t in extras]
-        else:
-            extra_color = "#ff6583"
-            ax.axhline(y=1.50, color=extra_color, linestyle='--', linewidth=1.5)
-            extras = [
-                "METR",
-            ]
-            extra_handles = [Line2D([0], [0], color=extra_color, label=t, linestyle='--', linewidth=1.5) for t in extras]
+        if paper:
+            if level == "3-pike":
+                extra_color = "#902ebd"
+                ax.axhline(y=1.64, color=extra_color, linestyle='--', linewidth=1.5)
+                extras = [
+                    "torch.compile",
+                ]
+                extra_handles = [Line2D([0], [0], color=extra_color, label=t, linestyle='--', linewidth=1.5) for t in extras]
+            else:
+                extra_color = "#ff6583"
+                ax.axhline(y=1.50, color=extra_color, linestyle='--', linewidth=1.5)
+                extras = [
+                    "METR",
+                ]
+                extra_handles = [Line2D([0], [0], color=extra_color, label=t, linestyle='--', linewidth=1.5) for t in extras]
 
         # Plot lines in the order defined by plot_map
         known_keys = {file_key for file_key, *_ in plot_map}
@@ -92,8 +96,8 @@ def main(output_dir: Path, level: str):
 
             ax.plot(df[idx_column_name], df['geomean_speedup'], label=label, linewidth=2, color=col, linestyle=linestyle)
 
-        # Also plot any extra CSVs present that are not in plot_map
-        if data_dir.exists():
+        # Also plot any extra CSVs present that are not in plot_map (non-paper mode only)
+        if not paper and data_dir.exists():
             for csv_path in sorted(data_dir.glob("*.csv")):
                 file_key = csv_path.stem
                 if file_key in known_keys:
@@ -124,12 +128,13 @@ def main(output_dir: Path, level: str):
     # --- Shared Legend ---
     handles, labels = ax_left.get_legend_handles_labels()
 
-    if level == "3-pike":
-        handles.insert(3, extra_handles[0])
-        labels.insert(3, extras[0])
-    else:
-        handles += extra_handles
-        labels += extras
+    if paper:
+        if level == "3-pike":
+            handles.insert(3, extra_handles[0])
+            labels.insert(3, extras[0])
+        else:
+            handles += extra_handles
+            labels += extras
 
     legend_pos = (0.5, 1.13)
     if level == "3-pike":
@@ -152,6 +157,7 @@ if __name__ == "__main__":
     parser.add_argument("--input-dir", type=str, help="Path to input directory (unused, for interface consistency)")
     parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
     parser.add_argument("--level", type=str, required=True, choices=["3-pike", "5"], help="Level to process")
+    parser.add_argument("--paper", action="store_true", help="Paper mode: only plot the specified labels and draw special reference lines")
     args = parser.parse_args()
 
-    main(Path(args.output_dir).resolve(), args.level)
+    main(Path(args.output_dir).resolve(), args.level, paper=args.paper)

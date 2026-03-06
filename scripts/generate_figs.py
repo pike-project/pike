@@ -52,6 +52,8 @@ def main() -> None:
     parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
     parser.add_argument("--level", type=str, default=None, choices=["3-pike", "5"],
                         help="Process only this level.")
+    parser.add_argument("--paper", action="store_true",
+                        help="Paper mode: trajectory plots show only the specified labels and draw special reference lines")
     args = parser.parse_args()
 
     input_dir = Path(args.input_dir).resolve()
@@ -75,7 +77,7 @@ def main() -> None:
             merged_budget_run_level(input_dir, output_dir, level,
                                     use_cost_stopping=use_cost)
 
-        plot_trajectories(output_dir, level)
+        plot_trajectories(output_dir, level, paper=args.paper)
         plot_overall_speedup(output_dir, level)
 
 

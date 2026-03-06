@@ -278,6 +278,10 @@ def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
 
     root_dir = (input_dir / "full-pike-runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
 
+    if not root_dir.exists():
+        print(f"Skipping run '{run_name}': directory not found at {root_dir}")
+        return None
+
     runtimes_dir = results_dir / f"data/{runtimes_dirname}"
     convergence_dir = results_dir / "figs/convergence"
     speedup_traj_dir = results_dir / f"data/{tables_dirname}/speedup_trajectories"
@@ -449,8 +453,7 @@ def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
 
 
 def run_level(input_dir: Path, output_dir: Path, level: str,
-              use_cost_stopping: bool = False, output_solutions: bool = False,
-              run_name: str = None):
+              use_cost_stopping: bool = False, output_solutions: bool = False):
     use_cost_stopping_condition = use_cost_stopping
 
     target_attempt = 300
@@ -478,13 +481,21 @@ def run_level(input_dir: Path, output_dir: Path, level: str,
 
     task_blacklist = task_blacklist_map.get(level, set())
 
-    if run_name is not None:
-        # Find the output label from runs_map, falling back to the run name itself
-        label_map = dict(runs_map.get(level, []))
-        output_label = label_map.get(run_name, run_name)
-        runs = [(run_name, output_label)]
+    # Build label lookup from runs_map
+    label_map = dict(runs_map.get(level, []))
+
+    # Discover all run dirs on disk under full-pike-runs/
+    full_pike_dir = (input_dir / "full-pike-runs").resolve()
+    if full_pike_dir.is_dir():
+        all_run_dirs = sorted(d.name for d in full_pike_dir.iterdir() if d.is_dir())
     else:
-        runs = runs_map[level]
+        all_run_dirs = []
+
+    # Build runs list: use label from runs_map if available, otherwise use dirname
+    runs = [(name, label_map.get(name, name)) for name in all_run_dirs]
+
+    if not runs:
+        print(f"No run directories found for level {level} under {full_pike_dir}")
 
     speedups = {}
     for (run_name, output_label) in runs:

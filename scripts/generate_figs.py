@@ -50,14 +50,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", type=str, required=True, help="Path to input directory")
     parser.add_argument("--output-dir", type=str, required=True, help="Path to output directory")
-    parser.add_argument("--run-name", type=str, default=None,
-                        help="Process only this run. Must be used together with --level.")
     parser.add_argument("--level", type=str, default=None, choices=["3-pike", "5"],
-                        help="Process only this level. Must be used together with --run-name.")
+                        help="Process only this level.")
     args = parser.parse_args()
-
-    if (args.run_name is None) != (args.level is None):
-        parser.error("--run-name and --level must be provided together")
 
     input_dir = Path(args.input_dir).resolve()
     output_dir = Path(args.output_dir).resolve()
@@ -65,16 +60,20 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     levels = [args.level] if args.level else ["3-pike", "5"]
-    single_run_name = args.run_name
 
     for level in levels:
+        level_dirname = f"h100_level_{level}"
+        baseline_src = (input_dir / "baseline-runtimes" / level_dirname).resolve()
+        if not baseline_src.exists():
+            print(f"Warning: baseline runtimes not found for level {level} at {baseline_src}, skipping level.")
+            continue
+
         copy_level_baseline_runtimes(input_dir, output_dir, level)
 
         # merged_budget: run twice (with and without cost stopping)
         for use_cost in [False, True]:
             merged_budget_run_level(input_dir, output_dir, level,
-                                    use_cost_stopping=use_cost,
-                                    run_name=single_run_name)
+                                    use_cost_stopping=use_cost)
 
         plot_trajectories(output_dir, level)
         plot_overall_speedup(output_dir, level)

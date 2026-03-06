@@ -85,7 +85,7 @@ python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere
 Try a dry run first (does not require the Eval Worker to be running):
 
 ```bash
-python scripts/run_search.py --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --run-name <run_name> --task-start 1 --task-end 50 --dry-run
+python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50 --dry-run
 ```
 
 You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
@@ -115,7 +115,7 @@ python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
 After the search completes, generate figures for your run using `--run-name` and `--level`:
 
 ```bash
-python scripts/generate_figs.py --input-dir data/pike-data --output-dir data/pike-out --run-name h100_level_3-pike_pike-b --level 3-pike
+python scripts/generate_figs.py --run-name <run_name> --input-dir data/pike-data --output-dir data/pike-out --level 3-pike
 ```
 
 This processes only the specified run. Omit `--run-name` and `--level` to process all known runs across both levels (the original behavior).

@@ -4,13 +4,15 @@ This document describes how to run the PIKE pipeline components separately. The 
 
 ## Components
 
-The PIKE pipeline has three components:
+The advanced PIKE pipeline has three components:
 
 1. **Eval Worker** — containerized GPU evaluator, communicates over the filesystem
 2. **Eval HTTP Server** — HTTP proxy between the worker's filesystem channel and the search process (`scripts/disk_channel_server.py`)
 3. **Search Process** — PIKE-B (`scripts/parallel_tree_search.py`) or PIKE-O (`pike-openevolve`)
 
 Start them in the order listed below.
+
+**Note:** by default, the container and search will communicate via the top-level `worker_io` dir in this repository. You can change this I/O directory by passing a different `--worker-io-dir` to both the worker script and the search script.
 
 ## Start Eval Worker
 

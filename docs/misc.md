@@ -1,5 +1,18 @@
 # Miscellaneous Notes
 
+## Compressing/Updating pike-data
+
+```bash
+tar -czf pike-data.tar.gz pike-data/
+```
+
+```bash
+cp pike-data.tar.gz data/pike-data-archive/pike-data-compressed
+cd data/pike-data-archive/pike-data-compressed
+
+hf upload knagaitsev/pike-data-compressed . --repo-type=dataset
+```
+
 ## Package Setup
 
 We probably want a `setup.py` like this eventually:

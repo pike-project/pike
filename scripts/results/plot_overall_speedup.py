@@ -16,6 +16,12 @@ _BASELINE_FILES = {
     "tensorrt.json": "tensorrt",
 }
 
+# Per-(level, baseline label) task IDs whose speedup is forced to 1.0.
+# Used for benchmarks manually determined to be invalid.
+_BASELINE_SPEEDUP_FORCE_1 = {
+    ("5", "metr"): {1},
+}
+
 
 def compute_baseline_speedups(runtimes_dir: Path, level: str) -> dict:
     eager_path = runtimes_dir / "eager.json"
@@ -50,9 +56,13 @@ def compute_baseline_speedups(runtimes_dir: Path, level: str) -> dict:
             and entry["runtime"] > 0
         }
 
+        force_1 = _BASELINE_SPEEDUP_FORCE_1.get((level, label), set())
         speedup_list = []
         for pid, eager_rt in eager_map.items():
             if pid in blacklist:
+                continue
+            if pid in force_1:
+                speedup_list.append(1.0)
                 continue
             baseline_rt = baseline_map.get(pid)
             if baseline_rt is not None:

@@ -110,10 +110,10 @@ python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
 
 ### Generate Figures
 
-After the search and the baseline evaluation complete, generate figures for your run using `--run-name` and `--level`:
+After the search and the baseline evaluation complete, generate figures for the run:
 
 ```bash
-python scripts/generate_figs.py --input-dir data/pike-data --output-dir data/pike-out --level 3-pike
+python scripts/generate_figs.py --input-dir data/pike-data --output-dir data/pike-out
 ```
 
 ### Original Paper Figure Generation

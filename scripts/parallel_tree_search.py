@@ -454,7 +454,13 @@ class ParallelTreeSearch:
             if self.config.dry_run:
                 # skip a sample result with random probability on dry run
                 if random.random() > 0.1:
-                    all_results.append(self.mock_eval_result(sample["sample_id"]))
+                    mock_result = self.mock_eval_result(sample["sample_id"])
+                    all_results.append(mock_result)
+                    self.write_sample_data(
+                        sample["problem_id"], sample["sample_id"],
+                        "eval_results.json",
+                        json.dumps(mock_result["results"], indent=4),
+                    )
                 continue
 
             poll_path = "/poll"

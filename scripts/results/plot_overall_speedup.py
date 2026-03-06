@@ -60,6 +60,7 @@ def main(output_dir: Path, level: str):
     checkpoint_values = []
     col = []
 
+    known_labels = {label for label, *_ in label_mapping}
     for (label, title, color) in label_mapping:
         if label in speedups:
             titles.append(title)
@@ -71,6 +72,14 @@ def main(output_dir: Path, level: str):
                 checkpoint_values.append(speedups_money_budget[label])
             else:
                 checkpoint_values.append(None)
+
+    # Also include any runs in speedups.json not covered by label_mapping
+    for label, value in speedups.items():
+        if label not in known_labels:
+            titles.insert(0, label)
+            values.insert(0, value)
+            col.insert(0, "#888888")
+            checkpoint_values.insert(0, speedups_money_budget.get(label))
 
     plt.ylabel('Speedup')
 

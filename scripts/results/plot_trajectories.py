@@ -74,6 +74,7 @@ def main(output_dir: Path, level: str):
             extra_handles = [Line2D([0], [0], color=extra_color, label=t, linestyle='--', linewidth=1.5) for t in extras]
 
         # Plot lines in the order defined by plot_map
+        known_keys = {file_key for file_key, *_ in plot_map}
         for file_key, label, col, linestyle in plot_map:
             csv_path = data_dir / f"{file_key}.csv"
             if not csv_path.exists():
@@ -90,6 +91,19 @@ def main(output_dir: Path, level: str):
             df['geomean_speedup'] = df[task_cols].apply(geometric_mean, axis=1)
 
             ax.plot(df[idx_column_name], df['geomean_speedup'], label=label, linewidth=2, color=col, linestyle=linestyle)
+
+        # Also plot any extra CSVs present that are not in plot_map
+        if data_dir.exists():
+            for csv_path in sorted(data_dir.glob("*.csv")):
+                file_key = csv_path.stem
+                if file_key in known_keys:
+                    continue
+                df = pd.read_csv(csv_path)
+                if idx_column_name not in df.columns:
+                    continue
+                task_cols = [c for c in df.columns if c != idx_column_name]
+                df['geomean_speedup'] = df[task_cols].apply(geometric_mean, axis=1)
+                ax.plot(df[idx_column_name], df['geomean_speedup'], label=file_key, linewidth=2, linestyle="-")
 
         # --- Figure appearance for this subplot ---
         if ax == ax_left:

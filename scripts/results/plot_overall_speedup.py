@@ -146,7 +146,7 @@ def main(output_dir: Path, level: str):
         if label not in known_labels:
             titles.insert(0, label)
             values.insert(0, value)
-            col.insert(0, "#888888")
+            col.insert(0, "#BBBBBB")
             checkpoint_values.insert(0, speedups_money_budget.get(label))
 
     plt.ylabel('Speedup')

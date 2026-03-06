@@ -29,16 +29,7 @@ python scripts/disk_channel_server.py --port 8000
 ## Run PIKE-B
 
 ```bash
-python scripts/parallel_tree_search.py \
-    --server-type google \
-    --model-name gemini-2.5-pro \
-    --level 3-pike \
-    --task-start 1 --task-end 50 \
-    --num-branches 10 \
-    --max-fix-attempts 5 \
-    --query-budget 300 \
-    --eval-port 8000 \
-    --run-dir <path/to/output-dir>
+python scripts/parallel_tree_search.py --server-type google --model-name gemini-2.5-pro --level 3-pike --task-start 1 --task-end 50 --num-branches 10 --max-fix-attempts 5 --query-budget 300 --eval-port 8000 --run-dir <path/to/output-dir>
 ```
 
 Add `--dry-run` to simulate eval responses without hitting the worker.
@@ -47,9 +38,7 @@ After a PIKE-B run completes, the output is in the original PIKE-B format. To co
 
 ```bash
 mv <run-dir> <run-dir>_legacy
-python scripts/analyze/convert_prev_to_openevolve.py \
-    --src <run-dir>_legacy \
-    --dst <run-dir>
+python scripts/analyze/convert_prev_to_openevolve.py --src <run-dir>_legacy --dst <run-dir>
 ```
 
 ## Run PIKE-O
@@ -65,13 +54,7 @@ pip install -e .
 Then run (from the pike-openevolve directory):
 
 ```bash
-python examples/kernelbench/run.py \
-    --pike-dir <path/to/this-repo> \
-    --level 3-pike \
-    --task-start 1 --task-end 50 \
-    --max-fix-attempts 5 \
-    --eval-port 8000 \
-    --run-dir <path/to/output-dir>
+python examples/kernelbench/run.py --pike-dir <path/to/this-repo> --level 3-pike --task-start 1 --task-end 50 --max-fix-attempts 5 --eval-port 8000 --run-dir <path/to/output-dir>
 ```
 
 To tune the PIKE-O configuration, edit `examples/kernelbench/config.yaml`.

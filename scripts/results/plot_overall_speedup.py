@@ -3,11 +3,68 @@ import os
 import json
 from pathlib import Path
 import matplotlib.pyplot as plt
+from scipy.stats import gmean
 
-baseline_speedups_map = {
-    "3-pike": {"metr": 1.40, "torch.compile": 1.64, "tensorrt": 1.41},
-    "5": {"metr": 1.50, "torch.compile": 1.29, "tensorrt": 1.25},
+_TASK_BLACKLIST = {
+    "3-pike": {36, 37, 38, 39, 40, 41, 42},
+    "5": set(),
 }
+
+_BASELINE_FILES = {
+    "metr.json": "metr",
+    "compile.json": "torch.compile",
+    "tensorrt.json": "tensorrt",
+}
+
+
+def compute_baseline_speedups(runtimes_dir: Path, level: str) -> dict:
+    eager_path = runtimes_dir / "eager.json"
+    if not eager_path.exists():
+        return {}
+
+    with open(eager_path) as f:
+        eager_data = json.load(f)
+
+    eager_map = {
+        v["problem_id"]: v["runtime"]
+        for v in eager_data.get("results", [])
+        if v.get("runtime") is not None and v["runtime"] > 0
+    }
+
+    blacklist = _TASK_BLACKLIST.get(level, set())
+    result = {}
+
+    for filename, label in _BASELINE_FILES.items():
+        baseline_path = runtimes_dir / filename
+        if not baseline_path.exists():
+            continue
+
+        with open(baseline_path) as f:
+            baseline_data = json.load(f)
+
+        baseline_map = {
+            entry["problem_id"]: entry["runtime"]
+            for entry in baseline_data.get("results", [])
+            if entry.get("problem_id") is not None
+            and entry.get("runtime") is not None
+            and entry["runtime"] > 0
+        }
+
+        speedup_list = []
+        for pid, eager_rt in eager_map.items():
+            if pid in blacklist:
+                continue
+            baseline_rt = baseline_map.get(pid)
+            if baseline_rt is not None:
+                speedup = max(1.0, eager_rt / baseline_rt)
+            else:
+                speedup = 1.0
+            speedup_list.append(speedup)
+
+        if speedup_list:
+            result[label] = float(gmean(speedup_list))
+
+    return result
 
 
 def main(output_dir: Path, level: str):
@@ -27,7 +84,8 @@ def main(output_dir: Path, level: str):
     with open(overall_speedups_dir / speedups_money_budget_filename) as f:
         speedups_money_budget = json.load(f)
 
-    baseline_speedups = baseline_speedups_map.get(level, {})
+    runtimes_dir = data_dir / "runtimes"
+    baseline_speedups = compute_baseline_speedups(runtimes_dir, level)
     speedups.update(baseline_speedups)
 
     if level == "3-pike":

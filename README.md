@@ -88,7 +88,7 @@ Try a dry run first (does not require the Eval Worker to be running):
 python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50 --dry-run
 ```
 
-You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
+You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/level_<level>/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
 
 The dry run simulates eval responses without hitting the worker. The dry run will still generate a run dir, but it can be safely removed since it just generates bogus data. Once satisfied, run without `--dry-run` (Eval Worker must be running).
 

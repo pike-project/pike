@@ -220,8 +220,8 @@ def main():
     output_dir = Path(args.output_dir)
     worker_io_dir = Path(args.worker_io_dir)
 
-    # Determine output location: <output-dir>/full-pike-runs/<run-name>/runs/runs/run_N/
-    run_name_dir = output_dir / "full-pike-runs" / args.run_name / "runs" / "runs"
+    # Determine output location: <output-dir>/full-pike-runs/level_<level>/<run-name>/runs/runs/run_N/
+    run_name_dir = output_dir / "full-pike-runs" / f"level_{args.level}" / args.run_name / "runs" / "runs"
     run_n = next_run_number(run_name_dir)
     run_n_dir = run_name_dir / f"run_{run_n}"
     run_dir = run_n_dir / "run"

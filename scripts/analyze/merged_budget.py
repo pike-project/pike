@@ -271,12 +271,12 @@ def get_progress_iters_attempts(task_path, task_number, target_attempt, run_name
 
 # --- Main Execution Logic ---
 
-def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
+def run(run_name, output_label, run_num, level, input_dir, results_dir, sol_dest_dir,
         runtimes_dirname, tables_dirname, task_blacklist, target_attempt,
         total_step_count, use_cost_stopping_condition, output_solutions,
         target_cost, cost_step):
 
-    root_dir = (input_dir / "full-pike-runs" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
+    root_dir = (input_dir / "full-pike-runs" / f"level_{level}" / run_name / f"runs/runs/run_{run_num}/run/tasks").resolve()
 
     if not root_dir.exists():
         print(f"Skipping run '{run_name}': directory not found at {root_dir}")
@@ -484,8 +484,8 @@ def run_level(input_dir: Path, output_dir: Path, level: str,
     # Build label lookup from runs_map
     label_map = dict(runs_map.get(level, []))
 
-    # Discover all run dirs on disk under full-pike-runs/
-    full_pike_dir = (input_dir / "full-pike-runs").resolve()
+    # Discover all run dirs on disk under full-pike-runs/level_<level>/
+    full_pike_dir = (input_dir / "full-pike-runs" / f"level_{level}").resolve()
     if full_pike_dir.is_dir():
         all_run_dirs = sorted(d.name for d in full_pike_dir.iterdir() if d.is_dir())
     else:
@@ -501,7 +501,7 @@ def run_level(input_dir: Path, output_dir: Path, level: str,
     for (run_name, output_label) in runs:
         sol_dest_dir = (input_dir / "best-pike-kernels" / run_name).resolve()
         geomean_np = run(
-            run_name, output_label, 0,
+            run_name, output_label, 0, level,
             input_dir, results_dir, sol_dest_dir,
             runtimes_dirname, tables_dirname, task_blacklist,
             target_attempt, total_step_count, use_cost_stopping_condition,

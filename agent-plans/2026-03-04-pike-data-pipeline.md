@@ -93,7 +93,7 @@ python scripts/run_search.py \
 
 Behavior:
 1. Start eval HTTP server as background subprocess (unless `--no-eval-server`)
-2. Pick next `run_N` number under `<output-dir>/full-pike-runs/<run-name>/runs/runs/`
+2. Pick next `run_N` number under `<output-dir>/full-pike-runs/level_<level>/<run-name>/runs/runs/`
 3. PIKE-B: run `parallel_tree_search.py` via subprocess; then rename `run/` → `run_legacy/` and call `convert_prev_to_openevolve.py`
 4. PIKE-O: clone `pike-openevolve` to `local/deps/` if needed, `pip install -e`, then run `examples/kernelbench/run.py` via subprocess
 

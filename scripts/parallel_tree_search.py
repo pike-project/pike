@@ -358,7 +358,7 @@ class ParallelTreeSearch:
                 else:
                     res_text = "```exit(0)```"
                 
-                query_results.append((res_text, {}))
+                query_results.append((res_text, {"usage_metadata": {"prompt_token_count": 1000, "total_token_count": 1500}}))
         else:
             query_results = self.query_llm_parallel(raw_queries)
 

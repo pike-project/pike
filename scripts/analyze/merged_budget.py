@@ -306,7 +306,9 @@ def run(run_name, output_label, run_num, input_dir, results_dir, sol_dest_dir,
         print("Warning: eager runtimes file has unexpected format. Expected JSON object with a 'results' list. Continuing with empty results.")
         eager_runtimes = {"results": []}
 
-    sol_dest_dir.mkdir(parents=True, exist_ok=True)
+    if output_solutions:
+        sol_dest_dir.mkdir(parents=True, exist_ok=True)
+
     plot_path.parent.mkdir(parents=True, exist_ok=True)
 
     task_names_unfiltered = sorted([d for d in os.listdir(root_dir) if d.startswith("task")], key=lambda x: int(x.split("task")[1].split("_")[0]))

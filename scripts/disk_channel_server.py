@@ -71,6 +71,9 @@ class CustomHandler(BaseHTTPRequestHandler):
         self.loop = loop
         super().__init__(*args, **kwargs)
 
+    def log_message(self, format, *args):
+        pass
+
     def do_GET(self):
         manager = self.manager
         parsed_url = urlparse(self.path)

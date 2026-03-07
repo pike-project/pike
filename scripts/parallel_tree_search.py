@@ -217,35 +217,29 @@ class ParallelTreeSearch:
 
         # Create inference function with config parameters
         # We provide some presets in utils but you can also pass in your own, see query_server for more details
-        # self.inference_server = create_inference_server_from_presets(server_type="openai",
-        #                                                         model_name="o3-mini",
-        #                                                         max_tokens=self.config.max_tokens,
-        #                                                         verbose=self.config.verbose,
-        #                                                         is_reasoning_model=True,
-        #                                                         reasoning_effort="high")
 
         # TODO: get reasoning models to work with CLI options
+        if model_name == "o3-mini":
+            self.inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                    model_name=model_name,
+                                                                    max_tokens=self.config.max_tokens,
+                                                                    verbose=self.config.verbose,
+                                                                    is_reasoning_model=True,
+                                                                    reasoning_effort="high")
+        else:
+            self.inference_server = create_inference_server_from_presets(server_type=server_type,
+                                                                    model_name=model_name,
+                                                                    temperature=self.config.temperature,
+                                                                    max_tokens=self.config.max_tokens,
+                                                                    verbose=self.config.verbose)
 
-        # self.inference_server = create_inference_server_from_presets(server_type="cborg",
-        #                                                         model_name="openai/o3-mini",
+        self.cheap_inference_server = self.inference_server
+
+        # self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
+        #                                                         model_name="gemini-2.5-flash",
+        #                                                         temperature=self.config.temperature,
         #                                                         max_tokens=self.config.max_tokens,
-        #                                                         verbose=self.config.verbose,
-        #                                                         is_reasoning_model=True,
-        #                                                         reasoning_effort="high")
-
-        # self.cheap_inference_server = self.inference_server
-
-        self.inference_server = create_inference_server_from_presets(server_type=server_type,
-                                                                model_name=model_name,
-                                                                temperature=self.config.temperature,
-                                                                max_tokens=self.config.max_tokens,
-                                                                verbose=self.config.verbose)
-
-        self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
-                                                                model_name="gemini-2.5-flash",
-                                                                temperature=self.config.temperature,
-                                                                max_tokens=self.config.max_tokens,
-                                                                verbose=self.config.verbose)
+        #                                                         verbose=self.config.verbose)
 
     async def init(self):
         print("Starting handshake with worker...")

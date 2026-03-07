@@ -132,17 +132,23 @@ def run_pike_o(args, run_dir: Path):
         cwd=pike_oe_dir,
     )
 
+    if args.server_type != "google" or args.model_name != "gemini-2.5-pro":
+        # TODO: explain that pike-o configuration is currently fixed to google with gemini-2.5-pro,
+        # and if a user wants to override this, they will need to modify examples/kernelbench/config.yaml
+        # within the pike-openevolve repo that was just cloned
+        # There they will need to modify the model and API base
+        raise Exception("")
+
     run_script = pike_oe_dir / "examples" / "kernelbench" / "run.py"
     cmd = [
         sys.executable, str(run_script),
         "--pike-dir", str(root_dir),
-        "--output-dir", str(run_dir),
+        "--run-dir", str(run_dir),
         "--level", args.level,
-        "--server-type", args.server_type,
-        "--model-name", args.model_name,
         "--task-start", str(args.task_start),
         "--task-end", str(args.task_end),
         "--eval-port", str(args.port),
+        "--max-fix-attempts", str(args.max_fix_attempts),
     ]
     print(f"Running PIKE-O: {' '.join(cmd)}")
     subprocess.run(cmd, check=True, cwd=root_dir)
@@ -166,7 +172,7 @@ def main():
     )
     parser.add_argument(
         "--server-type", type=str, required=True,
-        help="LLM server type (e.g. google, anthropic, openai)",
+        help="LLM server type (e.g. google, openai)",
     )
     parser.add_argument(
         "--model-name", type=str, required=True,

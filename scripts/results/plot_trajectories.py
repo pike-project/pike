@@ -82,7 +82,7 @@ def main(output_dir: Path, level: str, paper: bool = False):
         for file_key, label, col, linestyle in plot_map:
             csv_path = data_dir / f"{file_key}.csv"
             if not csv_path.exists():
-                print(f"⚠️ Missing CSV: {csv_path}")
+                # print(f"Missing CSV: {csv_path}")
                 continue
 
             df = pd.read_csv(csv_path)

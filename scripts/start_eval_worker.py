@@ -200,8 +200,10 @@ class EvalWorker:
                     # print(f"[stderr]\n{stderr}")
 
             except asyncio.TimeoutError:
+                print(f"Task {eval_id} timed out, killing...")
                 proc.kill()
                 await proc.wait()
+                print(f"Task {eval_id} killed.")
                 
                 timed_out = True
 

@@ -70,6 +70,14 @@ As noted above, running a PIKE search requires two components running simultaneo
 
 Start the Eval Worker first, then run the search in a second terminal.
 
+### Dry Run
+
+Try a dry run first to test the host components (does not require the Eval Worker to be running):
+
+```bash
+./tools/dry_run.sh
+```
+
 ### Start Eval Worker
 
 Ensure Docker and NVIDIA Container Toolkit are installed, then start the containerized Eval Worker (this script will fetch the container from online if not yet installed):
@@ -82,19 +90,13 @@ python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere
 
 `scripts/run_search.py` is a simple, unified entry point for PIKE-B and PIKE-O. It automatically manages multiple components, including an eval HTTP server that is for internal use only. The default port for this internal server is 8000, but this can be adjusted with the `--port` flag (any available port should work fine).
 
-Try a dry run first (does not require the Eval Worker to be running):
-
 ```bash
-python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50 --dry-run
+python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50
 ```
 
 You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/level_<level>/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
 
-The dry run simulates eval responses without hitting the worker. The dry run will still generate a run dir, but it can be safely removed since it just generates bogus data. Once satisfied, run without `--dry-run` (Eval Worker must be running).
-
-For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically. This strategy does not currently have a dry run mode.
-
-For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
+For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically.
 
 ### Evaluate Baselines
 
@@ -135,6 +137,8 @@ The `--paper` option should only be used on original paper data, as it only incl
 ## Documentation
 
 Additional documentation is available in the [`docs/`](docs/) directory, covering the eval worker, containers, HPC cluster setup, LLM API setup, profiling, and troubleshooting.
+
+For advanced setups (running components separately, remote eval server), see [`docs/advanced_setup.md`](docs/advanced_setup.md).
 
 ## Citation
 

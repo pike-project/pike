@@ -88,6 +88,8 @@ Ensure Docker and NVIDIA Container Toolkit are installed, then start the contain
 python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 20 --pull-image
 ```
 
+If you need to restart the worker in the middle of a run, clear any outstanding messages via `rm -rf worker_io`
+
 ### Evaluate Baselines
 
 This step collects runtimes for the original PyTorch code, allowing calculation of speedups. This step can be run before or after the search, but both steps MUST happen before generating figures.

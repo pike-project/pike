@@ -1,0 +1,3 @@
+{
+    "docker_image": "ghcr.io/knagaitsev/kernel-bench-deps:v0.7"
+}

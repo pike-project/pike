@@ -140,13 +140,25 @@ def main():
         cmd += run_cmd
 
     else: # docker or podman-hpc
+        uid = os.getuid()
+        gid = os.getgid()
+        username = os.environ.get("USER", "worker")
+
+        # Create a passwd file so the UID resolves inside the container
+        # (needed by e.g. torch.compile which calls getpass.getuser())
+        passwd_file = worker_dir / "passwd"
+        with open(passwd_file, "w") as f:
+            f.write(f"{username}:x:{uid}:{gid}::{os.environ.get('HOME', '/tmp')}:/bin/sh\n")
+
         flags_str = f"""
                 --gpus all --cap-drop=ALL --network=none
-                --tmpfs /tmp
+                --user {uid}:{gid}
+                --tmpfs /tmp:exec
                 --tmpfs /cache
-                --tmpfs /scratch
+                --tmpfs /scratch:exec
                 --volume {input_dir}:/input
                 --volume {output_dir}:/output
+                --volume {passwd_file}:/etc/passwd:ro
                 --security-opt no-new-privileges --rm
                 -it
             """

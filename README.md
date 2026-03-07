@@ -78,6 +78,8 @@ Try a dry run first to test the host components (does not require the Eval Worke
 ./tools/dry_run.sh
 ```
 
+If everything worked correctly, you should figures with bogus data in `data/dry-run/pike-out/h100_level_3-pike/results/figs`.
+
 ### Start Eval Worker
 
 Ensure Docker and NVIDIA Container Toolkit are installed, then start the containerized Eval Worker (this script will fetch the container from online if not yet installed):

@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -48,14 +49,15 @@ def main():
     # could be replaced with docker, the only flag that will need to be adjusted is --gpu (podman-hpc specific)
     container_cmd = args.engine
 
+    root_dir = Path.resolve(curr_path / "../..")
+
     local_image_name = "kernel-bench-deps"
-    remote_image_name = "ghcr.io/knagaitsev/kernel-bench-deps:v0.6"
+    with open(root_dir / "dependencies.json") as f:
+        remote_image_name = json.load(f)["docker_image"]
 
     non_root_user = False
     read_only_fs = True
     pull_from_docker_hub = args.pull_image
-
-    root_dir = Path.resolve(curr_path / "../..")
 
     app_bind_dir = Path("/app")
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import sys
 import signal
@@ -67,11 +68,14 @@ def main():
         env["APPTAINER_TMPDIR"] = str(tmp_dir)
         env["APPTAINER_CACHEDIR"] = str(cache_dir)
 
+        with open(root_dir / "dependencies.json") as f:
+            docker_image = json.load(f)["docker_image"]
+
         subprocess.run(
             [
                 "apptainer", "pull",
                 str(image_path),
-                "docker://ghcr.io/knagaitsev/kernel-bench-deps:v0.6"
+                "docker://" + docker_image
             ],
             check=True,
             env=env

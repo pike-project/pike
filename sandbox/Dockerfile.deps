@@ -4,6 +4,7 @@ WORKDIR /deps
 
 COPY requirements.txt /deps/
 COPY requirements_eval_worker.txt /deps/
+COPY requirements_eval_worker_level_5.txt /deps/
 
 # Update and install Python and pip
 RUN apt-get update && apt-get install -y \
@@ -20,11 +21,7 @@ ENV PATH="$VENV_PATH/bin:$PATH"
 
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt
-# Install torch first — flash_attn's setup.py imports torch at build time
-RUN pip install torch==2.8.0
 RUN pip install -r requirements_eval_worker.txt
-# flash_attn needs --no-build-isolation so its setup.py can see the installed torch;
-# pre-install its build deps (psutil, packaging, ninja) that would normally come from build isolation
-RUN pip install psutil packaging ninja && pip install flash_attn --no-build-isolation
+RUN pip install -r requirements_eval_worker_level_5.txt
 
 WORKDIR /app

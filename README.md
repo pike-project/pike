@@ -88,9 +88,21 @@ Ensure Docker and NVIDIA Container Toolkit are installed, then start the contain
 python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 20 --pull-image
 ```
 
+### Evaluate Baselines
+
+This step collects runtimes for the original PyTorch code, allowing calculation of speedups. This step can be run before or after the search, but both steps MUST happen before generating figures.
+
+```bash
+python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
+```
+
+This script and the `run_search` script below run an eval HTTP server that is for internal use only. The default port for this internal server is 8000, but this can be adjusted with the `--port` flag (any available port should work fine).
+
 ### Run the Search
 
-`scripts/run_search.py` is a simple, unified entry point for PIKE-B and PIKE-O. It automatically manages multiple components, including an eval HTTP server that is for internal use only. The default port for this internal server is 8000, but this can be adjusted with the `--port` flag (any available port should work fine).
+Keep the Eval Worker running for this. The search process submits PyTorch/kernel code to the evaluator, just like in the Evaluate Baselines step.
+
+**Important:** use the same `--output-dir` here as you used for baseline evaluation, so that `generate_figs.py` can find both the search results and the baseline runtimes in one place.
 
 ```bash
 python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50
@@ -99,18 +111,6 @@ python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data -
 You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/level_<level>/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
 
 For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically.
-
-### Evaluate Baselines
-
-Keep the Eval Worker running for this. It submits PyTorch/kernel code to the evaluator, just like the search process does.
-
-**Important:** use the same `--output-dir` here as you used for the search, so that `generate_figs.py` can find both the search results and the baseline runtimes in one place.
-
-This step can be run before or after the search, but both steps MUST happen before generating figures, as this step collects runtimes for the original PyTorch code, allowing calculation of speedups.
-
-```bash
-python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
-```
 
 ### Generate Figures
 

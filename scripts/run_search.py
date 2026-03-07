@@ -3,6 +3,7 @@ Unified entry point for running PIKE-B or PIKE-O search, with the eval HTTP
 server started automatically.
 
 Usage:
+    # PIKE-B (requires --server-type, --model-name, and --query-budget):
     python scripts/run_search.py \
         --output-dir data/pike-data \
         --strategy pike-b \
@@ -18,6 +19,19 @@ Usage:
         [--worker-io-dir worker_io] \
         [--no-eval-server] \
         [--dry-run]
+
+    # PIKE-O (--server-type, --model-name, and --query-budget must not be set;
+    #         model and iteration config lives in pike-openevolve's config.yaml):
+    python scripts/run_search.py \
+        --output-dir data/pike-data \
+        --strategy pike-o \
+        --level 3-pike \
+        --run-name h100_level_3-pike_pike-o \
+        [--task-start 1] [--task-end 50] \
+        [--max-fix-attempts 5] \
+        [--port 8000] \
+        [--worker-io-dir worker_io] \
+        [--no-eval-server]
 """
 
 import os
@@ -132,13 +146,6 @@ def run_pike_o(args, run_dir: Path):
         cwd=pike_oe_dir,
     )
 
-    if args.server_type != "google" or args.model_name != "gemini-2.5-pro":
-        # TODO: explain that pike-o configuration is currently fixed to google with gemini-2.5-pro,
-        # and if a user wants to override this, they will need to modify examples/kernelbench/config.yaml
-        # within the pike-openevolve repo that was just cloned
-        # There they will need to modify the model and API base
-        raise Exception("")
-
     run_script = pike_oe_dir / "examples" / "kernelbench" / "run.py"
     cmd = [
         sys.executable, str(run_script),
@@ -171,12 +178,12 @@ def main():
         help="KernelBench level (e.g. 3-pike, 5)",
     )
     parser.add_argument(
-        "--server-type", type=str, required=True,
-        help="LLM server type (e.g. google, openai)",
+        "--server-type", type=str, default=None,
+        help="LLM server type (e.g. google, openai). Required for pike-b, must not be set for pike-o.",
     )
     parser.add_argument(
-        "--model-name", type=str, required=True,
-        help="LLM model name (e.g. gemini-2.5-pro)",
+        "--model-name", type=str, default=None,
+        help="LLM model name (e.g. gemini-2.5-pro). Required for pike-b, must not be set for pike-o.",
     )
     parser.add_argument(
         "--run-name", type=str, required=True,
@@ -191,8 +198,8 @@ def main():
         help="Task range end, inclusive (default: 50)",
     )
     parser.add_argument(
-        "--query-budget", type=int, default=300,
-        help="Max LLM query budget (default: 300)",
+        "--query-budget", type=int, default=None,
+        help="Max LLM query budget (default: 300). Required for pike-b, must not be set for pike-o.",
     )
     parser.add_argument(
         "--num-branches", type=int, default=10,
@@ -200,7 +207,7 @@ def main():
     )
     parser.add_argument(
         "--max-fix-attempts", type=int, default=5,
-        help="Max error-fix attempts per branch for PIKE-B (default: 5)",
+        help="Max error-fix attempts per branch (default: 5)",
     )
     parser.add_argument(
         "--port", type=int, default=8000,
@@ -220,8 +227,26 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.strategy == "pike-o" and args.dry_run:
-        parser.error("--dry-run is not supported for pike-o")
+    if args.strategy == "pike-b":
+        if not args.server_type or not args.model_name:
+            parser.error("--server-type and --model-name are required for pike-b")
+        if args.query_budget is None:
+            args.query_budget = 300
+    elif args.strategy == "pike-o":
+        if args.server_type or args.model_name:
+            parser.error(
+                "--server-type and --model-name must not be set for pike-o. "
+                "PIKE-O model configuration is controlled by examples/kernelbench/config.yaml "
+                "in the pike-openevolve repo."
+            )
+        if args.query_budget is not None:
+            parser.error(
+                "--query-budget must not be set for pike-o. "
+                "PIKE-O query budget is controlled by the max_iterations value in "
+                "examples/kernelbench/config.yaml in the pike-openevolve repo."
+            )
+        if args.dry_run:
+            parser.error("--dry-run is not supported for pike-o")
 
     output_dir = Path(args.output_dir)
     worker_io_dir = Path(args.worker_io_dir)

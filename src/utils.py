@@ -30,6 +30,7 @@ ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
 SAMBANOVA_API_KEY = os.environ.get("SAMBANOVA_API_KEY")
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY")
 CBORG_API_KEY = os.environ.get("CBORG_API_KEY")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
 
 ########################################################
@@ -157,6 +158,12 @@ def query_server(
                 base_url="https://api.cborg.lbl.gov"
             )
             model = model_name
+        case "openrouter":
+            client = OpenAI(
+                api_key=OPENROUTER_API_KEY,
+                base_url="https://openrouter.ai/api/v1"
+            )
+            model = model_name
         case _:
             raise NotImplementedError
 
@@ -248,7 +255,7 @@ def query_server(
                 # do not use temperature or top_p
             )
         outputs = [choice.message.content for choice in response.choices]
-    elif server_type == "openai" or server_type == "cborg":
+    elif server_type in ("openai", "cborg", "openrouter"):
         if is_reasoning_model:
             print(f"Server type: {server_type}, Using OpenAI reasoning model: {model} with reasoning effort {reasoning_effort}, max_completion_tokens: {max_tokens}")
             response = client.chat.completions.create(
@@ -389,6 +396,11 @@ SERVER_PRESETS = {
     "cborg": {
         "model_name": "gpt-4o-2024-08-06",
         # "model_name": "o1-preview-2024-09-12", # be careful with this one
+        "temperature": 0.0,
+        "max_tokens": 4096,
+    },
+    "openrouter": {
+        "model_name": "deepseek/deepseek-chat-v3-0324",
         "temperature": 0.0,
         "max_tokens": 4096,
     },

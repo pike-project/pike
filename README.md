@@ -51,6 +51,7 @@ Save the following API key environment variables to `~/.bashrc`:
 ```bash
 export OPENAI_API_KEY=<...>
 export GEMINI_API_KEY=<...>
+export OPENROUTER_API_KEY=<...>
 ```
 
 Then source the changes via:
@@ -109,6 +110,8 @@ Keep the Eval Worker running for this. The search process submits PyTorch/kernel
 ```bash
 python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50
 ```
+
+Set desired server type (e.g. google, openai, openrouter), and model name (e.g. `gemini-2.5-pro`, `gpt-oss-120b`)
 
 You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/level_<level>/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
 

@@ -23,7 +23,7 @@ class DiskChannelManager:
             "type": "handshake",
         })
 
-    async def submit(self, code, level, task):
+    async def submit(self, code, level, task, mode="eager"):
         eval_id = uuid.uuid4()
         await self.disk_channel.send({
             "id": str(eval_id),
@@ -31,7 +31,7 @@ class DiskChannelManager:
             "level": level,
             "task": task,
             "code": code,
-            "mode": "eager"
+            "mode": mode,
         })
         return eval_id
 
@@ -82,6 +82,7 @@ class CustomHandler(BaseHTTPRequestHandler):
                 code = unquote(query_params.get("code")[0])
                 level = str(query_params.get("level")[0])
                 task = int(query_params.get("task")[0])
+                mode = str(query_params.get("mode", ["eager"])[0])
             except Exception:
                 self.send_response(500)
                 self.end_headers()
@@ -89,7 +90,7 @@ class CustomHandler(BaseHTTPRequestHandler):
                 return
 
             fut = asyncio.run_coroutine_threadsafe(
-                manager.submit(code, level, task), self.loop
+                manager.submit(code, level, task, mode), self.loop
             )
             eval_id = fut.result()
 

@@ -70,8 +70,7 @@ async def run_baseline(
     output_name: str,
     output_dir: Path,
     level: str,
-    worker_input_dir: Path,
-    worker_output_dir: Path,
+    eval_port: int,
     dry_run: bool,
 ):
     """Run one baseline evaluation and write results JSON."""
@@ -100,10 +99,9 @@ async def run_baseline(
         run_dir=None,
         output_name=output_name,
         output_dir=output_dir,
-        worker_input_dir=worker_input_dir,
-        worker_output_dir=worker_output_dir,
+        eval_port=eval_port,
         dry_run=dry_run,
-        sequential=False,
+        sequential=True,
     )
     await eval_sol.run()
     print(f"Wrote {output_dir / output_name}.json")
@@ -113,8 +111,6 @@ async def run_all_baselines(args):
     output_dir = Path(args.output_dir)
     level = args.level
     worker_io_dir = Path(args.worker_io_dir)
-    worker_input_dir = worker_io_dir / "input"
-    worker_output_dir = worker_io_dir / "output"
     dry_run = args.dry_run
 
     baseline_dir = output_dir / "baseline-runtimes" / f"h100_level_{level}"
@@ -129,7 +125,7 @@ async def run_all_baselines(args):
 
     try:
         evals = [
-            ("baseline", "eager",     "eager"),
+            # ("baseline", "eager",     "eager"),
             ("baseline", "compile",   "compile"),
             ("baseline", "tensorrt",  "tensorrt"),
             ("metr",     "eager",     "metr"),
@@ -143,8 +139,7 @@ async def run_all_baselines(args):
                 output_name=output_name,
                 output_dir=baseline_dir,
                 level=level,
-                worker_input_dir=worker_input_dir,
-                worker_output_dir=worker_output_dir,
+                eval_port=args.port,
                 dry_run=dry_run,
             )
     finally:

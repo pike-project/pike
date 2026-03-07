@@ -3,36 +3,26 @@ import os, sys
 from pathlib import Path
 import asyncio
 import subprocess
+import time
 import uuid
 import json
 import argparse
 from datetime import datetime
+import requests
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
-from src.util.disk_channel import DiskChannel
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 root_dir = (curr_dir / "../..").resolve()
 deps_dir = root_dir / "local/deps"
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, worker_input_dir: Path, worker_output_dir: Path, dry_run: bool, sequential: bool):
-        tx_dir = worker_input_dir
-        rx_dir = worker_output_dir
-
-        print(tx_dir, rx_dir)
-
-        if not dry_run:
-            self.disk_channel = DiskChannel(tx_dir, rx_dir)
-        else:
-            self.disk_channel = None
+    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, eval_port: int, dry_run: bool, sequential: bool):
+        self.eval_port = eval_port
+        self.base_url = f"http://localhost:{eval_port}"
 
         self.run_dir = run_dir
-
         self.output_dir = output_dir
-
-        # self.dup_count = 1
 
         self.level = level
         self.mode = mode
@@ -41,7 +31,7 @@ class EvalSolutions:
         self.output_name = output_name
         self.dry_run = dry_run
         self.sequential = sequential
-    
+
     def dry_run_metr_samples(self):
         """Generate placeholder samples using ground-truth task IDs (no METR repo needed)."""
         gt_samples = self.ground_truth_solutions()
@@ -63,7 +53,7 @@ class EvalSolutions:
                 continue
 
             task = int(filename.split("_")[1].split(".py")[0])
-            
+
             file_path = level_dir / filename
 
             with open(file_path) as f:
@@ -88,12 +78,12 @@ class EvalSolutions:
                 continue
 
             task = int(filename.split("_")[0])
-            
+
             file_path = level_dir / filename
 
             with open(file_path) as f:
                 code = f.read()
-            
+
             tasks.append({
                 "code": code,
                 "problem_id": task
@@ -111,7 +101,7 @@ class EvalSolutions:
                 continue
 
             task = int(filename.split("_")[1].split(".py")[0])
-            
+
             file_path = sols_dir / filename
 
             with open(file_path) as f:
@@ -168,154 +158,162 @@ class EvalSolutions:
 
         return samples
 
+    async def wait_for_ready(self):
+        if self.dry_run:
+            return
+        print("Waiting for eval server...")
+        while True:
+            try:
+                res = requests.get(f"{self.base_url}/ready")
+                if res.text == "true":
+                    break
+            except Exception:
+                pass
+            await asyncio.sleep(1.0)
+        print("Eval server ready.")
+
+    def _make_dry_run_result(self, eval_id):
+        return {
+            "id": eval_id,
+            "results": {
+                "stdout": "this is dry_run stdout",
+                "stderr": "this is dry_run stderr",
+                "timed_out": False,
+                "eval_results": {
+                    "loaded": True,
+                    "correct": True,
+                    "runtime": random.random() * 10,
+                    "max_diff": [0.0001],
+                }
+            },
+        }
+
+    def _poll_for_result(self, eval_id):
+        """Poll /poll until a non-null result is returned. Returns data dict or None on timeout."""
+        start_time = time.time()
+        while True:
+            try:
+                res = requests.get(f"{self.base_url}/poll", params={"id": eval_id})
+                data = res.json()
+                if data is not None:
+                    return data
+            except Exception as e:
+                print(f"Poll error for {eval_id}: {e}")
+
+            if time.time() - start_time > 60 * 60:
+                print(f"Timeout waiting for eval_id {eval_id}")
+                return None
+
+            time.sleep(1.0)
+
+    def _process_result(self, data, sample):
+        """Extract results_data from a poll response. Always returns a dict (never raises)."""
+        sample_id = sample["sample_id"]
+        problem_id = sample["problem_id"]
+
+        try:
+            results = data.get("results", {})
+        except Exception:
+            results = {}
+
+        runtime = None
+        try:
+            runtime = results["eval_results"]["runtime"]
+        except Exception:
+            print(f"================================================================")
+            print(f"------------------- Task {problem_id} stdout -------------------")
+            print(results.get("stdout"))
+            print(f"------------------- Task {problem_id} stderr -------------------")
+            print(results.get("stderr"))
+            print(f"================================================================")
+
+        print(f"Eval result for task: {problem_id}, runtime: {runtime}")
+
+        return {
+            "sample_id": sample_id,
+            "problem_id": problem_id,
+            "results": results,
+            "runtime": runtime,
+        }
+
     async def eval_samples(self, samples):
         eval_id_to_sample = {}
 
         for sample in samples:
-            eval_id = str(uuid.uuid4())
-            # sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
             code = sample["code"]
 
-            eval_id_to_sample[eval_id] = sample
+            if self.dry_run:
+                eval_id = str(uuid.uuid4())
+            else:
+                try:
+                    res = requests.get(f"{self.base_url}/submit", params={
+                        "code": code,
+                        "level": self.level,
+                        "task": problem_id,
+                        "mode": self.mode,
+                    })
+                    eval_id = res.text
+                except Exception as e:
+                    print(f"Submit error for task {problem_id}: {e}")
+                    continue
 
-            if not self.dry_run:
-                await self.disk_channel.send({
-                    "id": eval_id,
-                    "type": "eval",
-                    "level": self.level,
-                    "task": problem_id,
-                    "code": code,
-                    "mode": self.mode
-                })
+            eval_id_to_sample[eval_id] = sample
 
         all_results = []
 
-        eval_ids = list(eval_id_to_sample.keys())
-
-        num_samples = len(samples)
-        for recv_idx in range(num_samples):
-            # recv, then get the sample based on the eval_id
+        for eval_id, sample in eval_id_to_sample.items():
             if self.dry_run:
-                res = {
-                    "id": eval_ids[recv_idx],
-                    "results": {
-                        "stdout": "this is dry_run stdout",
-                        "stderr": "this is dry_run stderr",
-                        "timed_out": False,
-                        "eval_results": {
-                            "loaded": True,
-                            "correct": True,
-                            "runtime": random.random() * 10,
-                            "max_diff": [0.0001],
-                        }
-                    },
-                }
+                data = self._make_dry_run_result(eval_id)
             else:
-                res = await self.disk_channel.recv()
-            eval_id = res["id"]
-            results = res["results"]
-            sample = eval_id_to_sample[eval_id]
-            sample_id = sample["sample_id"]
-            problem_id = sample["problem_id"]
+                data = await asyncio.to_thread(self._poll_for_result, eval_id)
 
-            runtime = None
-            try:
-                runtime = res["results"]["eval_results"]["runtime"]
-            except Exception as e:
-                print(f"================================================================")
-                print(f"------------------- Task {problem_id} stdout -------------------")
-                print(res["results"]["stdout"])
-                print(f"------------------- Task {problem_id} stderr -------------------")
-                print(res["results"]["stderr"])
-                print(f"================================================================")
+            if data is None:
+                continue
 
-            print(f"Eval result for task: {problem_id}, runtime: {runtime}")
+            all_results.append(self._process_result(data, sample))
 
-            results_data = {
-                "sample_id": sample_id,
-                "problem_id": problem_id,
-                "results": results,
-                "runtime": runtime,
-            }
-
-            all_results.append(results_data)
-        
         all_results.sort(key=lambda x: x["sample_id"])
 
         return all_results
 
     async def eval_samples_seq(self, samples):
-        eval_id_to_sample = {}
-
         all_results = []
 
         for sample in samples:
-            eval_id = str(uuid.uuid4())
-            # sample_id = sample["sample_id"]
             problem_id = sample["problem_id"]
             code = sample["code"]
-
-            eval_id_to_sample[eval_id] = sample
+            eval_id = str(uuid.uuid4())
 
             if self.dry_run:
-                res = {
-                    "id": eval_id,
-                    "results": {
-                        "stdout": "this is dry_run stdout",
-                        "stderr": "this is dry_run stderr",
-                        "timed_out": False,
-                        "eval_results": {
-                            "loaded": True,
-                            "correct": True,
-                            "runtime": random.random() * 10,
-                            "max_diff": [0.0001],
-                        }
-                    },
-                }
+                data = self._make_dry_run_result(eval_id)
             else:
-                await self.disk_channel.send({
-                    "id": eval_id,
-                    "type": "eval",
-                    "level": self.level,
-                    "task": problem_id,
-                    "code": code,
-                    "mode": self.mode
-                })
-                res = await self.disk_channel.recv()
-            eval_id = res["id"]
-            results = res["results"]
-            sample = eval_id_to_sample[eval_id]
-            sample_id = sample["sample_id"]
-            problem_id = sample["problem_id"]
+                try:
+                    res = requests.get(f"{self.base_url}/submit", params={
+                        "code": code,
+                        "level": self.level,
+                        "task": problem_id,
+                        "mode": self.mode,
+                    })
+                    eval_id = res.text
+                except Exception as e:
+                    print(f"Submit error for task {problem_id}: {e}")
+                    continue
 
-            runtime = None
-            try:
-                runtime = res["results"]["eval_results"]["runtime"]
-            except Exception as e:
-                print(f"================================================================")
-                print(f"------------------- Task {problem_id} stdout -------------------")
-                print(res["results"]["stdout"])
-                print(f"------------------- Task {problem_id} stderr -------------------")
-                print(res["results"]["stderr"])
-                print(f"================================================================")
+                data = await asyncio.to_thread(self._poll_for_result, eval_id)
 
-            print(f"Eval result for task: {problem_id}, runtime: {runtime}")
+            if data is None:
+                continue
 
-            results_data = {
-                "sample_id": sample_id,
-                "problem_id": problem_id,
-                "results": results,
-                "runtime": runtime,
-            }
+            all_results.append(self._process_result(data, sample))
 
-            all_results.append(results_data)
-        
         all_results.sort(key=lambda x: x["sample_id"])
 
         return all_results
 
     async def run(self):
+        await self.wait_for_ready()
+
         samples = self.get_samples()
 
         if self.sequential:
@@ -333,13 +331,11 @@ class EvalSolutions:
         with open(results_path, "w") as f:
             json.dump(full_results, f, indent=4)
 
-
     async def close(self):
-        print("Sending close message to worker...")
+        if not self.dry_run:
+            print("Sending close message to worker...")
+            requests.get(f"{self.base_url}/close")
 
-        await self.disk_channel.send({
-            "type": "close"
-        })
 
 async def main():
     parser = argparse.ArgumentParser()
@@ -351,8 +347,7 @@ async def main():
     parser.add_argument("--run-dir", type=str, required=False)
     parser.add_argument("--output-name", type=str, required=False)
     parser.add_argument("--output-dir", type=str, required=False)
-    parser.add_argument("--worker-input-dir", type=str, required=False)
-    parser.add_argument("--worker-output-dir", type=str, required=False)
+    parser.add_argument("--eval-port", type=int, default=8000)
     parser.add_argument("--dry-run", action='store_true')
     parser.add_argument("--close-worker", action='store_true')
     parser.add_argument("--sequential", action='store_true')
@@ -413,21 +408,11 @@ async def main():
 
     os.makedirs(output_dir, exist_ok=True)
 
-    worker_input_dir = (curr_dir / "../../worker_io/input").resolve()
-
-    if args.worker_input_dir is not None:
-        worker_input_dir = Path(args.worker_input_dir)
-
-    worker_output_dir = (curr_dir / "../../worker_io/output").resolve()
-
-    if args.worker_output_dir is not None:
-        worker_output_dir = Path(args.worker_output_dir)
-
     output_name = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     if args.output_name is not None:
         output_name = args.output_name
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, worker_input_dir, worker_output_dir, args.dry_run, args.sequential)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, args.eval_port, args.dry_run, args.sequential)
     await eval_sol.run()
 
     if args.close_worker:

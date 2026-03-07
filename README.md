@@ -85,7 +85,7 @@ If everything worked correctly, you should figures with bogus data in `data/dry-
 Ensure Docker and NVIDIA Container Toolkit are installed, then start the containerized Eval Worker (this script will fetch the container from online if not yet installed):
 
 ```bash
-python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 20 --pull-image
+python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 10 --pull-image
 ```
 
 If you need to restart the worker in the middle of a run, clear any outstanding messages via `rm -rf worker_io`

@@ -49,7 +49,7 @@ def main():
     container_cmd = args.engine
 
     local_image_name = "kernel-bench-deps"
-    remote_image_name = "docker.io/loonride/kernel-bench-deps:v0.5"
+    remote_image_name = "ghcr.io/knagaitsev/kernel-bench-deps:v0.6"
 
     non_root_user = False
     read_only_fs = True

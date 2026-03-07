@@ -71,7 +71,7 @@ def main():
             [
                 "apptainer", "pull",
                 str(image_path),
-                "docker://docker.io/loonride/kernel-bench-deps:v0.5"
+                "docker://ghcr.io/knagaitsev/kernel-bench-deps:v0.6"
             ],
             check=True,
             env=env

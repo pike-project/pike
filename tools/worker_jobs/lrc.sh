@@ -10,7 +10,7 @@ if [ ! -f "$IMAGE_PATH" ]; then
 
     # NOTE: must pass in tmp dir and cache dir, since otherwise /tmp does not have sufficient space
     # to set up the container on Lawrencium
-    APPTAINER_TMPDIR=$SCRATCH/.cache/apptainer/tmp APPTAINER_CACHEDIR=$SCRATCH/.cache/apptainer/cache apptainer pull $IMAGE_PATH docker://docker.io/loonride/kernel-bench-deps:v0.5
+    APPTAINER_TMPDIR=$SCRATCH/.cache/apptainer/tmp APPTAINER_CACHEDIR=$SCRATCH/.cache/apptainer/cache apptainer pull $IMAGE_PATH docker://ghcr.io/knagaitsev/kernel-bench-deps:v0.6
 fi
 
 # TIME_STR=$(date +"%Y-%m-%d-%H-%M-%S")

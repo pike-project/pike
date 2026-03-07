@@ -20,13 +20,21 @@ To build the container:
 ./sandbox/tools/build-deps.sh
 ```
 
-To push the container:
+Push the container to Dockerhub (Old images can be found here: https://hub.docker.com/r/loonride/kernel-bench-deps)
 
 ```bash
 # to push the built image (if you need to)
 docker login docker.io
 docker tag kernel-bench-deps:latest docker.io/<username>/kernel-bench-deps:<tag>
 docker push docker.io/<username>/kernel-bench-deps:<tag>
+```
+
+Push the container got GHCR (New images can be found here: )
+
+```bash
+docker login ghcr.io
+docker tag kernel-bench-deps:latest ghcr.io/<username>/kernel-bench-deps:<tag>
+docker push ghcr.io/<username>/kernel-bench-deps:<tag>
 ```
 
 Attach to running docker container:

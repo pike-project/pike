@@ -13,4 +13,4 @@ datasets==4.5.0
 # Level 5 specific
 diffusers
 opt_einsum
-flash_attn
+# flash_attn is installed separately in the Dockerfile (needs --no-build-isolation)

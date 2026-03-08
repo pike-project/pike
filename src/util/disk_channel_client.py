@@ -23,11 +23,11 @@ class DiskChannelClient:
             time.sleep(self.poll_interval)
 
     def submit(self, code: str, level: str, task: int, mode: str | None = None) -> str:
-        """POST-like submit via GET /submit. Returns eval_id string. Raises on failure."""
+        """POST /submit with JSON body. Returns eval_id string. Raises on failure."""
         params = {"code": code, "level": level, "task": task}
         if mode is not None:
             params["mode"] = mode
-        res = requests.get(f"{self.base_url}/submit", params=params)
+        res = requests.post(f"{self.base_url}/submit", json=params)
         res.raise_for_status()
         return res.text
 

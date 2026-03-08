@@ -9,7 +9,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from src.util.disk_channel import DiskChannel
 from functools import partial
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs
 
 logger = logging.getLogger("disk_channel_server")
 
@@ -88,18 +88,20 @@ class CustomHandler(BaseHTTPRequestHandler):
         # if self.verbose:
         #     super().log_message(format, *args)
 
-    def do_GET(self):
+    def do_POST(self):
         manager = self.manager
         parsed_url = urlparse(self.path)
         path = parsed_url.path
-        query_params = parse_qs(parsed_url.query)
 
         if path == "/submit":
             try:
-                code = unquote(query_params.get("code")[0])
-                level = str(query_params.get("level")[0])
-                task = int(query_params.get("task")[0])
-                mode = str(query_params.get("mode", ["eager"])[0])
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                data = json.loads(body)
+                code = data["code"]
+                level = str(data["level"])
+                task = int(data["task"])
+                mode = str(data.get("mode", "eager"))
             except Exception:
                 self.send_response(500)
                 self.end_headers()
@@ -118,7 +120,18 @@ class CustomHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(f"{eval_id}".encode())
-        elif path == "/ready":
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"Not Found")
+
+    def do_GET(self):
+        manager = self.manager
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+        query_params = parse_qs(parsed_url.query)
+
+        if path == "/ready":
             data_str = json.dumps(manager.handshake_complete)
 
             self.send_response(200)

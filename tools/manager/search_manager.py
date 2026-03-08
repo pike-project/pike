@@ -1,12 +1,16 @@
 import os
+import sys
 import subprocess
 from pathlib import Path
 from time import sleep
 from datetime import datetime
-import requests
 import argparse
+
 from math import ceil
 import time
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from src.util.disk_channel_client import DiskChannelClient
 
 def split_into_ranges(nums, n_ranges):
     if not nums:
@@ -226,7 +230,7 @@ class SearchManager:
 
         sleep(10)
 
-        requests.get(f"http://localhost:{self.port}/close")
+        DiskChannelClient(port=self.port).close()
 
         disk_channel_server.terminate()
         disk_channel_server.wait()

@@ -7,9 +7,7 @@ from time import sleep
 import asyncio
 import uuid
 import random
-import time
 from enum import Enum
-import requests
 import argparse
 from math import ceil
 
@@ -21,6 +19,7 @@ import src.query_strategies as query_strategies
 from src.utils import extract_first_code, extract_idea_list, set_gpu_arch, read_file, create_inference_server_from_presets, maybe_multithread, maybe_multithread_ordered
 
 import src.util.query_util as query_util
+from src.util.disk_channel_client import DiskChannelClient
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
@@ -235,6 +234,9 @@ class ParallelTreeSearch:
 
         self.cheap_inference_server = self.inference_server
 
+        if not config.dry_run:
+            self.eval_client = DiskChannelClient(port=config.eval_port)
+
         # self.cheap_inference_server = create_inference_server_from_presets(server_type=server_type,
         #                                                         model_name="gemini-2.5-flash",
         #                                                         temperature=self.config.temperature,
@@ -245,17 +247,7 @@ class ParallelTreeSearch:
         print("Starting handshake with worker...")
 
         if not self.config.dry_run:
-            base_url = f"http://localhost:{self.config.eval_port}"
-
-            while True:
-                try:
-                    res = requests.get(f"{base_url}/ready")
-                    ready_str = res.text
-
-                    if ready_str == "true":
-                        break
-                except Exception as e:
-                    continue
+            await asyncio.to_thread(self.eval_client.wait_for_ready)
 
         print("Worker handshake complete.")
 
@@ -415,25 +407,15 @@ class ParallelTreeSearch:
 
         eval_id_to_sample = {}
 
-        base_url = f"http://localhost:{self.config.eval_port}"
-
         for sample in samples:
             problem_id = sample["problem_id"]
             code = sample["code"]
-
-            submit_path = "/submit"
-            submit_params = {
-                "code": code,
-                "level": self.config.level,
-                "task": problem_id
-            }
 
             try:
                 if self.config.dry_run:
                     eval_id = str(uuid.uuid4())
                 else:
-                    res = requests.get(f"{base_url}{submit_path}", params=submit_params)
-                    eval_id = res.text
+                    eval_id = self.eval_client.submit(code=code, level=self.config.level, task=problem_id)
 
                 eval_id_to_sample[eval_id] = sample
             except Exception as e:
@@ -441,8 +423,6 @@ class ParallelTreeSearch:
                 continue
 
         all_results = []
-
-        start_time = time.time()
 
         for (eval_id, sample) in eval_id_to_sample.items():
             if self.config.dry_run:
@@ -457,26 +437,7 @@ class ParallelTreeSearch:
                     )
                 continue
 
-            poll_path = "/poll"
-            poll_params = {"id": eval_id}
-
-            data = None
-            while True:
-                try:
-                    res = requests.get(f"{base_url}{poll_path}", params=poll_params)
-                except Exception as e:
-                    print(e)
-                    await asyncio.sleep(1.0)
-                    continue
-                data = res.json()
-                if data is not None:
-                    break
-
-                # one hour timeout to give up
-                if time.time() - start_time > 60 * 60:
-                    break
-
-                await asyncio.sleep(1.0)
+            data = await asyncio.to_thread(self.eval_client.poll_for_result, eval_id)
 
             if data is None:
                 continue

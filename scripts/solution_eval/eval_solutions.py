@@ -4,12 +4,10 @@ import os, sys
 from pathlib import Path
 import asyncio
 import subprocess
-import time
 import uuid
 import json
 import argparse
 from datetime import datetime
-import requests
 
 logger = logging.getLogger("eval_solutions")
 
@@ -19,12 +17,16 @@ curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 root_dir = (curr_dir / "../..").resolve()
 deps_dir = root_dir / "local/deps"
 
+from src.util.disk_channel_client import DiskChannelClient
+
 class EvalSolutions:
     def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, eval_port: int, dry_run: bool, sequential: bool, verbose: bool = False):
         self.eval_port = eval_port
         self.base_url = f"http://localhost:{eval_port}"
 
         self.run_dir = run_dir
+        if not dry_run:
+            self.eval_client = DiskChannelClient(port=eval_port)
         self.output_dir = output_dir
 
         self.level = level
@@ -172,14 +174,7 @@ class EvalSolutions:
         if self.dry_run:
             return
         print("Waiting for eval server...")
-        while True:
-            try:
-                res = requests.get(f"{self.base_url}/ready")
-                if res.text == "true":
-                    break
-            except Exception:
-                pass
-            await asyncio.sleep(1.0)
+        await asyncio.to_thread(self.eval_client.wait_for_ready)
         print("Eval server ready.")
 
     def _make_dry_run_result(self, eval_id):
@@ -197,33 +192,6 @@ class EvalSolutions:
                 }
             },
         }
-
-    def _poll_for_result(self, eval_id):
-        """Poll /poll until a non-null result is returned. Returns data dict or None on timeout."""
-        start_time = time.time()
-        poll_count = 0
-        while True:
-            try:
-                res = requests.get(f"{self.base_url}/poll", params={"id": eval_id})
-                data = res.json()
-                poll_count += 1
-                if data is not None:
-                    elapsed = time.time() - start_time
-                    logger.debug("poll result arrived for eval_id=%s after %d polls (%.1fs)", eval_id, poll_count, elapsed)
-                    return data
-            except Exception as e:
-                print(f"Poll error for {eval_id}: {e}")
-
-            if poll_count % 30 == 0:
-                elapsed = time.time() - start_time
-                logger.debug("still polling eval_id=%s (%d polls, %.1fs elapsed)", eval_id, poll_count, elapsed)
-
-            if time.time() - start_time > 60 * 60:
-                print(f"Timeout waiting for eval_id {eval_id}")
-                logger.debug("TIMEOUT for eval_id=%s after %d polls", eval_id, poll_count)
-                return None
-
-            time.sleep(1.0)
 
     def _process_result(self, data, sample):
         """Extract results_data from a poll response. Always returns a dict (never raises)."""
@@ -267,14 +235,8 @@ class EvalSolutions:
             else:
                 logger.debug("submitting task=%d code_len=%d", problem_id, len(code))
                 try:
-                    res = requests.get(f"{self.base_url}/submit", params={
-                        "code": code,
-                        "level": self.level,
-                        "task": problem_id,
-                        "mode": self.mode,
-                    })
-                    eval_id = res.text
-                    logger.debug("submitted task=%d eval_id=%s http_status=%d", problem_id, eval_id, res.status_code)
+                    eval_id = self.eval_client.submit(code=code, level=self.level, task=problem_id, mode=self.mode)
+                    logger.debug("submitted task=%d eval_id=%s", problem_id, eval_id)
                 except Exception as e:
                     print(f"Submit error for task {problem_id}: {e}")
                     continue
@@ -289,7 +251,7 @@ class EvalSolutions:
             if self.dry_run:
                 data = self._make_dry_run_result(eval_id)
             else:
-                data = await asyncio.to_thread(self._poll_for_result, eval_id)
+                data = await asyncio.to_thread(self.eval_client.poll_for_result, eval_id)
 
             if data is None:
                 continue
@@ -314,20 +276,14 @@ class EvalSolutions:
             else:
                 logger.debug("submitting task=%d code_len=%d", problem_id, len(code))
                 try:
-                    res = requests.get(f"{self.base_url}/submit", params={
-                        "code": code,
-                        "level": self.level,
-                        "task": problem_id,
-                        "mode": self.mode,
-                    })
-                    eval_id = res.text
+                    eval_id = self.eval_client.submit(code=code, level=self.level, task=problem_id, mode=self.mode)
                 except Exception as e:
                     print(f"Submit error for task {problem_id}: {e}")
                     continue
-                
-                logger.debug("submitted task=%d eval_id=%s http_status=%d", problem_id, eval_id, res.status_code)
 
-                data = await asyncio.to_thread(self._poll_for_result, eval_id)
+                logger.debug("submitted task=%d eval_id=%s", problem_id, eval_id)
+
+                data = await asyncio.to_thread(self.eval_client.poll_for_result, eval_id)
 
             if data is None:
                 continue
@@ -361,7 +317,7 @@ class EvalSolutions:
     async def close(self):
         if not self.dry_run:
             print("Sending close message to worker...")
-            requests.get(f"{self.base_url}/close")
+            self.eval_client.close()
 
 
 async def main():

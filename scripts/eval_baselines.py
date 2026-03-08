@@ -11,6 +11,7 @@ Usage:
         [--dry-run]
 """
 
+import logging
 import os
 import sys
 import asyncio
@@ -43,22 +44,21 @@ def fetch_metr_deps():
         print("KernelBenchFiltered already present, skipping clone.")
 
 
-def start_eval_server(port: int, worker_io_dir: Path) -> subprocess.Popen:
+def start_eval_server(port: int, worker_io_dir: Path, verbose: bool = False) -> subprocess.Popen:
     """Launch the eval HTTP server as a background subprocess."""
     worker_io_dir.mkdir(parents=True, exist_ok=True)
     (worker_io_dir / "input").mkdir(parents=True, exist_ok=True)
     (worker_io_dir / "output").mkdir(parents=True, exist_ok=True)
 
     server_script = curr_dir / "disk_channel_server.py"
-    proc = subprocess.Popen(
-        [
-            sys.executable, str(server_script),
-            "--port", str(port),
-            "--worker-io-dir", str(worker_io_dir),
-            "--verbose",
-        ],
-        cwd=root_dir,
-    )
+    cmd = [
+        sys.executable, str(server_script),
+        "--port", str(port),
+        "--worker-io-dir", str(worker_io_dir),
+    ]
+    if verbose:
+        cmd.append("--verbose")
+    proc = subprocess.Popen(cmd, cwd=root_dir)
     # Give the server a moment to start
     time.sleep(2)
     print(f"Started eval HTTP server on port {port} (pid={proc.pid})")
@@ -73,6 +73,7 @@ async def run_baseline(
     level: str,
     eval_port: int,
     dry_run: bool,
+    verbose: bool = False,
 ):
     """Run one baseline evaluation and write results JSON."""
     mode_title_map = {
@@ -103,7 +104,7 @@ async def run_baseline(
         eval_port=eval_port,
         dry_run=dry_run,
         sequential=True,
-        verbose=True,
+        verbose=verbose,
     )
     await eval_sol.run()
     print(f"Wrote {output_dir / output_name}.json")
@@ -114,6 +115,7 @@ async def run_all_baselines(args):
     level = args.level
     worker_io_dir = Path(args.worker_io_dir)
     dry_run = args.dry_run
+    verbose = args.verbose
 
     baseline_dir = output_dir / "baseline-runtimes" / f"h100_level_{level}"
     baseline_dir.mkdir(parents=True, exist_ok=True)
@@ -123,7 +125,7 @@ async def run_all_baselines(args):
 
     server_proc = None
     if not args.no_eval_server and not dry_run:
-        server_proc = start_eval_server(args.port, worker_io_dir)
+        server_proc = start_eval_server(args.port, worker_io_dir, verbose=verbose)
 
     try:
         evals = [
@@ -143,6 +145,7 @@ async def run_all_baselines(args):
                 level=level,
                 eval_port=args.port,
                 dry_run=dry_run,
+                verbose=verbose,
             )
     finally:
         if server_proc is not None:
@@ -179,7 +182,17 @@ def main():
         "--dry-run", action="store_true",
         help="Dry run: produce dummy results without hitting the eval worker",
     )
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="Enable debug logging across the eval pipeline",
+    )
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(name)s] %(message)s",
+        )
 
     asyncio.run(run_all_baselines(args))
 

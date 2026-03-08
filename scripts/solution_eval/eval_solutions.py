@@ -378,6 +378,7 @@ async def main():
     parser.add_argument("--dry-run", action='store_true')
     parser.add_argument("--close-worker", action='store_true')
     parser.add_argument("--sequential", action='store_true')
+    parser.add_argument("--verbose", action='store_true')
     args = parser.parse_args()
 
     valid_modes = [
@@ -439,7 +440,7 @@ async def main():
     if args.output_name is not None:
         output_name = args.output_name
 
-    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, args.eval_port, args.dry_run, args.sequential)
+    eval_sol = EvalSolutions(args.level, mode, solutions_name, title, run_dir, output_name, output_dir, args.eval_port, args.dry_run, args.sequential, verbose=args.verbose)
     await eval_sol.run()
 
     if args.close_worker:

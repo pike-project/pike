@@ -1,4 +1,5 @@
 import random
+import logging
 import os, sys
 from pathlib import Path
 import asyncio
@@ -10,6 +11,8 @@ import argparse
 from datetime import datetime
 import requests
 
+logger = logging.getLogger("eval_solutions")
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
@@ -17,7 +20,7 @@ root_dir = (curr_dir / "../..").resolve()
 deps_dir = root_dir / "local/deps"
 
 class EvalSolutions:
-    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, eval_port: int, dry_run: bool, sequential: bool):
+    def __init__(self, level: int, mode: str, solutions_name: str, title: str, run_dir: Path, output_name: str, output_dir: Path, eval_port: int, dry_run: bool, sequential: bool, verbose: bool = False):
         self.eval_port = eval_port
         self.base_url = f"http://localhost:{eval_port}"
 
@@ -31,6 +34,13 @@ class EvalSolutions:
         self.output_name = output_name
         self.dry_run = dry_run
         self.sequential = sequential
+
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+            if not logger.handlers:
+                handler = logging.StreamHandler()
+                handler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
+                logger.addHandler(handler)
 
     def dry_run_metr_samples(self):
         """Generate placeholder samples using ground-truth task IDs (no METR repo needed)."""
@@ -191,17 +201,26 @@ class EvalSolutions:
     def _poll_for_result(self, eval_id):
         """Poll /poll until a non-null result is returned. Returns data dict or None on timeout."""
         start_time = time.time()
+        poll_count = 0
         while True:
             try:
                 res = requests.get(f"{self.base_url}/poll", params={"id": eval_id})
                 data = res.json()
+                poll_count += 1
                 if data is not None:
+                    elapsed = time.time() - start_time
+                    logger.debug("poll result arrived for eval_id=%s after %d polls (%.1fs)", eval_id, poll_count, elapsed)
                     return data
             except Exception as e:
                 print(f"Poll error for {eval_id}: {e}")
 
+            if poll_count % 30 == 0:
+                elapsed = time.time() - start_time
+                logger.debug("still polling eval_id=%s (%d polls, %.1fs elapsed)", eval_id, poll_count, elapsed)
+
             if time.time() - start_time > 60 * 60:
                 print(f"Timeout waiting for eval_id {eval_id}")
+                logger.debug("TIMEOUT for eval_id=%s after %d polls", eval_id, poll_count)
                 return None
 
             time.sleep(1.0)
@@ -246,6 +265,7 @@ class EvalSolutions:
             if self.dry_run:
                 eval_id = str(uuid.uuid4())
             else:
+                logger.debug("submitting task=%d code_len=%d", problem_id, len(code))
                 try:
                     res = requests.get(f"{self.base_url}/submit", params={
                         "code": code,
@@ -254,6 +274,7 @@ class EvalSolutions:
                         "mode": self.mode,
                     })
                     eval_id = res.text
+                    logger.debug("submitted task=%d eval_id=%s http_status=%d", problem_id, eval_id, res.status_code)
                 except Exception as e:
                     print(f"Submit error for task {problem_id}: {e}")
                     continue
@@ -263,6 +284,8 @@ class EvalSolutions:
         all_results = []
 
         for eval_id, sample in eval_id_to_sample.items():
+            problem_id = sample["problem_id"]
+            logger.debug("polling for eval_id=%s task=%d", eval_id, problem_id)
             if self.dry_run:
                 data = self._make_dry_run_result(eval_id)
             else:
@@ -271,6 +294,7 @@ class EvalSolutions:
             if data is None:
                 continue
 
+            logger.debug("poll returned for eval_id=%s task=%d", eval_id, problem_id)
             all_results.append(self._process_result(data, sample))
 
         all_results.sort(key=lambda x: x["sample_id"])
@@ -288,6 +312,7 @@ class EvalSolutions:
             if self.dry_run:
                 data = self._make_dry_run_result(eval_id)
             else:
+                logger.debug("submitting task=%d code_len=%d", problem_id, len(code))
                 try:
                     res = requests.get(f"{self.base_url}/submit", params={
                         "code": code,
@@ -299,6 +324,8 @@ class EvalSolutions:
                 except Exception as e:
                     print(f"Submit error for task {problem_id}: {e}")
                     continue
+                
+                logger.debug("submitted task=%d eval_id=%s http_status=%d", problem_id, eval_id, res.status_code)
 
                 data = await asyncio.to_thread(self._poll_for_result, eval_id)
 

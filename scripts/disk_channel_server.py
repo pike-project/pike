@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import json
+import logging
 import os
 import argparse
 import signal
@@ -10,10 +11,12 @@ from src.util.disk_channel import DiskChannel
 from functools import partial
 from urllib.parse import urlparse, parse_qs, unquote
 
+logger = logging.getLogger("disk_channel_server")
+
 
 class DiskChannelManager:
-    def __init__(self, tx_dir: Path, rx_dir: Path):
-        self.disk_channel = DiskChannel(tx_dir, rx_dir)
+    def __init__(self, tx_dir: Path, rx_dir: Path, verbose: bool = False):
+        self.disk_channel = DiskChannel(tx_dir, rx_dir, verbose=verbose)
         self.completed_tasks = {}
         self.handshake_complete = False
         self._stopping = False
@@ -25,6 +28,8 @@ class DiskChannelManager:
 
     async def submit(self, code, level, task, mode="eager"):
         eval_id = uuid.uuid4()
+        logger.debug("submit(): sending eval level=%s task=%s mode=%s eval_id=%s code_len=%d",
+                      level, task, mode, eval_id, len(code))
         await self.disk_channel.send({
             "id": str(eval_id),
             "type": "eval",
@@ -33,6 +38,7 @@ class DiskChannelManager:
             "code": code,
             "mode": mode,
         })
+        logger.debug("submit(): disk_channel.send() completed for eval_id=%s", eval_id)
         return eval_id
 
     async def recv_loop(self):
@@ -45,8 +51,11 @@ class DiskChannelManager:
                     msg_type = msg["type"]
                     if msg_type == "handshake":
                         self.handshake_complete = True
+                        logger.debug("recv_loop(): handshake complete")
                     elif msg_type == "result":
                         self.completed_tasks[msg["id"]] = msg
+                        logger.debug("recv_loop(): received result for eval_id=%s (total stored: %d)",
+                                     msg["id"], len(self.completed_tasks))
             except asyncio.CancelledError:
                 break
 
@@ -56,8 +65,10 @@ class DiskChannelManager:
         self._stopping = True
 
     def poll(self, eval_id):
-        # return self.completed_tasks.pop(eval_id, None)
-        return self.completed_tasks.get(eval_id)
+        result = self.completed_tasks.get(eval_id)
+        if result is not None:
+            logger.debug("poll(): found result for eval_id=%s", eval_id)
+        return result
 
     async def close(self):
         print("Sending disk_channel close message")
@@ -66,13 +77,16 @@ class DiskChannelManager:
         })
 
 class CustomHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, manager: DiskChannelManager, loop, **kwargs):
+    def __init__(self, *args, manager: DiskChannelManager, loop, verbose: bool = False, **kwargs):
         self.manager = manager
         self.loop = loop
+        self.verbose = verbose
         super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
         pass
+        # if self.verbose:
+        #     super().log_message(format, *args)
 
     def do_GET(self):
         manager = self.manager
@@ -92,10 +106,14 @@ class CustomHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b"Bad input")
                 return
 
+            logger.debug("/submit: level=%s task=%d mode=%s code_len=%d", level, task, mode, len(code))
+
             fut = asyncio.run_coroutine_threadsafe(
                 manager.submit(code, level, task, mode), self.loop
             )
             eval_id = fut.result()
+
+            logger.debug("/submit: returned eval_id=%s for task=%d", eval_id, task)
 
             self.send_response(200)
             self.end_headers()
@@ -117,6 +135,7 @@ class CustomHandler(BaseHTTPRequestHandler):
                 return
 
             data = manager.poll(eval_id)
+            logger.debug("/poll: eval_id=%s found=%s", eval_id, data is not None)
             data_str = json.dumps(data)
 
             self.send_response(200)
@@ -142,19 +161,26 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=False, default=8000, help="Port to serve this HTTP server on")
     parser.add_argument("--worker-io-dir", type=str, required=False, default="worker_io", help="Scratch directory for communicating with the worker via filesystem")
+    parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(name)s] %(message)s",
+        )
 
     tx_dir = Path(args.worker_io_dir) / "input"
     rx_dir = Path(args.worker_io_dir) / "output"
     os.makedirs(tx_dir, exist_ok=True)
     os.makedirs(rx_dir, exist_ok=True)
 
-    manager = DiskChannelManager(tx_dir=tx_dir, rx_dir=rx_dir)
+    manager = DiskChannelManager(tx_dir=tx_dir, rx_dir=rx_dir, verbose=args.verbose)
 
     recv_task = asyncio.create_task(manager.recv_loop())
 
     loop = asyncio.get_running_loop()
-    handler_with_args = partial(CustomHandler, manager=manager, loop=loop)
+    handler_with_args = partial(CustomHandler, manager=manager, loop=loop, verbose=args.verbose)
 
     server = ThreadingHTTPServer(("localhost", args.port), handler_with_args)
 

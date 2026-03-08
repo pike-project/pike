@@ -89,7 +89,9 @@ Ensure Docker and NVIDIA Container Toolkit are installed, then start the contain
 python -u sandbox/tools/start_worker_container.py --engine docker --arch <Ampere/Hopper> --max-active-tasks 10 --pull-image
 ```
 
-If you need to restart the worker in the middle of a run, clear any outstanding messages via `rm -rf worker_io`
+Increasing `--max-active-tasks` will increase task throughput, but we do not recommend going beyond half the available CPU threads with this parameter, as increasing this parameter can increase noise.
+
+If you need to restart the worker in the middle of a run, clear any outstanding messages via `rm -rf worker_io`.
 
 ### Evaluate Baselines
 
@@ -98,6 +100,8 @@ This step collects runtimes for the original PyTorch code, allowing calculation 
 ```bash
 python scripts/eval_baselines.py --output-dir data/pike-data --level 3-pike
 ```
+
+This will take some time (potentially multiple hours), as it evaluates each task sequentially to minimize noise.
 
 This script and the `run_search` script below run an eval HTTP server that is for internal use only. The default port for this internal server is 8000, but this can be adjusted with the `--port` flag (any available port should work fine).
 
@@ -110,6 +114,8 @@ Keep the Eval Worker running for this. The search process submits PyTorch/kernel
 ```bash
 python scripts/run_search.py --run-name <run_name> --output-dir data/pike-data --strategy pike-b --level 3-pike --server-type google --model-name gemini-2.5-pro --task-start 1 --task-end 50
 ```
+
+This can take 12+ hours with the default query budget per task of 300, and it will start hitting your LLM provider heavily with requests, so use it with caution. Try conservative parameters first, like lower query budget (e.g. `--query-budget 50`) or a single task (e.g. `--task-start 13 --task-end 13`).
 
 Set desired server type (e.g. google, openai, openrouter), and model name (e.g. `gemini-2.5-pro`, `gpt-oss-120b`)
 

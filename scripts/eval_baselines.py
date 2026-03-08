@@ -55,6 +55,7 @@ def start_eval_server(port: int, worker_io_dir: Path) -> subprocess.Popen:
             sys.executable, str(server_script),
             "--port", str(port),
             "--worker-io-dir", str(worker_io_dir),
+            "--verbose",
         ],
         cwd=root_dir,
     )
@@ -102,6 +103,7 @@ async def run_baseline(
         eval_port=eval_port,
         dry_run=dry_run,
         sequential=True,
+        verbose=True,
     )
     await eval_sol.run()
     print(f"Wrote {output_dir / output_name}.json")
@@ -125,10 +127,10 @@ async def run_all_baselines(args):
 
     try:
         evals = [
-            # ("baseline", "eager",     "eager"),
-            ("baseline", "compile",   "compile"),
-            ("baseline", "tensorrt",  "tensorrt"),
-            ("metr",     "eager",     "metr"),
+            ("baseline", "eager",     "eager"),
+            # ("baseline", "compile",   "compile"),
+            # ("baseline", "tensorrt",  "tensorrt"),
+            # ("metr",     "eager",     "metr"),
         ]
 
         for solutions, mode, output_name in evals:

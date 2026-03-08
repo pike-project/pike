@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import uuid
 from pathlib import Path
 from collections import deque
@@ -31,7 +32,7 @@ class DiskChannel:
     for ".done" files, reading the corresponding JSON file, and then deleting
     both files.
     """
-    def __init__(self, tx_dir: Path, rx_dir: Path, poll_interval: float = 1.0):
+    def __init__(self, tx_dir: Path, rx_dir: Path, poll_interval: float = 1.0, verbose: bool = False):
         """
         Initializes the DiskChannel.
 
@@ -40,10 +41,19 @@ class DiskChannel:
             rx_dir: The directory to read incoming messages from.
             poll_interval: The time in seconds to wait between polling for
                            new messages when the queue is empty.
+            verbose: If True, enable DEBUG-level logging for this channel.
         """
         self.tx_dir = tx_dir
         self.rx_dir = rx_dir
         self.poll_interval = poll_interval
+
+        self.logger = logging.getLogger(f"disk_channel.{tx_dir.name}->{rx_dir.name}")
+        if verbose:
+            self.logger.setLevel(logging.DEBUG)
+            if not self.logger.handlers:
+                handler = logging.StreamHandler()
+                handler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
+                self.logger.addHandler(handler)
 
         # Create directories if they don't exist
         self.tx_dir.mkdir(parents=True, exist_ok=True)
@@ -71,11 +81,13 @@ class DiskChannel:
         # If the queue has files, process the first one.
         if self._pending_files:
             done_path = self._pending_files.popleft()
-            
+
             try:
                 data = await self._process_file(done_path)
                 # On successful processing, remove from seen set and return
                 self._seen_files.remove(done_path)
+                self.logger.debug("poll(): received message type=%s id=%s from %s",
+                                  data.get("type"), data.get("id"), done_path.name)
                 return data
             except Exception as e:
                 print(f"Error processing {done_path.name}: {e}. Discarding.")
@@ -118,10 +130,14 @@ class DiskChannel:
                 self.rx_dir.glob('*.done'), 
                 key=lambda p: p.stat().st_mtime
             )
+            new_count = 0
             for done_file in all_done_files:
                 if done_file not in self._seen_files:
                     self._seen_files.add(done_file)
                     self._pending_files.append(done_file)
+                    new_count += 1
+            if new_count > 0:
+                self.logger.debug("_scan_for_new_files(): found %d new .done file(s) in %s", new_count, self.rx_dir)
         except FileNotFoundError:
             # The rx_dir might have been deleted. It will be recreated on next send.
             print(f"Warning: rx_dir {self.rx_dir} not found during scan.")
@@ -174,6 +190,9 @@ class DiskChannel:
         data_path = self.tx_dir / f"{message_id}.json"
         done_path = self.tx_dir / f"{message_id}.done"
 
+        self.logger.debug("send(): writing message_id=%s type=%s id=%s",
+                          message_id, data.get("type"), data.get("id"))
+
         # 1. Write the data to the JSON file.
         async with aiofiles.open(data_path, 'w', encoding='utf-8') as f:
             await f.write(json.dumps(data))
@@ -182,6 +201,8 @@ class DiskChannel:
         # This is the atomic signal that the message is ready.
         async with aiofiles.open(done_path, 'w'):
             pass
+
+        self.logger.debug("send(): completed writing .json + .done for message_id=%s", message_id)
 
 
 # Example usage to demonstrate and test the DiskChannel

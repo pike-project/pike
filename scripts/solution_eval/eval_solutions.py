@@ -53,7 +53,7 @@ class EvalSolutions:
         kernel_bench_dir = (deps_dir / "KernelBenchFiltered").resolve()
 
         level = self.level
-        if level == "3-metr":
+        if level == "3-metr" or level == "3-pike":
             level = "3"
 
         level_dir = kernel_bench_dir / f"best_agent_solutions/level_{level}"

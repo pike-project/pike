@@ -214,7 +214,7 @@ class EvalSolutions:
             print(results.get("stderr"))
             print(f"================================================================")
 
-        print(f"Eval result for task: {problem_id}, runtime: {runtime}")
+        print(f"Result received for task: {problem_id}, runtime: {runtime}")
 
         return {
             "sample_id": sample_id,
@@ -236,7 +236,7 @@ class EvalSolutions:
                 logger.debug("submitting task=%d code_len=%d", problem_id, len(code))
                 try:
                     eval_id = self.eval_client.submit(code=code, level=self.level, task=problem_id, mode=self.mode)
-                    logger.debug("submitted task=%d eval_id=%s", problem_id, eval_id)
+                    print(f"Submitted task: {problem_id}, eval_id: {eval_id}")
                 except Exception as e:
                     print(f"Submit error for task {problem_id}: {e}")
                     continue
@@ -281,7 +281,7 @@ class EvalSolutions:
                     print(f"Submit error for task {problem_id}: {e}")
                     continue
 
-                logger.debug("submitted task=%d eval_id=%s", problem_id, eval_id)
+                print(f"Submitted task: {problem_id}, eval_id: {eval_id}")
 
                 data = await asyncio.to_thread(self.eval_client.poll_for_result, eval_id)
 

@@ -130,9 +130,9 @@ async def run_all_baselines(args):
     try:
         evals = [
             ("baseline", "eager",     "eager"),
-            # ("baseline", "compile",   "compile"),
-            # ("baseline", "tensorrt",  "tensorrt"),
-            # ("metr",     "eager",     "metr"),
+            ("baseline", "compile",   "compile"),
+            ("baseline", "tensorrt",  "tensorrt"),
+            ("metr",     "eager",     "metr"),
         ]
 
         for solutions, mode, output_name in evals:

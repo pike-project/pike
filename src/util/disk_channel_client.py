@@ -38,6 +38,7 @@ class DiskChannelClient:
         while True:
             try:
                 res = requests.get(f"{self.base_url}/poll", params={"id": eval_id})
+                res.raise_for_status()
                 data = res.json()
                 poll_count += 1
                 if data is not None:
@@ -60,4 +61,4 @@ class DiskChannelClient:
 
     def close(self) -> None:
         """Send GET /close to shut down the worker."""
-        requests.get(f"{self.base_url}/close")
+        requests.get(f"{self.base_url}/close").raise_for_status()

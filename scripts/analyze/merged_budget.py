@@ -310,6 +310,10 @@ def run(run_name, output_label, run_num, level, input_dir, results_dir, sol_dest
         print("Warning: eager runtimes file has unexpected format. Expected JSON object with a 'results' list. Continuing with empty results.")
         eager_runtimes = {"results": []}
 
+    for v in eager_runtimes.get("results", []):
+        if v.get("runtime") is None:
+            print(f"⚠️  Warning: task {v.get('problem_id')} has no eager runtime — will not contribute to geomean.")
+
     if output_solutions:
         sol_dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -400,6 +404,12 @@ def run(run_name, output_label, run_num, level, input_dir, results_dir, sol_dest
             all_speedups_progress.append(speedup_progress)
             task_id = int(task_name.split("task")[1].split("_")[0])
             included_task_names_for_csv.append(f"task_{task_id}")
+
+    run_task_ids = {int(n.split("task")[1].split("_")[0]) for n in task_names}
+    for v in eager_runtimes.get("results", []):
+        pid = v.get("problem_id")
+        if pid is not None and pid not in run_task_ids and pid not in task_blacklist:
+            print(f"⚠️  Warning: task {pid} exists in eager runtimes but was not run — excluded from geomean.")
 
     all_efa_costs_np = np.array(all_efa_costs)
     efa_query_cost_mean = np.mean(all_efa_costs_np)

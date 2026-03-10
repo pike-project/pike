@@ -58,21 +58,17 @@ def compute_baseline_speedups(runtimes_dir: Path, level: str) -> dict:
 
         force_1 = _BASELINE_SPEEDUP_FORCE_1.get((level, label), set())
         speedup_list = []
-        for pid in set(baseline_map) | set(eager_map):
+        for pid, eager_rt in eager_map.items():
             if pid in blacklist:
-                continue
-            eager_rt = eager_map.get(pid)
-            if eager_rt is None:
-                print(f"⚠️ Warning: task {pid} missing eager runtime, excluding from {label} geomean.")
                 continue
             if pid in force_1:
                 speedup_list.append(1.0)
                 continue
             baseline_rt = baseline_map.get(pid)
-            if baseline_rt is None:
-                speedup = 1.0
-            else:
+            if baseline_rt is not None:
                 speedup = max(1.0, eager_rt / baseline_rt)
+            else:
+                speedup = 1.0
             speedup_list.append(speedup)
 
         if speedup_list:

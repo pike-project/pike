@@ -21,11 +21,16 @@ def main(output_dir: Path, level: str, paper: bool = False):
     output_filename = "all_trajectories_side_by_side"
     output_path = (output_dir / target_dirname / "results/figs/convergence" / f"{output_filename}.pdf").resolve()
 
-    # Create a figure with two subplots, side-by-side
-    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
-
-    axes = [ax_left, ax_right]
-    money_budget_options = [False, True]
+    if paper:
+        # Two subplots side-by-side: LLM Queries and Cost per Task
+        fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
+        axes = [ax_left, ax_right]
+        money_budget_options = [False, True]
+    else:
+        # Single plot: LLM Queries per Task only
+        fig, ax_left = plt.subplots(1, 1, figsize=(3.5, 3))
+        axes = [ax_left]
+        money_budget_options = [False]
 
     if level == "3-pike":
         plot_map = [
@@ -111,8 +116,11 @@ def main(output_dir: Path, level: str, paper: bool = False):
 
         # --- Figure appearance for this subplot ---
         if ax == ax_left:
-            ax.set_xlabel(f"(a) {xlabel}", fontsize=12)
-            ax.xaxis.label.set_position((0.4, -0.1))
+            if paper:
+                ax.set_xlabel(f"(a) {xlabel}", fontsize=12)
+                ax.xaxis.label.set_position((0.4, -0.1))
+            else:
+                ax.set_xlabel(xlabel, fontsize=12)
             ax.set_ylabel("Geomean Speedup", fontsize=12)
         else:
             ax.set_xlabel(f"(b) {xlabel}", fontsize=12)

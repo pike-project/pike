@@ -145,7 +145,7 @@ python scripts/fetch_paper_data.py
 python scripts/generate_figs.py --input-dir data/paper-data/pike-data --output-dir data/paper-data/pike-out --paper
 ```
 
-The `--paper` option should only be used on original paper data, as it only includes a subset of results in some plots, and adds additional markings to plots.
+The `--paper` option should only be used on original paper data, as it only includes a subset of results in some plots, adds additional markings to plots, and adds a money-budget plot.
 
 ## Documentation
 

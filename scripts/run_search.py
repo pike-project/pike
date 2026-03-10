@@ -127,28 +127,14 @@ def convert_to_openevolve(run_dir: Path):
 
 
 def run_pike_o(args, run_dir: Path):
-    """Clone pike-openevolve if needed, install it, then run the search."""
+    """Run the pike-openevolve search (must be installed first)."""
     pike_oe_dir = deps_dir / "pike-openevolve"
 
     if not pike_oe_dir.exists():
-        print("Cloning pike-openevolve...")
-        deps_dir.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["git", "clone", "git@github.com:google-deepmind/pike-openevolve.git"],
-            check=True,
-            cwd=deps_dir,
+        raise RuntimeError(
+            f"pike-openevolve not found at {pike_oe_dir}. "
+            "Run `python scripts/install_pike_openevolve.py` first."
         )
-
-    if not os.environ.get("VIRTUAL_ENV"):
-        print("Error: must be run inside a virtual environment (VIRTUAL_ENV not set).")
-        sys.exit(1)
-
-    print("Installing pike-openevolve...")
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-e", "."],
-        check=True,
-        cwd=pike_oe_dir,
-    )
 
     run_script = pike_oe_dir / "examples" / "kernelbench" / "run.py"
     cmd = [

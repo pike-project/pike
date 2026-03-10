@@ -121,7 +121,11 @@ Set desired server type (e.g. google, openai, openrouter), and model name (e.g. 
 
 You can select any run name for your run, passed in via `--run-name`. The output for the run will then appear in `<output-dir>/full-pike-runs/level_<level>/<run_name>`. If a run fails or you kill a run early, it is highly recommended to rename/remove that failed run, or change the `--run-name` value before restarting the run.
 
-For PIKE-O, pass `--strategy pike-o`. The script will clone and install [pike-openevolve](https://github.com/pike-project/pike-openevolve) automatically.
+For PIKE-O, pass `--strategy pike-o`. To use this strategy, you must first run the following [pike-openevolve](https://github.com/pike-project/pike-openevolve) install script:
+
+```bash
+python scripts/install_pike_openevolve.py
+```
 
 ### Generate Figures
 

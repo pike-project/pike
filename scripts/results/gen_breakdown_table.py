@@ -9,6 +9,13 @@ import json
 # --- Main Script Configuration ---
 # ==============================================================================
 
+# Per-(level, file-stem) task IDs whose speedup is forced to 1.0.
+# Used for benchmarks manually determined to be invalid.
+_BASELINE_SPEEDUP_FORCE_1 = {
+    ("5", "metr"): {1},
+}
+
+
 def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path | None = None):
     task_blacklist_speedup_1_map = {
         "5": set(),
@@ -213,11 +220,15 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
     # For any task that exists in "eager" but not in another method, its speedup is 1.0.
     # The speedups will be calculated in the order of `included_tasks` (i.e., by task number).
     methods_speedups = {title: [] for title in all_methods if title != eager_key}
+    title_to_file_stem = {v: k for k, v in file_to_title_map.items()}
 
     for title, runtimes in all_methods.items():
         if title == eager_key:
             continue
-        
+
+        file_stem = title_to_file_stem.get(title, "")
+        force_1 = _BASELINE_SPEEDUP_FORCE_1.get((level, file_stem), set())
+
         print(f"------ Running: {title} --------")
         for task in included_tasks:
             eager_runtime = eager_runtimes[task]
@@ -235,11 +246,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
             if int(task) in task_blacklist:
                 continue
 
-            # print(task, title)
-            # if task == 1 and title == "METR":
-            #     speedup = 1.0
-
-            if task in task_blacklist_speedup_1:
+            if task in task_blacklist_speedup_1 or task in force_1:
                 speedup = 1.0
 
             methods_speedups[title].append(speedup)

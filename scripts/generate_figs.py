@@ -80,7 +80,8 @@ def main() -> None:
 
         plot_trajectories(output_dir, level, paper=args.paper)
         plot_overall_speedup(output_dir, level)
-        gen_breakdown_table(output_dir, level, paper=args.paper)
+        if args.paper:
+            gen_breakdown_table(output_dir, level, paper=args.paper)
 
 
 if __name__ == "__main__":

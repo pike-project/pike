@@ -223,12 +223,8 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
             eager_runtime = eager_runtimes[task]
             method_runtime = runtimes.get(task)
 
-            # Core logic: If a task exists in eager but is missing for a given method,
-            # we consider it as having no speedup (speedup = 1.0).
             if method_runtime is None:
-                # speedup = 1.0
-                speedup = 0.0000000001
-                print(f"No runtime for method: {task}")
+                speedup = 1.0
             else:
                 speedup = eager_runtime / method_runtime
                 # Optional policy: prevent reporting slowdowns, clamping to a minimum of 1.0x.

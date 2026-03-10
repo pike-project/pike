@@ -8,15 +8,8 @@ import json
 # ==============================================================================
 # --- Main Script Configuration ---
 # ==============================================================================
-curr_dir = Path(os.path.realpath(os.path.dirname(__file__)))
 
-def gen_breakdown_table(target_dirname, level):
-    # target_dirname = "h100_level5"
-    # level = "5"
-
-    # target_dirname = "h100_level_3-pike"
-    # level = "3-pike"
-
+def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path | None = None):
     task_blacklist_speedup_1_map = {
         "5": set(),
         "3-pike": set(),
@@ -40,17 +33,21 @@ def gen_breakdown_table(target_dirname, level):
 
     task_blacklist = task_blacklist_map.get(level, set())
 
-    data_dir = (curr_dir / f"{target_dirname}/results/data/runtimes").resolve()
-    figs_dir = (curr_dir / f"{target_dirname}/results/figs/breakdown").resolve()
-    tables_dir = curr_dir / f"{target_dirname}/results/data/tables/geomean_speedups"
-    level_dir = (curr_dir / f"../../KernelBench/level{level}").resolve()
+    target_dirname = f"h100_level_{level}"
+    results_dir = output_dir / target_dirname / "results"
+    data_dir = results_dir / "data" / "runtimes"
+    figs_dir = results_dir / "figs" / "breakdown"
+    tables_dir = results_dir / "data" / "tables" / "geomean_speedups"
 
-    breakdown_all = False
+    if kernelbench_dir is None:
+        kernelbench_dir = Path(__file__).resolve().parent.parent.parent / "KernelBench"
+    level_dir = kernelbench_dir / f"level{level}"
+
+    breakdown_all = not paper
+    output_label = "breakdown_all" if breakdown_all else "breakdown_paper"
 
     if level == "3-pike":
         if breakdown_all:
-            output_label = "breakdown_all"
-
             included_files = [
                 "eager",
                 "prev_agents",
@@ -72,34 +69,28 @@ def gen_breakdown_table(target_dirname, level):
                 "tensorrt"
             ]
         else:
-            output_label = "breakdown_paper"
-
             included_files = [
                 "eager",
-                "prev_agents_median",
+                # "prev_agents_median",
                 "prev_agents",
                 # "openevolve_agents",
                 # "openevolve_agents_no_parallel_eval_no_islands",
-                # "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib",
+                "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib",
 
                 "metr",
                 "compile",
                 "tensorrt"
             ]
     elif level == "5":
-        breakdown_all = False
-
-        output_label = "breakdown_paper"
-
         included_files = [
             "eager",
             "prev_agents",
-            "openevolve_agents",
+            # "openevolve_agents",
 
             # "openevolve_agents_no_parallel_eval_no_islands",
             # "openevolve_agents_mut_nopar_noisl_exploitonly",
 
-            # "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib",
+            "openevolve_agents_mut_nopar_noisl_exploitonly_shortlib",
 
             "metr",
             "compile",
@@ -109,7 +100,13 @@ def gen_breakdown_table(target_dirname, level):
 
     plot_mode = "bar"  # choose "line" or "bar"
 
-    primary_str_match = "prev_agents_median"
+    primary_sort_map = {
+        ("3-pike", True): "prev_agents",   # paper mode
+        ("3-pike", False): "prev_agents",          # all mode
+        ("5", True): "prev_agents",
+        ("5", False): "prev_agents",
+    }
+    primary_str_match = primary_sort_map.get((level, paper), "prev_agents")
     # primary_str_match = "ours (oe, agents)"
 
     # --- LaTeX Table Configuration ---
@@ -380,6 +377,7 @@ def gen_breakdown_table(target_dirname, level):
     # os.makedirs(figs_dir, exist_ok=True)
     # fig.savefig(figs_dir / f"{output_label}_{plot_mode}.pdf")
     # print(f"Plot saved to: {figs_dir / f'{output_label}_{plot_mode}.pdf'}")
+    plt.close()
 
     # --- Prepare DataFrame for CSV and TeX ---
     # Enforce CSV columns order the same as included_files
@@ -496,3 +494,15 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
     with open(output_path, "w") as f:
         f.write(latex_table)
     print(f"LaTeX table saved to: {output_path}")
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output-dir", type=str, required=True)
+    parser.add_argument("--level", type=str, required=True, choices=["3-pike", "5"])
+    parser.add_argument("--paper", action="store_true")
+    parser.add_argument("--kernelbench-dir", type=str, default=None)
+    args = parser.parse_args()
+    kb_dir = Path(args.kernelbench_dir).resolve() if args.kernelbench_dir else None
+    main(Path(args.output_dir).resolve(), args.level, paper=args.paper, kernelbench_dir=kb_dir)

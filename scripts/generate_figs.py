@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.analyze.merged_budget import run_level as merged_budget_run_level
 from scripts.results.plot_trajectories import main as plot_trajectories
 from scripts.results.plot_overall_speedup import main as plot_overall_speedup
+from scripts.results.gen_breakdown_table import main as gen_breakdown_table
 
 
 def copy_all_files(src_dir: Path, dst_dir: Path) -> None:
@@ -79,6 +80,7 @@ def main() -> None:
 
         plot_trajectories(output_dir, level, paper=args.paper)
         plot_overall_speedup(output_dir, level)
+        gen_breakdown_table(output_dir, level, paper=args.paper)
 
 
 if __name__ == "__main__":

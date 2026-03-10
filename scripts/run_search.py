@@ -139,6 +139,10 @@ def run_pike_o(args, run_dir: Path):
             cwd=deps_dir,
         )
 
+    if not os.environ.get("VIRTUAL_ENV"):
+        print("Error: must be run inside a virtual environment (VIRTUAL_ENV not set).")
+        sys.exit(1)
+
     print("Installing pike-openevolve...")
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "-e", "."],

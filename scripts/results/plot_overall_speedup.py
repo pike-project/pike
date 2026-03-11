@@ -99,7 +99,7 @@ def main(output_dir: Path, level: str):
     speedups.update(baseline_speedups)
 
     if level == "3-pike":
-        f, ax = plt.subplots(1, figsize=(4.7, 3))
+        f, ax = plt.subplots(1, figsize=(5.3, 3))
     else:
         f, ax = plt.subplots(1, figsize=(3.5, 1.9))
 
@@ -111,6 +111,8 @@ def main(output_dir: Path, level: str):
         ("prev_agents_cheap_efa", "PIKE-B (cheap EFA)", "#5BD0D4"),
         ("prev_noagents", "PIKE-B (no EFA)", "#5BD0D4"),
         ("prev_agents_no_iba", "PIKE-B (no IBA)", "#5BD0D4"),
+        ("oss-120b", "PIKE-B (gpt-oss-120b)", "#5BD0D4"),
+        ("o3-mini-high", "PIKE-B (o3-mini-high)", "#5BD0D4"),
         ("openevolve_agents", "PIKE-O", "#ffa600"),
         ("openevolve_noagents", "PIKE-O (no EFA)", "#ffc559"),
         ("openevolve_agents_mutation", "PIKE-O (mut)", "#ffc559"),
@@ -122,6 +124,11 @@ def main(output_dir: Path, level: str):
         ("torch.compile", "torch.compile", "#c07bdf"),
         ("tensorrt", "TensorRT", "#CBA0DE"),
     ]
+
+    checkpoint_blacklist = {
+        "oss-120b",
+        "o3-mini-high",
+    }
 
     titles = []
     values = []
@@ -136,7 +143,7 @@ def main(output_dir: Path, level: str):
             values.append(speedups[label])
             col.append(color)
 
-            if label in speedups_money_budget:
+            if label in speedups_money_budget and label not in checkpoint_blacklist:
                 checkpoint_values.append(speedups_money_budget[label])
             else:
                 checkpoint_values.append(None)
@@ -147,7 +154,9 @@ def main(output_dir: Path, level: str):
             titles.insert(0, label)
             values.insert(0, value)
             col.insert(0, "#BBBBBB")
-            checkpoint_values.insert(0, speedups_money_budget.get(label))
+            # checkpoint_values.insert(0, speedups_money_budget.get(label))
+
+            checkpoint_values.insert(0, None)
 
     plt.ylabel('Speedup')
 

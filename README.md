@@ -35,7 +35,7 @@ The simplest PIKE setup involves two components:
     - An LLM-driven search script
     - A baseline script to evaluate pre-existing baseline PyTorch/kernel code
 
-We recommend setting up your host environment using `uv` ([uv installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+Set up your host environment using `uv` ([uv installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
 Clone this repository, then do the following:
 
@@ -46,7 +46,7 @@ uv pip install -r requirements.txt
 uv pip install -e .
 ```
 
-Save the following API key environment variables to `~/.bashrc`:
+Save API key environment variables to `~/.bashrc`:
 
 ```bash
 export OPENAI_API_KEY=<...>

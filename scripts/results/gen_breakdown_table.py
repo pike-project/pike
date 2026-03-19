@@ -527,15 +527,15 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
                 row_data[remapped_title] = "-"
         return pd.Series(row_data)
 
-    geo_clamped_row = make_geo_row("Geomean (clamped)", geomeans)
+    geo_clamped_row = make_geo_row("gmean (clamped)", geomeans)
     geo_unclamped_row = (
-        make_geo_row("Geomean (unclamped)", geomeans_unclamped)
+        make_geo_row("gmean (uncl.)", geomeans_unclamped)
         if geomeans_unclamped is not None
         else None
     )
 
     geo_ti_uncl_row = (
-        make_geo_row("Geomean (TI, uncl.)", geomeans_ti_unclamped)
+        make_geo_row("gmean (TI, uncl.)", geomeans_ti_unclamped)
         if geomeans_ti_unclamped is not None
         else None
     )
@@ -561,7 +561,7 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
     # Insert a horizontal line rule (`\midrule`) before the first Geomean row for clarity
     lines = latex_table.splitlines()
     for i, line in enumerate(lines):
-        if line.strip().startswith("Geomean"):
+        if line.strip().startswith("gmean"):
             lines.insert(i, "\\midrule")
             break
     latex_table = "\n".join(lines)

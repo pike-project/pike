@@ -475,7 +475,7 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
     df_rounded = df_processed.copy()
     for col in df_processed.columns[1:]:
         df_rounded[col] = df_processed[col].map(
-            lambda x: "{—}" if x is None else (f"{x:.2f}" if pd.api.types.is_number(x) else str(x))
+            lambda x: "{—}" if pd.isna(x) else (f"{x:.2f}" if pd.api.types.is_number(x) else str(x))
         )
 
     def bold_max(row):

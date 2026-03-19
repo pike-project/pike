@@ -366,6 +366,25 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
                 arr = arr[arr > 0]
                 geomeans_ti_unclamped[name] = np.exp(np.mean(np.log(arr)))
 
+    # --- Compute eager/TI-relative unclamped geomean (speedup vs best of eager and TI) ---
+    geomeans_eager_ti_unclamped = {}
+    if compile_title and compile_title in all_methods:
+        for name in methods_speedups.keys():
+            method_runtimes_raw = all_methods.get(name, {})
+            ratios = []
+            for task in sorted_tasks:
+                er = eager_runtimes.get(task)
+                cr = compile_runtimes.get(task)
+                mr = method_runtimes_raw.get(task)
+                if mr is None:
+                    continue
+                best_baseline = min(r for r in [er, cr] if r is not None)
+                ratios.append(best_baseline / mr)
+            if ratios:
+                arr = np.array(ratios, dtype=float)
+                arr = arr[arr > 0]
+                geomeans_eager_ti_unclamped[name] = np.exp(np.mean(np.log(arr)))
+
     # --- Compute summary stats: success rate, slower counts ---
     n_tasks = len(sorted_tasks)
     success_rates = {}
@@ -483,6 +502,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
     generate_latex_table(df, geomeans, task_name_remapping, title_remapping, tex_path,
                          unclamped_df=df_unclamped, geomeans_unclamped=geomeans_unclamped,
                          geomeans_ti_unclamped=geomeans_ti_unclamped,
+                         geomeans_eager_ti_unclamped=geomeans_eager_ti_unclamped,
                          success_rates=success_rates, slower_counts=slower_counts,
                          slower_ti_counts=slower_ti_counts)
 
@@ -493,6 +513,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
 
 def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_path,
                           unclamped_df=None, geomeans_unclamped=None, geomeans_ti_unclamped=None,
+                          geomeans_eager_ti_unclamped=None,
                           success_rates=None, slower_counts=None, slower_ti_counts=None):
     """
     Converts a pandas DataFrame of speedups to a formatted LaTeX table.
@@ -575,6 +596,12 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
         else None
     )
 
+    geo_eager_ti_uncl_row = (
+        make_geo_row("gmean (eager/TI)", geomeans_eager_ti_unclamped)
+        if geomeans_eager_ti_unclamped is not None
+        else None
+    )
+
     def make_stat_row(label, stat_dict, fmt):
         row_data = {"Task": label}
         for remapped_title in df_bold.columns[1:]:
@@ -591,6 +618,8 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
         rows_to_append.append(geo_unclamped_row)
     if geo_ti_uncl_row is not None:
         rows_to_append.append(geo_ti_uncl_row)
+    if geo_eager_ti_uncl_row is not None:
+        rows_to_append.append(geo_eager_ti_uncl_row)
     if success_rates is not None:
         rows_to_append.append(make_stat_row("success", success_rates, r"{val:.0f}\%"))
     if slower_counts is not None:
@@ -602,7 +631,8 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
     # Bold max in each geomean row (not stat rows)
     n_geo_rows = (1
                   + (1 if geo_unclamped_row is not None else 0)
-                  + (1 if geo_ti_uncl_row is not None else 0))
+                  + (1 if geo_ti_uncl_row is not None else 0)
+                  + (1 if geo_eager_ti_uncl_row is not None else 0))
     for idx in range(len(df_bold), len(df_bold) + n_geo_rows):
         df_with_geo.iloc[idx] = bold_max(df_with_geo.iloc[idx])
 

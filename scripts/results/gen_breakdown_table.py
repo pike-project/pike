@@ -366,6 +366,38 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
                 arr = arr[arr > 0]
                 geomeans_ti_unclamped[name] = np.exp(np.mean(np.log(arr)))
 
+    # --- Compute summary stats: success rate, slower counts ---
+    n_tasks = len(sorted_tasks)
+    success_rates = {}
+    slower_counts = {}
+    slower_ti_counts = {}
+
+    for name, values in methods_speedups_unclamped.items():
+        n_success = sum(1 for v in values if v is not None)
+        success_rates[name] = 100.0 * n_success / n_tasks if n_tasks > 0 else 0.0
+        count = 0
+        for task, v in zip(sorted_tasks, values):
+            if v is None:  # method failed for this task
+                continue
+            if eager_runtimes.get(task) is None:  # eager baseline failed for this task
+                continue
+            if v < 1.0:
+                count += 1
+        slower_counts[name] = count
+
+    if compile_title and compile_title in all_methods:
+        for name in methods_speedups_unclamped.keys():
+            method_runtimes_raw = all_methods.get(name, {})
+            count = 0
+            for task in sorted_tasks:
+                cr = compile_runtimes.get(task)
+                mr = method_runtimes_raw.get(task)
+                if cr is None or mr is None:
+                    continue
+                if cr / mr < 1.0:
+                    count += 1
+            slower_ti_counts[name] = count
+
     # --- Plotting ---
     x = np.arange(len(labels_sorted))
     fig, ax = plt.subplots(figsize=(12, 5.5))
@@ -450,7 +482,9 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
     df_unclamped.rename(columns={"index": "Task"}, inplace=True)
     generate_latex_table(df, geomeans, task_name_remapping, title_remapping, tex_path,
                          unclamped_df=df_unclamped, geomeans_unclamped=geomeans_unclamped,
-                         geomeans_ti_unclamped=geomeans_ti_unclamped)
+                         geomeans_ti_unclamped=geomeans_ti_unclamped,
+                         success_rates=success_rates, slower_counts=slower_counts,
+                         slower_ti_counts=slower_ti_counts)
 
     # --- Print Geomean Summary ---
     print("\nGeomean speedups:")
@@ -458,7 +492,8 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
         print(f"- {k}: {geomeans[k]:.3f}")
 
 def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_path,
-                          unclamped_df=None, geomeans_unclamped=None, geomeans_ti_unclamped=None):
+                          unclamped_df=None, geomeans_unclamped=None, geomeans_ti_unclamped=None,
+                          success_rates=None, slower_counts=None, slower_ti_counts=None):
     """
     Converts a pandas DataFrame of speedups to a formatted LaTeX table.
 
@@ -535,20 +570,40 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
     )
 
     geo_ti_uncl_row = (
-        make_geo_row("gmean (TI, uncl.)", geomeans_ti_unclamped)
+        make_geo_row("gmean (TI)", geomeans_ti_unclamped)
         if geomeans_ti_unclamped is not None
         else None
     )
+
+    def make_stat_row(label, stat_dict, fmt):
+        row_data = {"Task": label}
+        for remapped_title in df_bold.columns[1:]:
+            original_title = remapped_to_original.get(remapped_title)
+            if original_title and original_title in stat_dict:
+                val = stat_dict[original_title]
+                row_data[remapped_title] = fmt.format(val=val)
+            else:
+                row_data[remapped_title] = "-"
+        return pd.Series(row_data)
 
     rows_to_append = [geo_clamped_row]
     if geo_unclamped_row is not None:
         rows_to_append.append(geo_unclamped_row)
     if geo_ti_uncl_row is not None:
         rows_to_append.append(geo_ti_uncl_row)
+    if success_rates is not None:
+        rows_to_append.append(make_stat_row("success", success_rates, r"{val:.0f}\%"))
+    if slower_counts is not None:
+        rows_to_append.append(make_stat_row("slower", slower_counts, "{val:.0f}"))
+    if slower_ti_counts is not None:
+        rows_to_append.append(make_stat_row("slower (TI)", slower_ti_counts, "{val:.0f}"))
 
     df_with_geo = pd.concat([df_bold, pd.DataFrame(rows_to_append)], ignore_index=True)
-    # Bold max in each geomean row
-    for idx in range(len(df_bold), len(df_with_geo)):
+    # Bold max in each geomean row (not stat rows)
+    n_geo_rows = (1
+                  + (1 if geo_unclamped_row is not None else 0)
+                  + (1 if geo_ti_uncl_row is not None else 0))
+    for idx in range(len(df_bold), len(df_bold) + n_geo_rows):
         df_with_geo.iloc[idx] = bold_max(df_with_geo.iloc[idx])
 
     # --- Step 4: Convert to LaTeX format and save ---

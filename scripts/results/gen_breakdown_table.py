@@ -347,6 +347,25 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
         arr = arr[arr > 0]
         geomeans_unclamped[name] = np.exp(np.mean(np.log(arr)))
 
+    # --- Compute TI-relative unclamped geomean (speedup vs torch.compile) ---
+    compile_title = file_to_title_map.get("compile")
+    geomeans_ti_unclamped = {}
+    if compile_title and compile_title in all_methods:
+        compile_runtimes = all_methods[compile_title]
+        for name in methods_speedups.keys():
+            method_runtimes_raw = all_methods.get(name, {})
+            ratios = []
+            for task in sorted_tasks:
+                cr = compile_runtimes.get(task)
+                mr = method_runtimes_raw.get(task)
+                if cr is None or mr is None:
+                    continue
+                ratios.append(cr / mr)
+            if ratios:
+                arr = np.array(ratios, dtype=float)
+                arr = arr[arr > 0]
+                geomeans_ti_unclamped[name] = np.exp(np.mean(np.log(arr)))
+
     # --- Plotting ---
     x = np.arange(len(labels_sorted))
     fig, ax = plt.subplots(figsize=(12, 5.5))
@@ -430,7 +449,8 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
     df_unclamped.reset_index(inplace=True)
     df_unclamped.rename(columns={"index": "Task"}, inplace=True)
     generate_latex_table(df, geomeans, task_name_remapping, title_remapping, tex_path,
-                         unclamped_df=df_unclamped, geomeans_unclamped=geomeans_unclamped)
+                         unclamped_df=df_unclamped, geomeans_unclamped=geomeans_unclamped,
+                         geomeans_ti_unclamped=geomeans_ti_unclamped)
 
     # --- Print Geomean Summary ---
     print("\nGeomean speedups:")
@@ -438,7 +458,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
         print(f"- {k}: {geomeans[k]:.3f}")
 
 def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_path,
-                          unclamped_df=None, geomeans_unclamped=None):
+                          unclamped_df=None, geomeans_unclamped=None, geomeans_ti_unclamped=None):
     """
     Converts a pandas DataFrame of speedups to a formatted LaTeX table.
 
@@ -514,9 +534,17 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
         else None
     )
 
+    geo_ti_uncl_row = (
+        make_geo_row("Geomean (TI, uncl.)", geomeans_ti_unclamped)
+        if geomeans_ti_unclamped is not None
+        else None
+    )
+
     rows_to_append = [geo_clamped_row]
     if geo_unclamped_row is not None:
         rows_to_append.append(geo_unclamped_row)
+    if geo_ti_uncl_row is not None:
+        rows_to_append.append(geo_ti_uncl_row)
 
     df_with_geo = pd.concat([df_bold, pd.DataFrame(rows_to_append)], ignore_index=True)
     # Bold max in each geomean row

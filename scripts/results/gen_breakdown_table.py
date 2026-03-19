@@ -220,6 +220,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
     # For any task that exists in "eager" but not in another method, its speedup is 1.0.
     # The speedups will be calculated in the order of `included_tasks` (i.e., by task number).
     methods_speedups = {title: [] for title in all_methods if title != eager_key}
+    methods_speedups_unclamped = {title: [] for title in all_methods if title != eager_key}
     title_to_file_stem = {v: k for k, v in file_to_title_map.items()}
 
     for title, runtimes in all_methods.items():
@@ -236,20 +237,25 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
 
             if method_runtime is None:
                 speedup = 1.0
+                speedup_unclamped = None  # failed run
             else:
-                speedup = eager_runtime / method_runtime
+                speedup_unclamped = eager_runtime / method_runtime
                 # Optional policy: prevent reporting slowdowns, clamping to a minimum of 1.0x.
-                if speedup < 1.0:
+                if speedup_unclamped < 1.0:
                     speedup = 1.0
-                    print(f"Speedup clamp: {task}, speedup: {speedup}")
+                    print(f"Speedup clamp: {task}, speedup: {speedup_unclamped:.4f}")
+                else:
+                    speedup = speedup_unclamped
 
             if int(task) in task_blacklist:
                 continue
 
             if task in task_blacklist_speedup_1 or task in force_1:
                 speedup = 1.0
+                speedup_unclamped = 1.0
 
             methods_speedups[title].append(speedup)
+            methods_speedups_unclamped[title].append(speedup_unclamped)
 
     print("------------------------")
 
@@ -302,6 +308,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
 
     # 6. Create a new dictionary to hold the reordered speedup lists for all methods.
     sorted_methods_speedups = {}
+    sorted_methods_speedups_unclamped = {}
     for title, original_speedup_list in methods_speedups.items():
         # For each method, create a new list by picking values from the original list
         # in the new `sorted_tasks` order.
@@ -310,6 +317,11 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
             for task_id in sorted_tasks
         ]
         sorted_methods_speedups[title] = new_speedup_list
+        new_speedup_list_unclamped = [
+            methods_speedups_unclamped[title][task_to_original_index[task_id]]
+            for task_id in sorted_tasks
+        ]
+        sorted_methods_speedups_unclamped[title] = new_speedup_list_unclamped
 
     # 7. Create the task labels for the plot's x-axis in the new sorted order.
     labels_sorted = [task_labels_map.get(t, str(t)) for t in sorted_tasks]
@@ -317,6 +329,7 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
     # 8. Overwrite the original speedups dictionary. All downstream code (plotting, tables)
     #    will now use the data sorted by the primary key's performance.
     methods_speedups = sorted_methods_speedups
+    methods_speedups_unclamped = sorted_methods_speedups_unclamped
 
 
     # --- Compute geometric mean ---
@@ -326,6 +339,13 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
         arr = np.array(values, dtype=float)
         arr = arr[arr > 0]  # filter out invalid/missing
         geomeans[name] = np.exp(np.mean(np.log(arr)))
+
+    # --- Compute unclamped geometric mean (None/failed tasks treated as 1.0) ---
+    geomeans_unclamped = {}
+    for name, values in methods_speedups_unclamped.items():
+        arr = np.array([v if v is not None else 1.0 for v in values], dtype=float)
+        arr = arr[arr > 0]
+        geomeans_unclamped[name] = np.exp(np.mean(np.log(arr)))
 
     # --- Plotting ---
     x = np.arange(len(labels_sorted))
@@ -402,26 +422,40 @@ def main(output_dir: Path, level: str, paper: bool = True, kernelbench_dir: Path
 
     # --- Save TeX Table using the new function ---
     tex_path = tex_dir / f"{output_label}.tex"
-    generate_latex_table(df, geomeans, task_name_remapping, title_remapping, tex_path)
+    # Build unclamped DataFrame (same structure as df but uses unclamped values, with None for failed runs)
+    df_unclamped = pd.DataFrame(
+        {name: methods_speedups_unclamped[name] for name in ordered_cols},
+        index=labels_sorted,
+    )
+    df_unclamped.reset_index(inplace=True)
+    df_unclamped.rename(columns={"index": "Task"}, inplace=True)
+    generate_latex_table(df, geomeans, task_name_remapping, title_remapping, tex_path,
+                         unclamped_df=df_unclamped, geomeans_unclamped=geomeans_unclamped)
 
     # --- Print Geomean Summary ---
     print("\nGeomean speedups:")
     for k in ordered_cols:
         print(f"- {k}: {geomeans[k]:.3f}")
 
-def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_path):
+def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_path,
+                          unclamped_df=None, geomeans_unclamped=None):
     """
     Converts a pandas DataFrame of speedups to a formatted LaTeX table.
 
     Args:
-        df (pd.DataFrame): DataFrame with a 'Task' column and method speedup columns.
-        geomeans (dict): Dictionary mapping original method titles to their geomean speedups.
+        df (pd.DataFrame): DataFrame with a 'Task' column and method speedup columns (clamped).
+        geomeans (dict): Dictionary mapping original method titles to their geomean speedups (clamped).
         task_remapping (dict): Dictionary to remap long task names to shorter ones.
         title_remapping (dict): Dictionary to remap long method titles to shorter ones.
         output_path (Path): Path object where the .tex file will be saved.
+        unclamped_df (pd.DataFrame | None): DataFrame with unclamped speedups (None for failed runs).
+        geomeans_unclamped (dict | None): Geomeans computed from unclamped values.
     """
-    # Create a working copy of the DataFrame
-    df_processed = df.copy()
+    # Use unclamped data for display if provided, otherwise fall back to clamped
+    display_df = unclamped_df if unclamped_df is not None else df
+
+    # Create a working copy of the display DataFrame
+    df_processed = display_df.copy()
 
     # --- Step 1: Remap task and column names ---
     df_processed["Task"] = df_processed["Task"].map(lambda x: task_remapping.get(x, x))
@@ -436,18 +470,17 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
     # Apply the title remapping to the DataFrame columns
     df_processed.rename(columns=title_remapping, inplace=True)
 
-
     # --- Step 2: Format numbers and bold the max value in each row ---
-    # Convert all speedup values to strings with 2 decimal places
+    # Convert all speedup values to strings with 2 decimal places; None → em-dash
     df_rounded = df_processed.copy()
     for col in df_processed.columns[1:]:
         df_rounded[col] = df_processed[col].map(
-            lambda x: f"{x:.2f}" if pd.api.types.is_number(x) else str(x)
+            lambda x: "{—}" if x is None else (f"{x:.2f}" if pd.api.types.is_number(x) else str(x))
         )
 
     def bold_max(row):
         """Helper function to find and bold the maximum value in a DataFrame row."""
-        # Convert string numbers to numeric, coercing errors to NaN
+        # Convert string numbers to numeric, coercing errors to NaN (dashes become NaN)
         numeric_vals = pd.to_numeric(row[1:], errors="coerce")
         if numeric_vals.notna().any():
             max_val = numeric_vals.max()
@@ -462,21 +495,33 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
 
     df_bold = df_rounded.apply(bold_max, axis=1)
 
-    # --- Step 3: Add and format the Geomean row ---
-    geo_row_data = {"Task": "Geomean"}
-    for remapped_title in df_bold.columns[1:]:
-        original_title = remapped_to_original.get(remapped_title)
-        if original_title and original_title in geomeans:
-            val = geomeans[original_title]
-            geo_row_data[remapped_title] = f"{val:.2f}"
-        else:
-            geo_row_data[remapped_title] = "-"  # Placeholder if not found
+    # --- Step 3: Add two Geomean rows (clamped and unclamped) ---
+    def make_geo_row(label, geo_dict):
+        row_data = {"Task": label}
+        for remapped_title in df_bold.columns[1:]:
+            original_title = remapped_to_original.get(remapped_title)
+            if original_title and original_title in geo_dict:
+                val = geo_dict[original_title]
+                row_data[remapped_title] = f"{val:.2f}"
+            else:
+                row_data[remapped_title] = "-"
+        return pd.Series(row_data)
 
-    geo_row = pd.Series(geo_row_data)
+    geo_clamped_row = make_geo_row("Geomean (clamped)", geomeans)
+    geo_unclamped_row = (
+        make_geo_row("Geomean (unclamped)", geomeans_unclamped)
+        if geomeans_unclamped is not None
+        else None
+    )
 
-    # Append the Geomean row and bold its maximum value
-    df_with_geo = pd.concat([df_bold, pd.DataFrame([geo_row])], ignore_index=True)
-    df_with_geo.iloc[-1] = bold_max(df_with_geo.iloc[-1])
+    rows_to_append = [geo_clamped_row]
+    if geo_unclamped_row is not None:
+        rows_to_append.append(geo_unclamped_row)
+
+    df_with_geo = pd.concat([df_bold, pd.DataFrame(rows_to_append)], ignore_index=True)
+    # Bold max in each geomean row
+    for idx in range(len(df_bold), len(df_with_geo)):
+        df_with_geo.iloc[idx] = bold_max(df_with_geo.iloc[idx])
 
     # --- Step 4: Convert to LaTeX format and save ---
     # Use 'l' for left-align (Task) and 'r' for right-align (numbers)
@@ -485,7 +530,7 @@ def generate_latex_table(df, geomeans, task_remapping, title_remapping, output_p
         index=False, escape=False, column_format=column_format
     )
 
-    # Insert a horizontal line rule (`\midrule`) before the Geomean row for clarity
+    # Insert a horizontal line rule (`\midrule`) before the first Geomean row for clarity
     lines = latex_table.splitlines()
     for i, line in enumerate(lines):
         if line.strip().startswith("Geomean"):
